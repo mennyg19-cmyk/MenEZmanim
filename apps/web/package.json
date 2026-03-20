@@ -14,7 +14,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@zmanim-app/core": "*",
-    "@zmanim-app/db": "*",
     "@zmanim-app/ui": "*"
   },
   "devDependencies": {

@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
    * drop App Router lambdas for dynamic pages. Keep standalone for local `node server.js` flows.
    */
   ...(process.env.VERCEL ? {} : { output: 'standalone' as const }),
-  transpilePackages: ['@zmanim-app/core', '@zmanim-app/db', '@zmanim-app/ui'],
+  transpilePackages: ['@zmanim-app/core', '@zmanim-app/ui'],
   turbopack: {
     root: monorepoRoot,
   },
