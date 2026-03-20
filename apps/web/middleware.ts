@@ -1,11 +1,29 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const isProtectedRoute = createRouteMatcher([
-  '/admin(.*)',
-  '/api/org(.*)',
-  '/api/sync(.*)',
-]);
+/**
+ * Public GETs for display board + mobile (no login). Writes and export/import require auth.
+ */
+function isPublicOrgApiRead(req: NextRequest): boolean {
+  if (req.method !== 'GET') return false;
+  const path = req.nextUrl.pathname;
+  if (!path.startsWith('/api/org/')) return false;
+
+  if (/^\/api\/org\/[^/]+\/?$/.test(path)) return true;
+
+  if (
+    /^\/api\/org\/[^/]+\/(styles|screens|announcements|memorials|media|schedules|groups)\/?$/.test(path)
+  ) {
+    return true;
+  }
+
+  if (/^\/api\/org\/[^/]+\/(screens|styles|media)\/[^/]+\/?$/.test(path)) {
+    return true;
+  }
+
+  return false;
+}
 
 const hasClerk =
   Boolean(process.env.CLERK_SECRET_KEY) &&
@@ -13,8 +31,24 @@ const hasClerk =
 
 export default hasClerk
   ? clerkMiddleware(async (auth, req) => {
-      if (isProtectedRoute(req)) {
+      const path = req.nextUrl.pathname;
+
+      if (path.startsWith('/api/org/')) {
+        if (isPublicOrgApiRead(req)) {
+          return NextResponse.next();
+        }
         await auth.protect();
+        return NextResponse.next();
+      }
+
+      if (path.startsWith('/api/sync')) {
+        await auth.protect();
+        return NextResponse.next();
+      }
+
+      if (path.startsWith('/admin')) {
+        await auth.protect();
+        return NextResponse.next();
       }
     })
   : function passthrough() {
