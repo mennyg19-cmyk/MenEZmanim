@@ -1,0 +1,75 @@
+:root {
+  /* ── Editor (dark) palette ─────────────── */
+  --ed-bg-deep: #0f172a;
+  --ed-bg: #1e293b;
+  --ed-border: #334155;
+  --ed-text: #e2e8f0;
+  --ed-text-muted: #94a3b8;
+  --ed-text-dim: #64748b;
+  --ed-text-faint: #475569;
+  --ed-accent: #3b82f6;
+  --ed-accent-light: #60a5fa;
+  --ed-accent-soft: #93c5fd;
+  --ed-active-bg: #1e3a5f;
+  --ed-danger: #f87171;
+  --ed-danger-text: #fca5a5;
+  --ed-danger-border: #7f1d1d;
+  --ed-danger-bg: #450a0a;
+
+  /* ── Admin (light) palette ─────────────── */
+  --adm-bg: #ffffff;
+  --adm-bg-muted: #f9fafb;
+  --adm-bg-hover: #f3f4f6;
+  --adm-bg-active: #f1f5f9;
+  --adm-border: #e5e7eb;
+  --adm-border-input: #d1d5db;
+  --adm-text: #374151;
+  --adm-text-dark: #111827;
+  --adm-text-muted: #6b7280;
+  --adm-text-dim: #9ca3af;
+  --adm-accent: #3b82f6;
+  --adm-accent-dark: #2563eb;
+  --adm-accent-hover: #1e40af;
+  --adm-danger: #ef4444;
+  --adm-danger-hover: #dc2626;
+  --adm-success: #059669;
+  --adm-warning: #f59e0b;
+  --adm-sidebar-bg: #111827;
+  --adm-sidebar-active: #1f2937;
+  --adm-sidebar-text: #d1d5db;
+  --adm-sidebar-border: #374151;
+
+  /* ── Mobile palette ────────────────────── */
+  --mob-accent: #4f46e5;
+  --mob-accent-bg: #eef2ff;
+  --mob-text: #1f2937;
+  --mob-text-muted: #6b7280;
+  --mob-text-dim: #9ca3af;
+  --mob-border: #e5e7eb;
+  --mob-border-light: #f3f4f6;
+  --mob-header-bg: #1a1a2e;
+  --mob-header-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  --mob-bg: #f8f9fa;
+  --mob-card-bg: #ffffff;
+
+  /* ── Widget defaults ───────────────────── */
+  --wgt-text: #333;
+  --wgt-border: rgba(0, 0, 0, 0.12);
+  --wgt-border-light: rgba(0, 0, 0, 0.08);
+  --wgt-border-faint: rgba(0, 0, 0, 0.06);
+  --wgt-row-alt: rgba(0, 0, 0, 0.025);
+  --wgt-separator: rgba(0, 0, 0, 0.1);
+
+  /* ── Shared tokens ─────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+
+  --font-system: system-ui, -apple-system, sans-serif;
+}

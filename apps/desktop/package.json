@@ -1,0 +1,31 @@
+{
+  "name": "@zmanim-app/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "tsc -p tsconfig.electron.json",
+    "package": "electron-builder --dir",
+    "clean": "rm -rf dist out"
+  },
+  "dependencies": {
+    "@zmanim-app/core": "*",
+    "@zmanim-app/db": "*",
+    "@zmanim-app/ui": "*",
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,33 @@
+appId: com.zmanim-app.desktop
+productName: Zmanim App
+copyright: Copyright © 2026
+directories:
+  output: out
+  buildResources: assets
+files:
+  - dist/**/*
+  - electron/**/*.js
+  - node_modules/**/*
+  - "!node_modules/.cache"
+win:
+  target:
+    - target: dir
+      arch: [x64]
+  icon: assets/icon.ico
+linux:
+  target:
+    - target: dir
+      arch: [x64]
+  icon: assets/icon.png
+mac:
+  target:
+    - target: dir
+      arch: [x64, arm64]
+  icon: assets/icon.icns
+portable:
+  artifactName: ZmanimApp-${version}-portable.exe
+extraResources:
+  - from: "../../assets"
+    to: assets
+    filter:
+      - "**/*"

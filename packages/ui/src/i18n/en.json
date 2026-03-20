@@ -1,0 +1,99 @@
+{
+  "app": {
+    "name": "Zmanim Board",
+    "admin": "Admin",
+    "display": "Display",
+    "mobile": "Mobile"
+  },
+  "zmanim": {
+    "alos": "Dawn (Alos HaShachar)",
+    "misheyakir": "Misheyakir",
+    "hanetz": "Sunrise (HaNetz)",
+    "sofZmanShma": "Latest Shma",
+    "sofZmanTefillah": "Latest Tefillah",
+    "chatzos": "Midday (Chatzos)",
+    "minchaGedolah": "Mincha Gedolah",
+    "minchaKetanah": "Mincha Ketanah",
+    "plagHamincha": "Plag HaMincha",
+    "shkiah": "Sunset (Shkiah)",
+    "tzais": "Nightfall (Tzais)",
+    "chatzosHalaila": "Midnight (Chatzos)",
+    "candleLighting": "Candle Lighting",
+    "havdalah": "Havdalah",
+    "rabbeinuTam": "Rabbeinu Tam"
+  },
+  "days": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "shabbat": "Shabbat"
+  },
+  "months": {
+    "nissan": "Nissan",
+    "iyar": "Iyar",
+    "sivan": "Sivan",
+    "tammuz": "Tammuz",
+    "av": "Av",
+    "elul": "Elul",
+    "tishrei": "Tishrei",
+    "cheshvan": "Cheshvan",
+    "kislev": "Kislev",
+    "teves": "Teves",
+    "shevat": "Shevat",
+    "adar": "Adar",
+    "adarI": "Adar I",
+    "adarII": "Adar II"
+  },
+  "tefilah": {
+    "mashivHaruach": "Mashiv HaRuach U'Morid HaGeshem",
+    "moridHatal": "Morid HaTal",
+    "veseinTalUmatar": "V'Sein Tal U'Matar",
+    "veseinBeracha": "V'Sein Beracha",
+    "yaalehVeyavo": "Ya'aleh V'Yavo",
+    "alHanissim": "Al HaNissim",
+    "hallelFull": "Full Hallel",
+    "hallelHalf": "Half Hallel",
+    "tachanun": "Tachanun",
+    "noTachanun": "No Tachanun"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "location": "Location",
+    "zmanimConfig": "Zmanim Settings",
+    "schedules": "Schedules",
+    "announcements": "Announcements",
+    "yahrzeit": "Yahrzeit",
+    "sponsors": "Sponsors",
+    "media": "Media",
+    "display": "Display",
+    "import": "Import",
+    "export": "Export",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "add": "Add",
+    "edit": "Edit"
+  },
+  "schedule": {
+    "shacharit": "Shacharit",
+    "mincha": "Mincha",
+    "maariv": "Maariv",
+    "other": "Other"
+  },
+  "holidays": {
+    "roshHashana": "Rosh Hashana",
+    "yomKippur": "Yom Kippur",
+    "sukkos": "Sukkos",
+    "shminiAtzeres": "Shmini Atzeres",
+    "simchasTorah": "Simchas Torah",
+    "chanukah": "Chanukah",
+    "purim": "Purim",
+    "pesach": "Pesach",
+    "shavuos": "Shavuos",
+    "tishaBav": "Tisha B'Av",
+    "roshChodesh": "Rosh Chodesh"
+  }
+}

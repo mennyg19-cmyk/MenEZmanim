@@ -1,0 +1,99 @@
+{
+  "app": {
+    "name": "זמנים טאוול",
+    "admin": "פארוואלטונג",
+    "display": "אנווייז",
+    "mobile": "מאביל"
+  },
+  "zmanim": {
+    "alos": "עלות השחר",
+    "misheyakir": "משיכיר",
+    "hanetz": "הנץ החמה",
+    "sofZmanShma": "סוף זמן ק\"ש",
+    "sofZmanTefillah": "סוף זמן תפילה",
+    "chatzos": "חצות היום",
+    "minchaGedolah": "מנחה גדולה",
+    "minchaKetanah": "מנחה קטנה",
+    "plagHamincha": "פלג המנחה",
+    "shkiah": "שקיעת החמה",
+    "tzais": "צאת הכוכבים",
+    "chatzosHalaila": "חצות הלילה",
+    "candleLighting": "ליכט צינדן",
+    "havdalah": "הבדלה",
+    "rabbeinuTam": "רבינו תם"
+  },
+  "days": {
+    "sunday": "זונטאג",
+    "monday": "מאנטאג",
+    "tuesday": "דינסטאג",
+    "wednesday": "מיטוואך",
+    "thursday": "דאנערשטאג",
+    "friday": "פרייטאג",
+    "shabbat": "שבת"
+  },
+  "months": {
+    "nissan": "ניסן",
+    "iyar": "אייר",
+    "sivan": "סיון",
+    "tammuz": "תמוז",
+    "av": "אב",
+    "elul": "אלול",
+    "tishrei": "תשרי",
+    "cheshvan": "חשון",
+    "kislev": "כסלו",
+    "teves": "טבת",
+    "shevat": "שבט",
+    "adar": "אדר",
+    "adarI": "אדר א׳",
+    "adarII": "אדר ב׳"
+  },
+  "tefilah": {
+    "mashivHaruach": "משיב הרוח ומוריד הגשם",
+    "moridHatal": "מוריד הטל",
+    "veseinTalUmatar": "ותן טל ומטר לברכה",
+    "veseinBeracha": "ותן ברכה",
+    "yaalehVeyavo": "יעלה ויבוא",
+    "alHanissim": "על הנסים",
+    "hallelFull": "גאנץ הלל",
+    "hallelHalf": "האלב הלל",
+    "tachanun": "תחנון",
+    "noTachanun": "קיין תחנון"
+  },
+  "admin": {
+    "dashboard": "קאנטראל טאוול",
+    "location": "ארט",
+    "zmanimConfig": "זמנים אויסשטעלונגען",
+    "schedules": "צייט טאוול",
+    "announcements": "מודעות",
+    "yahrzeit": "יארצייט",
+    "sponsors": "נדבנים",
+    "media": "מעדיע",
+    "display": "אנווייז",
+    "import": "אריינברענגען",
+    "export": "ארויסברענגען",
+    "save": "אויפהיטן",
+    "cancel": "אפזאגן",
+    "delete": "אויסמעקן",
+    "add": "צולייגן",
+    "edit": "פאררעכטן"
+  },
+  "schedule": {
+    "shacharit": "שחרית",
+    "mincha": "מנחה",
+    "maariv": "מעריב",
+    "other": "אנדערע"
+  },
+  "holidays": {
+    "roshHashana": "ראש השנה",
+    "yomKippur": "יום כיפור",
+    "sukkos": "סוכות",
+    "shminiAtzeres": "שמיני עצרת",
+    "simchasTorah": "שמחת תורה",
+    "chanukah": "חנוכה",
+    "purim": "פורים",
+    "pesach": "פסח",
+    "shavuos": "שבועות",
+    "tishaBav": "תשעה באב",
+    "roshChodesh": "ראש חודש"
+  }
+}

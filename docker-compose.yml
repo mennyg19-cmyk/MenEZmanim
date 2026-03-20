@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://zmanim:zmanim@db:5432/zmanim
+      - NEXTAUTH_SECRET=change-me-in-production
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=zmanim
+      - POSTGRES_PASSWORD=zmanim
+      - POSTGRES_DB=zmanim
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

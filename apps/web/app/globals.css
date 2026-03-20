@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@zmanim-app/ui/src/shared/themes/variables.css";
+@import "@zmanim-app/ui/src/shared/themes/editor.css";
+@import "@zmanim-app/ui/src/shared/themes/admin.css";
+@import "@zmanim-app/ui/src/shared/themes/mobile.css";
+@import "@zmanim-app/ui/src/shared/themes/widgets.css";

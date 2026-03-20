@@ -1,0 +1,845 @@
+/* ── Editor (dark theme) shared styles ─── */
+
+/* Panel & containers */
+.ed-panel {
+  background-color: var(--ed-bg-deep);
+  border-right: 1px solid var(--ed-bg);
+  color: var(--ed-text);
+  font-family: var(--font-system);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ed-panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ed-bg);
+  flex-shrink: 0;
+}
+
+.ed-panelHeaderBg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ed-bg);
+  flex-shrink: 0;
+  background-color: var(--ed-bg);
+}
+
+.ed-panelBody {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ed-panelFooter {
+  padding: 8px 12px;
+  border-top: 1px solid var(--ed-bg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Section titles */
+.ed-sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ed-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ed-sectionLabelSm {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ed-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ed-subLabel {
+  font-size: 10px;
+  color: var(--ed-text-faint);
+  margin-bottom: 3px;
+}
+
+/* Form inputs */
+.ed-input {
+  width: 100%;
+  padding: 6px 8px;
+  background-color: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  color: var(--ed-text);
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.ed-select {
+  width: 100%;
+  padding: 5px 8px;
+  background-color: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  color: var(--ed-text);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.ed-colorSwatch {
+  width: 32px;
+  height: 24px;
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  padding: 0;
+}
+
+.ed-colorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Buttons */
+.ed-btnSmall {
+  padding: 4px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-bg);
+  color: var(--ed-text);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ed-btnSmall:hover {
+  background-color: var(--ed-border);
+}
+
+.ed-btnPrimary {
+  padding: 4px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-accent);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-color: var(--ed-accent);
+  font-weight: 600;
+}
+
+.ed-btnPrimary:hover {
+  opacity: 0.9;
+}
+
+.ed-btnDanger {
+  padding: 4px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-bg);
+  color: var(--ed-danger);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-color: var(--ed-danger-border);
+}
+
+.ed-btnDangerFull {
+  padding: 5px 12px;
+  border: 1px solid var(--ed-danger-border);
+  border-radius: 5px;
+  background-color: var(--ed-danger-bg);
+  color: var(--ed-danger-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ed-btnDangerFull:hover {
+  background-color: var(--ed-danger-border);
+}
+
+.ed-btnGhost {
+  background: none;
+  border: none;
+  color: var(--ed-text-dim);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.ed-btnGhost:hover {
+  color: var(--ed-text-muted);
+}
+
+/* Close button */
+.ed-closeBtn {
+  background: none;
+  border: none;
+  color: var(--ed-text-dim);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* Tabs */
+.ed-tabBar {
+  display: flex;
+  border-bottom: 1px solid var(--ed-bg);
+  flex-shrink: 0;
+}
+
+.ed-tab {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  background: transparent;
+  color: var(--ed-text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: capitalize;
+  border-bottom: 2px solid transparent;
+}
+
+.ed-tabActive {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  background: var(--ed-bg);
+  color: var(--ed-accent-light);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: capitalize;
+  border-bottom: 2px solid transparent;
+  border-bottom-color: var(--ed-accent-light);
+}
+
+/* Field wrapper */
+.ed-field {
+  margin-bottom: 10px;
+}
+
+.ed-fieldLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ed-text-dim);
+  margin-bottom: 3px;
+}
+
+/* Section (collapsible) */
+.ed-section {
+  border-top: 1px solid var(--ed-bg);
+  margin-top: 8px;
+}
+
+.ed-sectionToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ed-text-muted);
+}
+
+.ed-sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ed-sectionArrow {
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.ed-sectionBody {
+  padding-bottom: 4px;
+}
+
+/* Toggle switch */
+.ed-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ed-toggleOff {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  background-color: var(--ed-border);
+}
+
+.ed-toggleOn {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  background-color: var(--ed-accent);
+}
+
+.ed-toggleKnob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #fff;
+  position: absolute;
+  top: 3px;
+  transition: left 0.15s;
+}
+
+/* Object list */
+.ed-objItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--ed-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  border-left: 3px solid transparent;
+  transition: background 0.1s;
+}
+
+.ed-objItem:hover {
+  background: rgba(30, 41, 59, 0.25);
+}
+
+.ed-objItemSelected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: var(--ed-bg);
+  color: var(--ed-text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  border-left: 3px solid transparent;
+  transition: background 0.1s;
+  border-left-color: var(--ed-accent);
+}
+
+.ed-objIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.ed-objName {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ed-objType {
+  font-size: 10px;
+  color: var(--ed-text-faint);
+}
+
+/* Align buttons */
+.ed-alignBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: none;
+  background-color: transparent;
+  color: var(--ed-text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.1s;
+}
+
+.ed-alignBtn:hover {
+  background-color: var(--ed-border);
+}
+
+/* Toolbar / floating bars */
+.ed-toolbar {
+  display: flex;
+  gap: 2px;
+  background-color: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-xl);
+  padding: 4px 6px;
+  box-shadow: var(--shadow-panel);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ed-divider {
+  width: 1px;
+  background-color: var(--ed-border);
+  margin: 2px 4px;
+}
+
+/* Zoom bar */
+.ed-zoomBar {
+  position: absolute;
+  top: 14px;
+  left: 32px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--ed-text-muted);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10001;
+}
+
+.ed-zoomInput {
+  width: 56px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--ed-border);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  font-size: 11px;
+  padding: 2px 6px;
+  text-align: center;
+}
+
+.ed-zoomBtn {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.ed-zoomLabel {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+/* Add widget overlay */
+.ed-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 10005;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ed-addWidgetModal {
+  background-color: var(--ed-bg-deep);
+  border: 1px solid var(--ed-bg);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 560px;
+  width: 90%;
+  box-shadow: var(--shadow-modal);
+}
+
+.ed-widgetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.ed-widgetCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  border: 1px solid var(--ed-bg);
+  border-radius: var(--radius-xl);
+  background-color: var(--ed-bg);
+  color: var(--ed-text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.ed-widgetCard:hover {
+  border-color: var(--ed-accent);
+  background-color: var(--ed-active-bg);
+}
+
+/* Theme panel */
+.ed-slidePanel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  background-color: var(--ed-bg-deep);
+  border-left: 1px solid var(--ed-bg);
+  z-index: 10003;
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Settings section */
+.ed-settingsToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--ed-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Type badge on canvas objects */
+.ed-typeBadge {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Selection info text */
+.ed-infoText {
+  font-size: 10px;
+  color: var(--ed-text-dim);
+  align-self: center;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* Background mode buttons */
+.ed-bgModeBtn {
+  flex: 1 1 45%;
+  padding: 6px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-md);
+  background-color: var(--ed-bg-deep);
+  color: var(--ed-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.1s;
+}
+
+.ed-bgModeBtnActive {
+  flex: 1 1 45%;
+  padding: 6px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-md);
+  background-color: var(--ed-active-bg);
+  color: var(--ed-accent-soft);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.1s;
+  border-color: var(--ed-accent-light);
+}
+
+/* Option buttons (text align, vertical align, column split, etc.) */
+.ed-optionBtn {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-bg-deep);
+  color: var(--ed-text);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ed-optionBtnActive {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-active-bg);
+  color: var(--ed-text);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-color: var(--ed-accent-light);
+}
+
+.ed-optionBtnSm {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-bg-deep);
+  color: var(--ed-text);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ed-optionBtnSmActive {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background-color: var(--ed-accent);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 600;
+  border-color: var(--ed-border);
+}
+
+/* Range slider */
+.ed-range {
+  width: 100%;
+  accent-color: var(--ed-accent);
+}
+
+/* Checkbox row */
+.ed-checkRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--ed-text);
+}
+
+/* Grouped item (e.g. davening group checkboxes) */
+.ed-groupItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.ed-groupItemActive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background-color: var(--ed-bg);
+}
+
+/* Hint / description text */
+.ed-hint {
+  font-size: 11px;
+  color: var(--ed-text-dim);
+  padding: 4px 0;
+}
+
+.ed-hintSm {
+  font-size: 10px;
+  color: var(--ed-text-muted);
+  margin-bottom: 6px;
+}
+
+/* Emphasis box */
+.ed-emphasisBox {
+  font-size: 11px;
+  padding: 6px 8px;
+  background-color: var(--ed-bg-deep);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--ed-bg);
+}
+
+/* Row color controls */
+.ed-rowColorRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ed-rowColorSwatch {
+  width: 28px;
+  height: 22px;
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ed-rowColorOpacity {
+  font-size: 10px;
+  color: var(--ed-text-dim);
+  min-width: 28px;
+  text-align: right;
+}
+
+.ed-rowColorClear {
+  background: none;
+  border: none;
+  color: var(--ed-danger);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Style Manager / Background Picker palette alignment */
+.ed-smContainer {
+  width: 260px;
+  background-color: var(--ed-bg-deep);
+  border-right: 1px solid var(--ed-border);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-system);
+  color: var(--ed-text);
+}
+
+.ed-smInput {
+  flex: 1;
+  padding: 6px 8px;
+  background-color: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-sm);
+  color: var(--ed-text);
+  font-size: 12px;
+}
+
+.ed-smCard {
+  padding: 10px;
+  margin-bottom: 4px;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  background-color: var(--ed-bg);
+}
+
+.ed-smCardActive {
+  padding: 10px;
+  margin-bottom: 4px;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  background-color: var(--ed-active-bg);
+  border-color: #3a6a9a;
+}
+
+.ed-smMeta {
+  font-size: 11px;
+  color: var(--ed-text-dim);
+  margin-bottom: 6px;
+}
+
+.ed-smEmpty {
+  padding: 16px;
+  text-align: center;
+  color: var(--ed-text-faint);
+  font-size: 12px;
+}
+
+/* Add button in header */
+.ed-addBtn {
+  padding: 3px 10px;
+  border: 1px solid var(--ed-border);
+  border-radius: 5px;
+  background: var(--ed-bg);
+  color: var(--ed-accent-light);
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.ed-addBtn:hover {
+  background: var(--ed-border);
+}
+
+/* Link */
+.ed-link {
+  font-size: 11px;
+  color: var(--ed-accent-light);
+  text-decoration: none;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.ed-link:hover {
+  text-decoration: underline;
+}
+
+/* Preview text block */
+.ed-fontPreview {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background-color: var(--ed-bg-deep);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--ed-bg);
+}

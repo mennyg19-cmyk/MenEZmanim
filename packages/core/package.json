@@ -1,0 +1,21 @@
+{
+  "name": "@zmanim-app/core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "kosher-zmanim": "latest",
+    "luxon": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.4.0",
+    "typescript": "^5.5.0"
+  }
+}

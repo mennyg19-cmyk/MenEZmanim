@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200" viewBox="0 0 600 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9"/>
+      <stop offset="100%" style="stop-color:#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="200" rx="12" fill="url(#bg)"/>
+  <text x="300" y="85" text-anchor="middle" fill="white" font-family="system-ui,sans-serif" font-size="28" font-weight="700">Community</text>
+  <text x="300" y="125" text-anchor="middle" fill="#e0f2fe" font-family="system-ui,sans-serif" font-size="18">Sample flyer · Zmanim App</text>
+</svg>

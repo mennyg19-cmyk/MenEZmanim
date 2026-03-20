@@ -1,0 +1,99 @@
+{
+  "app": {
+    "name": "לוח זמנים",
+    "admin": "ניהול",
+    "display": "תצוגה",
+    "mobile": "נייד"
+  },
+  "zmanim": {
+    "alos": "עלות השחר",
+    "misheyakir": "משיכיר",
+    "hanetz": "הנץ החמה",
+    "sofZmanShma": "סוף זמן ק\"ש",
+    "sofZmanTefillah": "סוף זמן תפילה",
+    "chatzos": "חצות היום",
+    "minchaGedolah": "מנחה גדולה",
+    "minchaKetanah": "מנחה קטנה",
+    "plagHamincha": "פלג המנחה",
+    "shkiah": "שקיעת החמה",
+    "tzais": "צאת הכוכבים",
+    "chatzosHalaila": "חצות הלילה",
+    "candleLighting": "הדלקת נרות",
+    "havdalah": "הבדלה",
+    "rabbeinuTam": "רבינו תם"
+  },
+  "days": {
+    "sunday": "ראשון",
+    "monday": "שני",
+    "tuesday": "שלישי",
+    "wednesday": "רביעי",
+    "thursday": "חמישי",
+    "friday": "שישי",
+    "shabbat": "שבת"
+  },
+  "months": {
+    "nissan": "ניסן",
+    "iyar": "אייר",
+    "sivan": "סיון",
+    "tammuz": "תמוז",
+    "av": "אב",
+    "elul": "אלול",
+    "tishrei": "תשרי",
+    "cheshvan": "חשון",
+    "kislev": "כסלו",
+    "teves": "טבת",
+    "shevat": "שבט",
+    "adar": "אדר",
+    "adarI": "אדר א׳",
+    "adarII": "אדר ב׳"
+  },
+  "tefilah": {
+    "mashivHaruach": "משיב הרוח ומוריד הגשם",
+    "moridHatal": "מוריד הטל",
+    "veseinTalUmatar": "ותן טל ומטר לברכה",
+    "veseinBeracha": "ותן ברכה",
+    "yaalehVeyavo": "יעלה ויבוא",
+    "alHanissim": "על הנסים",
+    "hallelFull": "הלל שלם",
+    "hallelHalf": "חצי הלל",
+    "tachanun": "תחנון",
+    "noTachanun": "אין תחנון"
+  },
+  "admin": {
+    "dashboard": "לוח בקרה",
+    "location": "מיקום",
+    "zmanimConfig": "הגדרות זמנים",
+    "schedules": "לוח זמנים",
+    "announcements": "הודעות",
+    "yahrzeit": "יארצייט",
+    "sponsors": "תורמים",
+    "media": "מדיה",
+    "display": "תצוגה",
+    "import": "ייבוא",
+    "export": "ייצוא",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "add": "הוסף",
+    "edit": "ערוך"
+  },
+  "schedule": {
+    "shacharit": "שחרית",
+    "mincha": "מנחה",
+    "maariv": "מעריב",
+    "other": "אחר"
+  },
+  "holidays": {
+    "roshHashana": "ראש השנה",
+    "yomKippur": "יום כיפור",
+    "sukkos": "סוכות",
+    "shminiAtzeres": "שמיני עצרת",
+    "simchasTorah": "שמחת תורה",
+    "chanukah": "חנוכה",
+    "purim": "פורים",
+    "pesach": "פסח",
+    "shavuos": "שבועות",
+    "tishaBav": "תשעה באב",
+    "roshChodesh": "ראש חודש"
+  }
+}
