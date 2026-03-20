@@ -1,54 +1,46 @@
 const { execSync } = require('child_process');
-const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const pkgPath = path.join(root, 'package.json');
-const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-const saved = pkg.workspaces;
-pkg.workspaces = ['packages/core', 'packages/ui', 'apps/web'];
-fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+execSync('npm install --ignore-scripts', { cwd: root, stdio: 'inherit' });
 
-try {
-  execSync('npm install', { cwd: root, stdio: 'inherit' });
-} finally {
-  pkg.workspaces = saved;
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
-}
-
-const webDir = path.join(root, 'apps', 'web');
-const webNm = path.join(webDir, 'node_modules');
+console.log('\n=== DEBUG ===');
+const fs = require('fs');
 const rootNm = path.join(root, 'node_modules');
-const rootNext = path.join(rootNm, 'next');
-const webNext = path.join(webNm, 'next');
+const webNm = path.join(root, 'apps', 'web', 'node_modules');
 
-console.log('\n=== DEBUG: Post-install state ===');
-console.log('root:', root);
-console.log('root/node_modules exists:', fs.existsSync(rootNm));
-console.log('root/node_modules/next exists:', fs.existsSync(rootNext));
-console.log('apps/web/node_modules exists:', fs.existsSync(webNm));
-console.log('apps/web/node_modules/next exists:', fs.existsSync(webNext));
+const rootItems = fs.readdirSync(rootNm).filter(f => !f.startsWith('.'));
+console.log('root/node_modules count:', rootItems.length);
+console.log('root/node_modules has next:', fs.existsSync(path.join(rootNm, 'next')));
 
 if (fs.existsSync(webNm)) {
-  console.log('apps/web/node_modules contents:', fs.readdirSync(webNm).slice(0, 20));
-}
-if (fs.existsSync(rootNm)) {
-  const items = fs.readdirSync(rootNm).filter(f => !f.startsWith('.'));
-  console.log('root/node_modules contents (' + items.length + '):', items.slice(0, 30));
-}
-
-if (fs.existsSync(rootNext) && !fs.existsSync(webNext)) {
-  fs.mkdirSync(webNm, { recursive: true });
-  fs.symlinkSync(rootNext, webNext);
-  console.log('Created symlink: apps/web/node_modules/next -> root/node_modules/next');
+  const webItems = fs.readdirSync(webNm).filter(f => !f.startsWith('.'));
+  console.log('web/node_modules count:', webItems.length);
+  console.log('web/node_modules has next:', fs.existsSync(path.join(webNm, 'next')));
+  console.log('web/node_modules contents:', webItems.slice(0, 10));
+} else {
+  console.log('web/node_modules does not exist');
 }
 
-console.log('FINAL: apps/web/node_modules/next exists:', fs.existsSync(path.join(webNm, 'next')));
+const nextPath = path.join(webNm, 'next');
+if (!fs.existsSync(nextPath)) {
+  const rootNext = path.join(rootNm, 'next');
+  if (fs.existsSync(rootNext)) {
+    fs.mkdirSync(webNm, { recursive: true });
+    fs.symlinkSync(rootNext, nextPath);
+    console.log('Created symlink for next');
+  } else {
+    console.log('ERROR: next not found anywhere!');
+    console.log('Looking for next-like packages...');
+    rootItems.filter(i => i.includes('next')).forEach(i => console.log(' ', i));
+  }
+}
+
 try {
-  const v = JSON.parse(fs.readFileSync(path.join(webNm, 'next', 'package.json'), 'utf8')).version;
-  console.log('FINAL: next version:', v);
+  const v = JSON.parse(fs.readFileSync(path.join(nextPath, 'package.json'), 'utf8')).version;
+  console.log('next version:', v);
 } catch (e) {
-  console.log('FINAL: could not read next version:', e.message);
+  console.log('Cannot read next version:', e.message);
 }
-console.log('=== END DEBUG ===\n');
+console.log('=== END ===\n');
