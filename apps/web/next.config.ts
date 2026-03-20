@@ -1,11 +1,23 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
+/** Monorepo root (repo root), not apps/web — required for correct NFT when using workspaces. */
+const monorepoRoot = path.resolve(__dirname, '..', '..');
+
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  /**
+   * Trace files from the repo root so `@zmanim-app/*` workspace packages resolve on Vercel.
+   * Without this, dynamic routes can 404 in production while static pages & APIs still work.
+   */
+  outputFileTracingRoot: monorepoRoot,
+  /**
+   * `standalone` is for Docker/self-host. On Vercel it fights the platform bundle and can
+   * drop App Router lambdas for dynamic pages. Keep standalone for local `node server.js` flows.
+   */
+  ...(process.env.VERCEL ? {} : { output: 'standalone' as const }),
   transpilePackages: ['@zmanim-app/core', '@zmanim-app/db', '@zmanim-app/ui'],
   turbopack: {
-    root: path.resolve(__dirname, '..', '..'),
+    root: monorepoRoot,
   },
   /** Legacy /demo/:id only — do not redirect all /:a/:b or /login/sso-callback would break. */
   async redirects() {
