@@ -4,9 +4,12 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const pkgPath = path.join(root, 'package.json');
 
+// Wipe stale cache
 const lockPath = path.join(root, 'package-lock.json');
 if (fs.existsSync(lockPath)) fs.unlinkSync(lockPath);
+execSync('rm -rf node_modules apps/web/node_modules packages/*/node_modules', { cwd: root, stdio: 'inherit' });
 
+// Temporarily exclude desktop/db workspaces
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 const saved = pkg.workspaces;
 pkg.workspaces = ['packages/core', 'packages/ui', 'apps/web'];
