@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd ../.. && npm install --workspace=apps/web --workspace=packages/core --workspace=packages/db --workspace=packages/ui --workspace=packages/export --workspace=packages/importer --include=dev",
-  "buildCommand": "ls -la node_modules/@clerk/nextjs/package.json 2>&1; ls -la node_modules/@zmanim-app 2>&1; echo '--- Starting next build ---'; next build",
+  "buildCommand": "ln -snf ../../node_modules node_modules && next build",
   "framework": "nextjs"
 }
