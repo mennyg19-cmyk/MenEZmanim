@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "postinstall": "node -e \"if(!process.env.VERCEL)require('child_process').execSync('prisma generate',{stdio:'inherit'})\"",
+    "postinstall": "prisma generate",
     "build": "prisma generate && tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
