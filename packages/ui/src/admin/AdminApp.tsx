@@ -251,7 +251,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
               <div className="adm-card">
                 <h3 className="adm-sectionTitle" style={{ margin: '0 0 12px' }}>Preview</h3>
                 <a
-                  href="/demo/1"
+                  href="/show/demo/1"
                   target="_blank"
                   rel="noopener"
                   className="adm-btnPrimary"
@@ -432,7 +432,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
         <div style={{ padding: '12px 8px', borderTop: '1px solid var(--adm-sidebar-border)' }}>
           <a
-            href="/demo/1"
+            href="/show/demo/1"
             target="_blank"
             rel="noopener"
             className="adm-btnPrimary"
@@ -462,7 +462,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
             </span>
           </h1>
           {activeSection === 'editor' && (
-            <a href="/demo/1" target="_blank" rel="noopener" className="adm-link" style={{ fontSize: 13 }}>
+            <a href="/show/demo/1" target="_blank" rel="noopener" className="adm-link" style={{ fontSize: 13 }}>
               Preview in new tab →
             </a>
           )}

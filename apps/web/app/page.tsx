@@ -40,7 +40,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-3">
           <span className="text-xl font-bold tracking-tight">Zmanim App</span>
           <nav className="flex flex-wrap items-center gap-4 text-sm">
-            <Link href="/demo/1" className="text-sky-400 hover:text-sky-300 transition-colors">
+            <Link href="/show/demo/1" className="text-sky-400 hover:text-sky-300 transition-colors">
               View demo
             </Link>
             <Link href="/mobile" className="text-sky-400 hover:text-sky-300 transition-colors">
@@ -76,7 +76,7 @@ export default function HomePage() {
               Get started
             </Link>
             <Link
-              href="/demo/1"
+              href="/show/demo/1"
               className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-800/50 px-8 py-3 text-lg font-semibold text-slate-100 hover:bg-slate-800 transition-colors"
             >
               View live demo
@@ -112,20 +112,20 @@ export default function HomePage() {
                 ready to explore without signing in.
               </p>
               <Link
-                href="/demo/1"
+                href="/show/demo/1"
                 className="inline-flex rounded-lg bg-sky-600 px-6 py-2.5 font-semibold text-white hover:bg-sky-500 transition-colors"
               >
                 Open display demo
               </Link>
             </div>
             <Link
-              href="/demo/1"
+              href="/show/demo/1"
               className="block rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 aspect-video shadow-2xl shadow-black/50 hover:border-sky-700/50 transition-colors group"
             >
               <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-900 to-slate-950 min-h-[200px]">
                 <div className="text-slate-500 text-sm mb-2">Preview</div>
                 <div className="text-2xl font-bold text-white group-hover:text-sky-300 transition-colors">
-                  /demo/1
+                  /show/demo/1
                 </div>
                 <div className="text-slate-500 text-sm mt-2">Main display · sample data</div>
               </div>
@@ -144,7 +144,7 @@ export default function HomePage() {
             <Link href="/register" className="hover:text-slate-300 transition-colors">
               Register
             </Link>
-            <Link href="/demo/1" className="hover:text-slate-300 transition-colors">
+            <Link href="/show/demo/1" className="hover:text-slate-300 transition-colors">
               Demo
             </Link>
             <Link href="/mobile" className="hover:text-slate-300 transition-colors">
