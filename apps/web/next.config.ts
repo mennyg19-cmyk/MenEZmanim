@@ -5,6 +5,13 @@ import path from 'path';
 const monorepoRoot = path.resolve(__dirname, '..', '..');
 
 const nextConfig: NextConfig = {
+  /** Turso/libSQL: keep nested `hrana-client` resolution on the server filesystem (avoid broken Turbopack bundles). */
+  serverExternalPackages: [
+    '@prisma/adapter-libsql',
+    '@libsql/client',
+    '@libsql/hrana-client',
+    'libsql',
+  ],
   /**
    * Trace files from the repo root so `@zmanim-app/*` workspace packages resolve on Vercel.
    * Without this, dynamic routes can 404 in production while static pages & APIs still work.
@@ -15,7 +22,7 @@ const nextConfig: NextConfig = {
    * drop App Router lambdas for dynamic pages. Keep standalone for local `node server.js` flows.
    */
   ...(process.env.VERCEL ? {} : { output: 'standalone' as const }),
-  transpilePackages: ['@zmanim-app/core', '@zmanim-app/ui'],
+  transpilePackages: ['@zmanim-app/core', '@zmanim-app/ui', '@zmanim-app/db'],
   turbopack: {
     root: monorepoRoot,
   },

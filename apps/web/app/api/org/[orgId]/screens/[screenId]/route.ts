@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../../_lib/response';
-import { store } from '../../../../_lib/store';
+import * as da from '../../../../_lib/data-access';
 
 type Ctx = { params: Promise<{ orgId: string; screenId: string }> };
 
@@ -15,10 +15,10 @@ function parseResolution(res: string): { width: number; height: number } {
 export async function GET(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, screenId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
-    const screens = store.getOrgScreens(orgId);
+    const screens = await da.getOrgScreens(orgId);
     let screen = screens.find((s) => s.id === screenId);
     if (!screen) {
       const idx = parseInt(screenId, 10);
@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
     }
     if (!screen) return error('Screen not found', 404);
 
-    const styles = store.getOrgStyles(orgId);
+    const styles = await da.getOrgStyles(orgId);
     const assignedStyle = screen.styleId ? styles.find((s) => s.id === screen.styleId) : null;
 
     return json({
@@ -48,25 +48,26 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 export async function PUT(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, screenId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
-    const screens = store.getOrgScreens(orgId);
+    const resolvedId = (await da.resolveOrgId(orgId)) ?? org.id;
+    const screens = await da.getOrgScreens(orgId);
     const idx = screens.findIndex((s) => s.id === screenId);
     if (idx === -1) return error('Screen not found', 404);
 
     const body = await request.json();
-    const updates: Partial<typeof screens[0]> = {};
+    const updates: Parameters<typeof da.updateScreen>[2] = {};
 
     if (body.name !== undefined) updates.name = body.name;
     if (body.styleId !== undefined) updates.styleId = body.styleId;
     if (body.resolution !== undefined) updates.resolution = body.resolution;
     if (body.active !== undefined) updates.active = body.active;
 
-    screens[idx] = { ...screens[idx], ...updates };
-    store.screens.set(orgId, screens);
+    const updated = await da.updateScreen(resolvedId, screenId, updates);
+    if (!updated) return error('Screen not found', 404);
 
-    return json(screens[idx]);
+    return json(updated);
   } catch (err) {
     console.error('Screen PUT error:', err);
     return error('Internal server error', 500);
@@ -76,15 +77,12 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
 export async function DELETE(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, screenId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
-    const screens = store.getOrgScreens(orgId);
-    const idx = screens.findIndex((s) => s.id === screenId);
-    if (idx === -1) return error('Screen not found', 404);
-
-    screens.splice(idx, 1);
-    store.screens.set(orgId, screens);
+    const resolvedId = (await da.resolveOrgId(orgId)) ?? org.id;
+    const ok = await da.deleteScreen(resolvedId, screenId);
+    if (!ok) return error('Screen not found', 404);
 
     return json({ deleted: true });
   } catch (err) {

@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../_lib/response';
-import { store } from '../../../_lib/store';
+import * as da from '../../../_lib/data-access';
 
 type Ctx = { params: Promise<{ orgId: string }> };
 
 export async function POST(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
     const body = await request.json();

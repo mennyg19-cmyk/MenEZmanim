@@ -1,15 +1,16 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../_lib/response';
-import { store, type DaveningGroup } from '../../../_lib/store';
+import * as da from '../../../_lib/data-access';
+import type { DaveningGroup } from '../../../_lib/store-types';
 
 type Ctx = { params: Promise<{ orgId: string }> };
 
 export async function GET(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
-    return json(store.getOrgGroups(orgId));
+    return json(await da.getOrgGroups(orgId));
   } catch (err) {
     console.error('Groups GET error:', err);
     return error('Internal server error', 500);
@@ -19,12 +20,12 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 export async function POST(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
     const body = await request.json();
-    const resolvedId = store.resolveOrgId(orgId) ?? orgId;
-    const existing = store.groups.get(resolvedId) ?? [];
+    const resolvedId = (await da.resolveOrgId(orgId)) ?? org.id;
+    const existing = await da.getOrgGroups(orgId);
 
     const group: DaveningGroup = {
       id: body.id ?? `group-${Date.now()}`,
@@ -35,9 +36,8 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       active: body.active ?? true,
     };
 
-    existing.push(group);
-    store.groups.set(resolvedId, existing);
-    return json(group, 201);
+    const created = await da.appendGroup(resolvedId, group);
+    return json(created, 201);
   } catch (err) {
     console.error('Groups POST error:', err);
     return error('Internal server error', 500);
@@ -47,12 +47,12 @@ export async function POST(request: NextRequest, ctx: Ctx) {
 export async function PUT(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
-    const body = await request.json() as DaveningGroup[];
-    const resolvedId = store.resolveOrgId(orgId) ?? orgId;
-    store.groups.set(resolvedId, body);
+    const body = (await request.json()) as DaveningGroup[];
+    const resolvedId = (await da.resolveOrgId(orgId)) ?? org.id;
+    await da.replaceGroups(resolvedId, body);
     return json(body);
   } catch (err) {
     console.error('Groups PUT error:', err);

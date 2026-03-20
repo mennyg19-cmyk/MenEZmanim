@@ -1,4 +1,4 @@
-import { PrismaClient, MinyanSchedule } from '@prisma/client';
+import { Prisma, PrismaClient, MinyanSchedule } from '@prisma/client';
 import { getDbClient } from '../client';
 
 export class MinyanScheduleRepository {
@@ -26,11 +26,11 @@ export class MinyanScheduleRepository {
     });
   }
 
-  async create(data: Omit<MinyanSchedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<MinyanSchedule> {
+  async create(data: Prisma.MinyanScheduleUncheckedCreateInput): Promise<MinyanSchedule> {
     return this.db.minyanSchedule.create({ data });
   }
 
-  async update(id: string, data: Partial<MinyanSchedule>): Promise<MinyanSchedule> {
+  async update(id: string, data: Prisma.MinyanScheduleUncheckedUpdateInput): Promise<MinyanSchedule> {
     return this.db.minyanSchedule.update({ where: { id }, data });
   }
 

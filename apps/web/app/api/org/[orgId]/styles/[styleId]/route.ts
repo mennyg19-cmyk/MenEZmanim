@@ -1,14 +1,13 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../../_lib/response';
-import { store } from '../../../../_lib/store';
+import * as da from '../../../../_lib/data-access';
 
 type Ctx = { params: Promise<{ orgId: string; styleId: string }> };
 
 export async function GET(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, styleId } = await ctx.params;
-    const styles = store.getOrgStyles(orgId);
-    const style = styles.find((s) => s.id === styleId);
+    const style = await da.getStyleById(orgId, styleId);
     if (!style) return error('Style not found', 404);
     return json(style);
   } catch (err) {
@@ -20,18 +19,14 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 export async function PUT(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, styleId } = await ctx.params;
-    const resolvedId = store.resolveOrgId(orgId);
+    const resolvedId = await da.resolveOrgId(orgId);
     if (!resolvedId) return error('Organization not found', 404);
 
-    const styles = store.getOrgStyles(orgId);
-    const idx = styles.findIndex((s) => s.id === styleId);
-    if (idx === -1) return error('Style not found', 404);
-
     const body = await request.json();
-    styles[idx] = { ...styles[idx], ...body, id: styleId };
-    store.styles.set(resolvedId, styles);
+    const updated = await da.updateStyle(resolvedId, styleId, body);
+    if (!updated) return error('Style not found', 404);
 
-    return json(styles[idx]);
+    return json(updated);
   } catch (err) {
     console.error('Style PUT error:', err);
     return error('Internal server error', 500);
@@ -41,15 +36,11 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
 export async function DELETE(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, styleId } = await ctx.params;
-    const resolvedId = store.resolveOrgId(orgId);
+    const resolvedId = await da.resolveOrgId(orgId);
     if (!resolvedId) return error('Organization not found', 404);
 
-    const styles = store.getOrgStyles(orgId);
-    const idx = styles.findIndex((s) => s.id === styleId);
-    if (idx === -1) return error('Style not found', 404);
-
-    styles.splice(idx, 1);
-    store.styles.set(resolvedId, styles);
+    const ok = await da.deleteStyle(resolvedId, styleId);
+    if (!ok) return error('Style not found', 404);
 
     return json({ deleted: true });
   } catch (err) {

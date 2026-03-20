@@ -1,22 +1,22 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../_lib/response';
-import { store } from '../../../_lib/store';
+import * as da from '../../../_lib/data-access';
 
 type Ctx = { params: Promise<{ orgId: string }> };
 
 export async function GET(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
     const { searchParams } = request.nextUrl;
     const type = searchParams.get('type') ?? 'json';
 
-    const schedules = store.getOrgSchedules(orgId);
-    const announcements = store.getOrgAnnouncements(orgId);
-    const memorials = store.getOrgMemorials(orgId);
-    const styles = store.getOrgStyles(orgId);
+    const schedules = await da.getOrgSchedules(orgId);
+    const announcements = await da.getOrgAnnouncements(orgId);
+    const memorials = await da.getOrgMemorials(orgId);
+    const styles = await da.getOrgStyles(orgId);
 
     const exportData = {
       org,
@@ -53,8 +53,7 @@ export async function GET(request: NextRequest, ctx: Ctx) {
           'VERSION:2.0',
           `PRODID:-//ZmanimApp//${orgId}//EN`,
           ...schedules.map(
-            (s) =>
-              `BEGIN:VEVENT\nSUMMARY:${s.name}\nDESCRIPTION:${s.type}\nEND:VEVENT`,
+            (s) => `BEGIN:VEVENT\nSUMMARY:${s.name}\nDESCRIPTION:${s.type}\nEND:VEVENT`,
           ),
           'END:VCALENDAR',
         ];

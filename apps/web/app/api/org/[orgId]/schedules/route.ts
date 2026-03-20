@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../_lib/response';
-import { store, type MinyanSchedule } from '../../../_lib/store';
+import * as da from '../../../_lib/data-access';
+import type { MinyanSchedule } from '../../../_lib/store-types';
 
 type Ctx = { params: Promise<{ orgId: string }> };
 
@@ -28,9 +29,9 @@ function enrichSchedule(s: MinyanSchedule) {
 export async function GET(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
-    const schedules = store.getOrgSchedules(orgId);
+    const schedules = await da.getOrgSchedules(orgId);
     return json(schedules.map(enrichSchedule));
   } catch (err) {
     console.error('Schedules GET error:', err);
@@ -41,11 +42,11 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 export async function POST(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
     const body = await request.json();
-    const resolvedId = store.resolveOrgId(orgId) ?? orgId;
+    const resolvedId = (await da.resolveOrgId(orgId)) ?? org.id;
     const schedule: MinyanSchedule = {
       id: body.id ?? `sched-${Date.now()}`,
       orgId: resolvedId,
@@ -69,10 +70,8 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       placeholderLabel: body.placeholderLabel,
     };
 
-    const existing = store.schedules.get(resolvedId) ?? [];
-    existing.push(schedule);
-    store.schedules.set(resolvedId, existing);
-    return json(schedule, 201);
+    const created = await da.appendSchedule(resolvedId, schedule);
+    return json(created, 201);
   } catch (err) {
     console.error('Schedules POST error:', err);
     return error('Internal server error', 500);
@@ -82,12 +81,12 @@ export async function POST(request: NextRequest, ctx: Ctx) {
 export async function PUT(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
-    const body = await request.json() as MinyanSchedule[];
-    const resolvedId = store.resolveOrgId(orgId) ?? orgId;
-    store.schedules.set(resolvedId, body);
+    const body = (await request.json()) as MinyanSchedule[];
+    const resolvedId = (await da.resolveOrgId(orgId)) ?? org.id;
+    await da.replaceSchedules(resolvedId, body);
     return json(body);
   } catch (err) {
     console.error('Schedules PUT error:', err);

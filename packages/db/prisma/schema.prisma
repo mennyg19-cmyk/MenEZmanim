@@ -22,6 +22,7 @@ model Organization {
   rabbeinu_tam_minutes   Int      @default(72)
   amPmFormat             Boolean  @default(false)
   inIsrael               Boolean  @default(false)
+  settings               String   @default("{}")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -70,13 +71,16 @@ model User {
 }
 
 model Style {
-  id              String   @id @default(cuid())
-  name            String
-  orgId           String
-  backgroundImage String?
-  isDefault       Boolean  @default(false)
-  activationRules String
-  sortOrder       Int      @default(0)
+  id               String   @id @default(cuid())
+  name             String
+  orgId            String
+  backgroundImage  String?
+  backgroundColor  String   @default("#0f172a")
+  canvasWidth      Int      @default(1920)
+  canvasHeight     Int      @default(1080)
+  isDefault        Boolean  @default(false)
+  activationRules  String
+  sortOrder        Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -100,6 +104,7 @@ model DisplayObject {
   fontFamily              String   @default("David Libre")
   fontSize                Int      @default(16)
   fontBold                Boolean  @default(false)
+  fontItalic              Boolean  @default(false)
   foreColor               String   @default("#000000")
   backColor               String   @default("transparent")
   language                String   @default("hebrew")
@@ -121,6 +126,7 @@ model ScheduleGroup {
   name                String
   hebrewName          String
   color               String
+  active              Boolean  @default(true)
   autoActivationRules String?
   sortOrder           Int
   isBuiltIn           Boolean  @default(true)
@@ -166,6 +172,7 @@ model MinyanSchedule {
   room             String?
   dayOfWeekMask    String   @default("1111111")
   scheduleGroupIds String?
+  details          Json?
   isActive         Boolean  @default(true)
   sortOrder        Int
   createdAt        DateTime @default(now())
@@ -177,15 +184,19 @@ model MinyanSchedule {
 }
 
 model Announcement {
-  id            String   @id @default(cuid())
-  orgId         String
-  title         String
-  content       String
-  scheduleRules String?
-  priority      Int      @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  orgId          String
+  title          String
+  titleHebrew    String?
+  content        String
+  contentHebrew  String?
+  scheduleRules  String?
+  priority       Int      @default(0)
+  isActive       Boolean  @default(true)
+  startDate      String?
+  endDate        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 

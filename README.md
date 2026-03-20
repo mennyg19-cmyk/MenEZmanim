@@ -61,12 +61,26 @@ The web app uses [Clerk](https://clerk.com) for sign-in (Google, GitHub, email, 
 3. Set **Root Directory** to `apps/web`.
 4. Vercel reads [apps/web/vercel.json](apps/web/vercel.json): install runs from the monorepo root (`cd ../.. && npm install`), build runs `turbo` for the web app.
 5. Add the **Clerk** environment variables above in the Vercel project settings (Production & Preview).
+6. **Persist API data (Turso)** — see below.
 
-The demo uses an in-memory API store — no database is required for the hosted demo.
+### Production database (Turso + Prisma)
 
-### SaaS (Vercel + Supabase) — optional DB
+The Next.js `/api/org/*` routes use `@zmanim-app/db` (Prisma + SQLite dialect). On Vercel, point Prisma at **Turso** (hosted libSQL); locally, a SQLite file is used when Turso env vars are unset.
 
-For a persistent database later, create a Supabase project and set `DATABASE_URL` (and run Prisma migrations). The current web API uses in-memory data by default.
+1. Create a database at [Turso](https://turso.tech) and copy the **database URL** and **auth token**.
+2. In Vercel → Project → Settings → Environment Variables, add (Production & Preview):
+   - `TURSO_DATABASE_URL` — e.g. `libsql://your-db-org.turso.io`
+   - `TURSO_AUTH_TOKEN` — from the Turso dashboard
+3. **Schema:** from your machine (with Turso env vars set), run:
+   - `cd packages/db && npx prisma db push`
+   - Optional explicit seed: `npm run db:seed` in `packages/db`
+4. **Build:** the monorepo install must include `packages/db` and run `prisma generate` (see `scripts/vercel-install.js` if you use a custom install).
+
+First API request to an empty database will also run the **demo org seed** (`seedDemoOrganization`) so `demo` / default org data exists.
+
+### Local / offline API database
+
+Without `TURSO_DATABASE_URL`, `packages/db` uses `DATABASE_URL` if set, otherwise defaults to `file:./data/zmanim.db` relative to the **process cwd** (set `DATABASE_URL=file:./data/zmanim.db` from the repo root when running the web app if needed). Run `cd packages/db && npx prisma db push` once to create tables.
 
 ### Git & GitHub
 
@@ -103,7 +117,9 @@ Copy `.env.example` to `.env` and adjust:
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | SQLite: `file:./data/zmanim.db` or PostgreSQL connection string |
+| `DATABASE_URL` | Local SQLite file for Prisma (when not using Turso), e.g. `file:./data/zmanim.db` |
+| `TURSO_DATABASE_URL` | Turso libSQL URL (Vercel / cloud) |
+| `TURSO_AUTH_TOKEN` | Turso auth token |
 | `NEXTAUTH_SECRET` | Secret for NextAuth (cloud mode) |
 | `NEXTAUTH_URL` | Public URL of the app |
 | `APP_MODE` | `local` \| `cloud` \| `hybrid` |

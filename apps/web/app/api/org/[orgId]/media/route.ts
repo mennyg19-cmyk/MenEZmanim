@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import path from 'path';
 import { writeFile, mkdir } from 'fs/promises';
 import { json, error, options } from '../../../_lib/response';
-import { store, type MediaItem } from '../../../_lib/store';
+import * as da from '../../../_lib/data-access';
+import type { MediaItem } from '../../../_lib/store-types';
 
 const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
@@ -11,10 +12,10 @@ type Ctx = { params: Promise<{ orgId: string }> };
 export async function GET(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
-    return json(store.getOrgMedia(orgId));
+    return json(await da.getOrgMedia(orgId));
   } catch (err) {
     console.error('Media GET error:', err);
     return error('Internal server error', 500);
@@ -27,10 +28,9 @@ async function uploadToBlob(file: File, uniqueName: string): Promise<string> {
   return blob.url;
 }
 
-async function uploadToLocal(file: File, uniqueName: string): Promise<string> {
+async function writeUploadLocal(buffer: Buffer, uniqueName: string): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   await mkdir(uploadsDir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(uploadsDir, uniqueName), buffer);
   return `/uploads/${uniqueName}`;
 }
@@ -38,7 +38,7 @@ async function uploadToLocal(file: File, uniqueName: string): Promise<string> {
 export async function POST(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const resolvedId = store.resolveOrgId(orgId);
+    const resolvedId = await da.resolveOrgId(orgId);
     if (!resolvedId) return error('Organization not found', 404);
 
     const formData = await request.formData();
@@ -53,9 +53,10 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       .replace(ext, '');
     const uniqueName = `${safeName}-${Date.now()}${ext}`;
 
+    const buffer = Buffer.from(await file.arrayBuffer());
     const url = useBlob
-      ? await uploadToBlob(file, uniqueName)
-      : await uploadToLocal(file, uniqueName);
+      ? await uploadToBlob(new File([buffer], file.name, { type: file.type }), uniqueName)
+      : await writeUploadLocal(buffer, uniqueName);
 
     const item: MediaItem = {
       id: `media-${Date.now()}`,
@@ -66,11 +67,8 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       uploadedAt: new Date().toISOString(),
     };
 
-    const existing = store.media.get(resolvedId) ?? [];
-    existing.push(item);
-    store.media.set(resolvedId, existing);
-
-    return json(item, 201);
+    const created = await da.createMediaItem(item, url, buffer.length);
+    return json(created, 201);
   } catch (err) {
     console.error('Media POST error:', err);
     return error('Internal server error', 500);

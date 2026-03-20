@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../_lib/response';
-import { store } from '../../_lib/store';
+import * as da from '../../_lib/data-access';
+import type { Organization } from '../../_lib/store-types';
 
 type Ctx = { params: Promise<{ orgId: string }> };
 
 export async function GET(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
     return json(org);
   } catch (err) {
@@ -19,18 +20,20 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 export async function PUT(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
-    const org = store.getOrg(orgId);
+    const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
     const body = await request.json();
-    // Keep canonical org.id (e.g. "default"); URL may use slug "demo" — do not overwrite id with slug.
     const canonicalId = org.id;
-    const updated = { ...org, ...body, id: canonicalId };
-    store.orgs.set(canonicalId, updated);
-    if (org.slug && org.slug !== canonicalId) {
-      store.orgs.set(org.slug, updated);
+    const updated: Organization = { ...org, ...body, id: canonicalId };
+    if (body.location && typeof body.location === 'object') {
+      updated.location = { ...org.location, ...(body.location as Organization['location']) };
     }
-    return json(updated);
+    if (body.settings && typeof body.settings === 'object') {
+      updated.settings = { ...org.settings, ...(body.settings as Record<string, unknown>) };
+    }
+    const saved = await da.saveOrganizationDto(updated);
+    return json(saved);
   } catch (err) {
     console.error('Org PUT error:', err);
     return error('Internal server error', 500);
