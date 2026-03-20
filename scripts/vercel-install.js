@@ -16,3 +16,13 @@ try {
   pkg.workspaces = saved;
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 }
+
+const webNm = path.join(root, 'apps', 'web', 'node_modules');
+const rootNext = path.join(root, 'node_modules', 'next');
+const webNext = path.join(webNm, 'next');
+
+if (fs.existsSync(rootNext) && !fs.existsSync(webNext)) {
+  fs.mkdirSync(webNm, { recursive: true });
+  fs.symlinkSync(rootNext, webNext);
+  console.log('Linked next into apps/web/node_modules');
+}
