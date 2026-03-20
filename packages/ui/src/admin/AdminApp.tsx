@@ -326,7 +326,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                       }
                     },
                     bgUploading,
-                    previewUrl: `/${orgId}/${activeEditorScreen ? screens.indexOf(activeEditorScreen) + 1 : 1}`,
+                    previewUrl: `/show/${orgId}/${activeEditorScreen ? screens.indexOf(activeEditorScreen) + 1 : 1}`,
                   }}
                   snapToGrid
                   gridSize={10}

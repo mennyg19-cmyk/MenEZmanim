@@ -333,8 +333,16 @@ const DEFAULT_SCHEDULES: MinyanSchedule[] = [
   { id: 'sched-27', orgId: 'default', name: "מעריב ו'", type: 'Maariv', groupId: 'g-shabbat', baseZman: 'tzeit', offset: 50, sortOrder: 26 },
 ];
 
+function normalizeOrgLookupKey(key: string): string {
+  return decodeURIComponent(key).trim();
+}
+
 class InMemoryStore {
-  orgs: Map<string, Organization> = new Map([['default', DEFAULT_ORG]]);
+  /** Keys: canonical id + slug (same org object) for reliable lookup */
+  orgs: Map<string, Organization> = new Map([
+    ['default', DEFAULT_ORG],
+    ['demo', DEFAULT_ORG],
+  ]);
   styles: Map<string, DisplayStyle[]> = new Map([['default', [DEFAULT_STYLE]]]);
   screens: Map<string, Screen[]> = new Map([['default', [DEFAULT_SCREEN]]]);
   announcements: Map<string, Announcement[]> = new Map([['default', [
@@ -444,20 +452,21 @@ class InMemoryStore {
   ]]]);
 
   getOrg(orgId: string): Organization | undefined {
-    const direct = this.orgs.get(orgId);
+    const key = normalizeOrgLookupKey(orgId);
+    const direct = this.orgs.get(key);
     if (direct) return direct;
+    const lower = key.toLowerCase();
     for (const org of this.orgs.values()) {
-      if (org.slug === orgId) return org;
+      if (org.id.toLowerCase() === lower || org.slug.toLowerCase() === lower) {
+        return org;
+      }
     }
     return undefined;
   }
 
+  /** Canonical storage id (e.g. "default"), never the slug alone when they differ */
   resolveOrgId(orgIdOrSlug: string): string | undefined {
-    if (this.orgs.has(orgIdOrSlug)) return orgIdOrSlug;
-    for (const org of this.orgs.values()) {
-      if (org.slug === orgIdOrSlug) return org.id;
-    }
-    return undefined;
+    return this.getOrg(orgIdOrSlug)?.id;
   }
 
   getOrgStyles(orgIdOrSlug: string): DisplayStyle[] {

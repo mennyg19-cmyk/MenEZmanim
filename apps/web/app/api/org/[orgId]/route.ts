@@ -23,8 +23,13 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     if (!org) return error('Organization not found', 404);
 
     const body = await request.json();
-    const updated = { ...org, ...body, id: orgId };
-    store.orgs.set(orgId, updated);
+    // Keep canonical org.id (e.g. "default"); URL may use slug "demo" — do not overwrite id with slug.
+    const canonicalId = org.id;
+    const updated = { ...org, ...body, id: canonicalId };
+    store.orgs.set(canonicalId, updated);
+    if (org.slug && org.slug !== canonicalId) {
+      store.orgs.set(org.slug, updated);
+    }
     return json(updated);
   } catch (err) {
     console.error('Org PUT error:', err);
