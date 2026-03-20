@@ -21,6 +21,9 @@ export async function DELETE(_request: NextRequest, ctx: Ctx) {
     if (item.url.startsWith('/uploads/')) {
       const filePath = path.join(process.cwd(), 'public', item.url);
       await unlink(filePath).catch(() => {});
+    } else if (item.url.includes('.vercel-storage.com') || item.url.includes('.blob.vercel-storage.com')) {
+      const { del } = await import('@vercel/blob');
+      await del(item.url).catch(() => {});
     }
 
     mediaList.splice(idx, 1);

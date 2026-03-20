@@ -4,6 +4,8 @@ import { writeFile, mkdir } from 'fs/promises';
 import { json, error, options } from '../../../_lib/response';
 import { store, type MediaItem } from '../../../_lib/store';
 
+const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+
 type Ctx = { params: Promise<{ orgId: string }> };
 
 export async function GET(_request: NextRequest, ctx: Ctx) {
@@ -17,6 +19,20 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
     console.error('Media GET error:', err);
     return error('Internal server error', 500);
   }
+}
+
+async function uploadToBlob(file: File, uniqueName: string): Promise<string> {
+  const { put } = await import('@vercel/blob');
+  const blob = await put(uniqueName, file, { access: 'public' });
+  return blob.url;
+}
+
+async function uploadToLocal(file: File, uniqueName: string): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  await mkdir(uploadsDir, { recursive: true });
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(path.join(uploadsDir, uniqueName), buffer);
+  return `/uploads/${uniqueName}`;
 }
 
 export async function POST(request: NextRequest, ctx: Ctx) {
@@ -37,16 +53,14 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       .replace(ext, '');
     const uniqueName = `${safeName}-${Date.now()}${ext}`;
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(uploadsDir, uniqueName), buffer);
+    const url = useBlob
+      ? await uploadToBlob(file, uniqueName)
+      : await uploadToLocal(file, uniqueName);
 
     const item: MediaItem = {
       id: `media-${Date.now()}`,
       orgId: resolvedId,
-      url: `/uploads/${uniqueName}`,
+      url,
       filename: file.name,
       mimeType: file.type || 'application/octet-stream',
       uploadedAt: new Date().toISOString(),
