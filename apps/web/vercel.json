@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "node ../../scripts/vercel-install.js",
+  "installCommand": "cd ../.. && node -e \"var f=require('fs'),p='package.json',o=JSON.parse(f.readFileSync(p));o.workspaces=['packages/core','packages/ui','apps/web'];f.writeFileSync(p,JSON.stringify(o,null,2))\" && npm install && test -d apps/web/node_modules/next || (mkdir -p apps/web/node_modules && ln -s ../../node_modules/next apps/web/node_modules/next)",
   "buildCommand": "cd ../.. && npx next build apps/web",
   "framework": "nextjs"
 }
