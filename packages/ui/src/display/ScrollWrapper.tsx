@@ -26,31 +26,52 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
   const speed = config?.speed ?? 30;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const [contentSize, setContentSize] = useState(0);
   const [containerSize, setContainerSize] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [measured, setMeasured] = useState(false);
 
   const isVertical = direction === 'up' || direction === 'down';
 
   const measure = useCallback(() => {
-    if (!containerRef.current || !contentRef.current) return;
+    if (!containerRef.current || !measureRef.current) return;
+    const cSize = isVertical
+      ? containerRef.current.clientHeight
+      : containerRef.current.clientWidth;
+
+    // Temporarily remove overflow constraint to measure true content size
+    const el = measureRef.current;
+    const prevOverflow = el.style.overflow;
+    const prevHeight = el.style.height;
+    const prevWidth = el.style.width;
+    el.style.overflow = 'visible';
     if (isVertical) {
-      setContentSize(contentRef.current.scrollHeight);
-      setContainerSize(containerRef.current.clientHeight);
+      el.style.height = 'auto';
     } else {
-      setContentSize(contentRef.current.scrollWidth);
-      setContainerSize(containerRef.current.clientWidth);
+      el.style.width = 'auto';
     }
-    setReady(true);
+
+    const mSize = isVertical ? el.scrollHeight : el.scrollWidth;
+
+    el.style.overflow = prevOverflow;
+    el.style.height = prevHeight;
+    el.style.width = prevWidth;
+
+    setContainerSize(cSize);
+    setContentSize(mSize);
+    setMeasured(true);
   }, [isVertical]);
 
   useEffect(() => {
-    if (!enabled) { setReady(false); return; }
-    const timer = setTimeout(measure, 50);
-    const ro = new ResizeObserver(measure);
+    if (!enabled) { setMeasured(false); return; }
+    // Delay initial measurement to allow content to render
+    const timer = setTimeout(measure, 100);
+    const ro = new ResizeObserver(() => {
+      // Re-measure on any size change
+      measure();
+    });
     if (containerRef.current) ro.observe(containerRef.current);
-    if (contentRef.current) ro.observe(contentRef.current);
+    if (measureRef.current) ro.observe(measureRef.current);
     return () => { clearTimeout(timer); ro.disconnect(); };
   }, [enabled, measure]);
 
@@ -58,12 +79,13 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
     return <>{children}</>;
   }
 
-  const needsScroll = ready && contentSize > 0 && containerSize > 0;
+  const needsScroll = measured && contentSize > containerSize && containerSize > 0;
 
   if (!needsScroll) {
+    // Render content for measurement; overflow hidden so it doesn't visually spill
     return (
       <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', ...style }}>
-        <div ref={contentRef}>{children}</div>
+        <div ref={measureRef}>{children}</div>
       </div>
     );
   }
@@ -97,7 +119,7 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
           whiteSpace: isVertical ? undefined : 'nowrap',
         }}
       >
-        <div ref={contentRef} style={{ display: isVertical ? 'block' : 'inline-block' }}>{children}</div>
+        <div ref={measureRef} style={{ display: isVertical ? 'block' : 'inline-block' }}>{children}</div>
         <div aria-hidden style={{ display: isVertical ? 'block' : 'inline-block' }}>{children}</div>
       </div>
     </div>

@@ -897,8 +897,8 @@ export function WysiwygCanvas({
                 <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
                 <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
                 <div style={{
-                  pointerEvents: 'none', overflow: 'hidden', width: '100%',
-                  ...(obj.content?.scroll?.enabled ? {} : { height: '100%' }),
+                  pointerEvents: 'none', width: '100%',
+                  ...(obj.content?.scroll?.enabled ? {} : { height: '100%', overflow: 'hidden' }),
                   display: 'flex', flexDirection: 'column',
                   justifyContent: (obj.content?.verticalAlign ?? 'top') === 'middle' ? 'center' : (obj.content?.verticalAlign ?? 'top') === 'bottom' ? 'flex-end' : 'flex-start',
                 }}>
