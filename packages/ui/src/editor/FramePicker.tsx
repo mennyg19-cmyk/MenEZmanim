@@ -5,7 +5,7 @@ import { FRAME_CATALOG, type FrameCategory } from '../shared/frames';
 
 interface FramePickerProps {
   value?: string | null;
-  onChange: (frameId: string | undefined) => void;
+  onChange: (frameId: string | null) => void;
   /** Current thickness multiplier (default 1.0) */
   thickness?: number;
   /** Called when thickness changes */
@@ -67,7 +67,7 @@ export function FramePicker({ value, onChange, thickness = 1, onThicknessChange,
         type="button"
         className={!value ? 'ed-bgModeBtnActive' : 'ed-bgModeBtn'}
         style={{ width: '100%', justifyContent: 'center' }}
-        onClick={() => onChange(undefined)}
+        onClick={() => onChange(null)}
       >
         None
       </button>

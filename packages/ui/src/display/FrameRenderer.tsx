@@ -34,7 +34,7 @@ function parseCustomFrame(id: string): { url: string; slice: number } | undefine
 export function FrameRenderer({ frameId, thickness = 1, children, className, style }: FrameRendererProps) {
   if (!frameId) {
     return (
-      <div className={className} style={{ width: '100%', height: '100%', boxSizing: 'border-box', ...style }}>
+      <div className={className} style={{ position: 'relative', width: '100%', height: '100%', boxSizing: 'border-box', ...style }}>
         {children}
       </div>
     );

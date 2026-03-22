@@ -69,9 +69,9 @@ export interface DisplayStyle {
   /** Built-in texture id when backgroundMode is texture */
   backgroundTexture?: string;
   /** Decorative frame id for the full canvas (9-slice border) */
-  backgroundFrameId?: string;
+  backgroundFrameId?: string | null;
   /** Frame thickness multiplier (default 1.0) */
-  backgroundFrameThickness?: number;
+  backgroundFrameThickness?: number | null;
   canvasWidth: number;
   canvasHeight: number;
   objects: DisplayObject[];
