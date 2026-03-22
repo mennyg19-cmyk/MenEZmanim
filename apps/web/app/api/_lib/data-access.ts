@@ -267,11 +267,57 @@ export async function getOrgStyles(orgIdOrSlug: string): Promise<DisplayStyle[]>
   const id = await resolveOrgId(orgIdOrSlug);
   if (!id) return [];
   const db = getDbClient();
-  const rows = await db.style.findMany({
+  let rows = await db.style.findMany({
     where: { orgId: id },
     orderBy: { sortOrder: 'asc' },
     include: { displayObjects: { orderBy: { layer: 'asc' } } },
   });
+
+  // Auto-bootstrap a default style + screen if the org has none
+  if (rows.length === 0) {
+    const style = await db.style.create({
+      data: {
+        name: 'Default Style',
+        orgId: id,
+        backgroundColor: '#0f172a',
+        backgroundMode: 'solid',
+        canvasWidth: 1920,
+        canvasHeight: 1080,
+        isDefault: true,
+        activationRules: JSON.stringify({ type: 'always' }),
+        sortOrder: 0,
+      },
+    });
+    const screenCount = await db.screen.count({ where: { orgId: id } });
+    if (screenCount === 0) {
+      await db.screen.create({
+        data: {
+          name: 'Main Display',
+          orgId: id,
+          assignedStyleId: style.id,
+          isActive: true,
+          resolution: '1920x1080',
+        },
+      });
+    } else {
+      // Assign the new style to the first screen that has no style
+      const unassigned = await db.screen.findFirst({
+        where: { orgId: id, assignedStyleId: null },
+      });
+      if (unassigned) {
+        await db.screen.update({
+          where: { id: unassigned.id },
+          data: { assignedStyleId: style.id },
+        });
+      }
+    }
+    rows = await db.style.findMany({
+      where: { orgId: id },
+      orderBy: { sortOrder: 'asc' },
+      include: { displayObjects: { orderBy: { layer: 'asc' } } },
+    });
+  }
+
   return rows.map((r) => prismaStyleRowToDisplayStyle(r, r.displayObjects));
 }
 
@@ -789,6 +835,31 @@ export async function createOrganization(data: {
   await db.orgMembership.create({
     data: { userId: ownerUserId, orgId: org.id, role: 'owner' },
   });
+
+  // Create a default style and screen so the editor works immediately
+  const style = await db.style.create({
+    data: {
+      name: 'Default Style',
+      orgId: org.id,
+      backgroundColor: '#0f172a',
+      backgroundMode: 'solid',
+      canvasWidth: 1920,
+      canvasHeight: 1080,
+      isDefault: true,
+      activationRules: JSON.stringify({ type: 'always' }),
+      sortOrder: 0,
+    },
+  });
+  await db.screen.create({
+    data: {
+      name: 'Main Display',
+      orgId: org.id,
+      assignedStyleId: style.id,
+      isActive: true,
+      resolution: '1920x1080',
+    },
+  });
+
   return org;
 }
 
