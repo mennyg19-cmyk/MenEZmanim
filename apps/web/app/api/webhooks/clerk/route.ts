@@ -59,11 +59,21 @@ export async function POST(request: NextRequest) {
     const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'User';
 
     const db = getDbClient();
-    await db.user.upsert({
-      where: { clerkUserId },
-      create: { clerkUserId, email, name },
-      update: { email, name },
-    });
+
+    // Check if a pre-seeded user exists by email (e.g. super admin seed with placeholder clerkUserId)
+    const existingByEmail = await db.user.findUnique({ where: { email } });
+    if (existingByEmail && existingByEmail.clerkUserId !== clerkUserId) {
+      await db.user.update({
+        where: { id: existingByEmail.id },
+        data: { clerkUserId, name },
+      });
+    } else {
+      await db.user.upsert({
+        where: { clerkUserId },
+        create: { clerkUserId, email, name },
+        update: { email, name },
+      });
+    }
   }
 
   return NextResponse.json({ received: true });

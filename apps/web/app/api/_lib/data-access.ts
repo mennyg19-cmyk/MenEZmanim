@@ -670,6 +670,16 @@ export interface MeResponse {
 export async function getOrCreateUser(clerkUserId: string, email: string, name: string) {
   await ensureSeeded();
   const db = getDbClient();
+
+  // Check if a pre-seeded user exists by email with a placeholder clerkUserId
+  const existingByEmail = await db.user.findUnique({ where: { email } });
+  if (existingByEmail && existingByEmail.clerkUserId !== clerkUserId) {
+    return db.user.update({
+      where: { id: existingByEmail.id },
+      data: { clerkUserId, name },
+    });
+  }
+
   return db.user.upsert({
     where: { clerkUserId },
     create: { clerkUserId, email, name },

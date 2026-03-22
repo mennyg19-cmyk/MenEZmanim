@@ -71,12 +71,18 @@ const TYPE_COLORS: Record<string, string> = {
   Other: '#64748b',
 };
 
+type FilterMode = 'all' | 'ungrouped' | string;
 
 export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: ScheduleEditorProps) {
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(groups[0]?.id ?? null);
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'events' | 'groups'>('events');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [tab, setTab] = useState<'events' | 'table' | 'groups'>('events');
   const [editingGroup, setEditingGroup] = useState<DaveningGroup | null>(null);
+  const [bulkAction, setBulkAction] = useState<'copy' | 'move' | null>(null);
+  const [bulkTargetGroup, setBulkTargetGroup] = useState('');
+  const [tableSortCol, setTableSortCol] = useState<string>('name');
+  const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('asc');
 
   const groupMap = useMemo(() => {
     const m = new Map<string, DaveningGroup>();
@@ -84,12 +90,19 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
     return m;
   }, [groups]);
 
+  const ungroupedCount = useMemo(() => schedules.filter((s) => !s.groupId).length, [schedules]);
+
   const filteredEvents = useMemo(() => {
-    if (!activeGroupId) return schedules;
-    return schedules
-      .filter((s) => s.groupId === activeGroupId)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  }, [schedules, activeGroupId]);
+    let result: Schedule[];
+    if (filterMode === 'all') {
+      result = [...schedules];
+    } else if (filterMode === 'ungrouped') {
+      result = schedules.filter((s) => !s.groupId);
+    } else {
+      result = schedules.filter((s) => s.groupId === filterMode);
+    }
+    return result.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [schedules, filterMode]);
 
   const selectedEvent = schedules.find((s) => s.id === selectedEventId) ?? null;
 
@@ -100,12 +113,13 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
   const addEvent = useCallback((placeholder = false) => {
     const newId = `sched-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const maxSort = filteredEvents.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0);
+    const groupId = filterMode !== 'all' && filterMode !== 'ungrouped' ? filterMode : undefined;
     const newEvent: Schedule = {
       id: newId,
       orgId: 'default',
       name: placeholder ? '' : 'New Event',
       type: 'Other',
-      groupId: activeGroupId ?? undefined,
+      groupId,
       timeMode: 'fixed',
       fixedTime: '08:00',
       daysActive: [true, true, true, true, true, true, true],
@@ -115,18 +129,18 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
     };
     onChange([...schedules, newEvent]);
     setSelectedEventId(newId);
-  }, [schedules, onChange, filteredEvents, activeGroupId]);
+  }, [schedules, onChange, filteredEvents, filterMode]);
 
   const deleteEvent = useCallback((id: string) => {
     onChange(schedules.filter((s) => s.id !== id));
     if (selectedEventId === id) setSelectedEventId(null);
+    setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
   }, [schedules, onChange, selectedEventId]);
 
   const moveEvent = useCallback((idx: number, dir: -1 | 1) => {
     const events = [...filteredEvents];
     const targetIdx = idx + dir;
     if (targetIdx < 0 || targetIdx >= events.length) return;
-    const temp = events[idx].sortOrder;
     const ids = events.map((e) => e.id);
     [ids[idx], ids[targetIdx]] = [ids[targetIdx], ids[idx]];
     const updated = schedules.map((s) => {
@@ -142,19 +156,124 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
     const id = `group-${Date.now()}`;
     const g: DaveningGroup = { id, name: 'New Group', nameHebrew: 'קבוצה חדשה', color: '#3b82f6', sortOrder: groups.length, active: true };
     onGroupsChange([...groups, g]);
-    setActiveGroupId(id);
+    setFilterMode(id);
   }, [groups, onGroupsChange]);
 
   const deleteGroup = useCallback((id: string) => {
     if (!onGroupsChange) return;
     onGroupsChange(groups.filter((g) => g.id !== id));
-    if (activeGroupId === id) setActiveGroupId(groups.find((g) => g.id !== id)?.id ?? null);
-  }, [groups, onGroupsChange, activeGroupId]);
+    if (filterMode === id) setFilterMode('all');
+  }, [groups, onGroupsChange, filterMode]);
 
   const updateGroup = useCallback((id: string, patch: Partial<DaveningGroup>) => {
     if (!onGroupsChange) return;
     onGroupsChange(groups.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   }, [groups, onGroupsChange]);
+
+  const toggleSelect = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    const allFilteredIds = filteredEvents.filter((e) => !e.isPlaceholder).map((e) => e.id);
+    const allSelected = allFilteredIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allFilteredIds));
+    }
+  }, [filteredEvents, selectedIds]);
+
+  const executeBulkAction = useCallback(() => {
+    if (!bulkAction || !bulkTargetGroup || selectedIds.size === 0) return;
+
+    if (bulkAction === 'move') {
+      const targetGroup = bulkTargetGroup === '__none__' ? undefined : bulkTargetGroup;
+      onChange(schedules.map((s) =>
+        selectedIds.has(s.id) ? { ...s, groupId: targetGroup } : s
+      ));
+    } else if (bulkAction === 'copy') {
+      const copies: Schedule[] = [];
+      const targetGroup = bulkTargetGroup === '__none__' ? undefined : bulkTargetGroup;
+      const maxSort = schedules.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0);
+      let sortCounter = maxSort + 1;
+      for (const id of selectedIds) {
+        const original = schedules.find((s) => s.id === id);
+        if (!original) continue;
+        copies.push({
+          ...original,
+          id: `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          groupId: targetGroup,
+          sortOrder: sortCounter++,
+        });
+      }
+      onChange([...schedules, ...copies]);
+    }
+
+    setSelectedIds(new Set());
+    setBulkAction(null);
+    setBulkTargetGroup('');
+  }, [bulkAction, bulkTargetGroup, selectedIds, schedules, onChange]);
+
+  const getTimeDisplay = (ev: Schedule) => {
+    if (ev.isPlaceholder) return ev.placeholderLabel || '— spacer —';
+    if (ev.timeMode === 'dynamic') {
+      const zman = ZMANIM.find((z) => z.value === ev.baseZman)?.label ?? ev.baseZman ?? '?';
+      const off = ev.offset ?? 0;
+      return `${zman} ${off > 0 ? '+' : ''}${off !== 0 ? `${off}m` : ''}`.trim();
+    }
+    return ev.fixedTime ?? '';
+  };
+
+  const getGroupName = (groupId?: string) => {
+    if (!groupId) return '—';
+    const g = groupMap.get(groupId);
+    return g ? g.nameHebrew : groupId;
+  };
+
+  const getDaysDisplay = (ev: Schedule) => {
+    if (!ev.daysActive) return 'All';
+    const active = ev.daysActive.map((d, i) => d ? DAYS_HE[i] : null).filter(Boolean);
+    if (active.length === 7) return 'All';
+    if (active.length === 0) return 'None';
+    return active.join(' ');
+  };
+
+  const tableSorted = useMemo(() => {
+    const items = [...filteredEvents];
+    items.sort((a, b) => {
+      let va: string | number = '';
+      let vb: string | number = '';
+      switch (tableSortCol) {
+        case 'name': va = a.name; vb = b.name; break;
+        case 'type': va = a.type; vb = b.type; break;
+        case 'group': va = getGroupName(a.groupId); vb = getGroupName(b.groupId); break;
+        case 'time': va = getTimeDisplay(a); vb = getTimeDisplay(b); break;
+        case 'room': va = a.room ?? ''; vb = b.room ?? ''; break;
+        case 'days': va = getDaysDisplay(a); vb = getDaysDisplay(b); break;
+        default: va = a.sortOrder ?? 0; vb = b.sortOrder ?? 0;
+      }
+      if (typeof va === 'string' && typeof vb === 'string') {
+        return tableSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      return tableSortDir === 'asc' ? (va as number) - (vb as number) : (vb as number) - (va as number);
+    });
+    return items;
+  }, [filteredEvents, tableSortCol, tableSortDir]);
+
+  const handleTableSort = (col: string) => {
+    if (tableSortCol === col) {
+      setTableSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setTableSortCol(col);
+      setTableSortDir('asc');
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -163,11 +282,77 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
         <button onClick={() => setTab('events')} className={tab === 'events' ? "adm-tabActive" : "adm-tab"}>
           Davening Times
         </button>
+        <button onClick={() => setTab('table')} className={tab === 'table' ? "adm-tabActive" : "adm-tab"}>
+          All Events ({schedules.length})
+        </button>
         <button onClick={() => setTab('groups')} className={tab === 'groups' ? "adm-tabActive" : "adm-tab"}>
           Groups ({groups.length})
         </button>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (tab === 'events' || tab === 'table') && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+          background: '#eff6ff', borderBottom: '1px solid #bfdbfe', fontSize: 12,
+        }}>
+          <strong style={{ color: '#1d4ed8' }}>{selectedIds.size} selected</strong>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{ border: 'none', background: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}
+          >
+            Clear
+          </button>
+          <span style={{ color: '#94a3b8' }}>|</span>
+          <select
+            value={bulkAction ?? ''}
+            onChange={(e) => setBulkAction(e.target.value as 'copy' | 'move' | null)}
+            style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid #d1d5db' }}
+          >
+            <option value="">Action...</option>
+            <option value="copy">Copy to group</option>
+            <option value="move">Move to group</option>
+          </select>
+          {bulkAction && (
+            <>
+              <select
+                value={bulkTargetGroup}
+                onChange={(e) => setBulkTargetGroup(e.target.value)}
+                style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid #d1d5db' }}
+              >
+                <option value="">Select group...</option>
+                <option value="__none__">No group</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>
+                ))}
+              </select>
+              <button
+                onClick={executeBulkAction}
+                disabled={!bulkTargetGroup}
+                style={{
+                  padding: '3px 10px', fontSize: 12, fontWeight: 600, borderRadius: 4,
+                  border: 'none', background: bulkTargetGroup ? '#3b82f6' : '#d1d5db',
+                  color: '#fff', cursor: bulkTargetGroup ? 'pointer' : 'default',
+                }}
+              >
+                Apply
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => {
+              onChange(schedules.filter((s) => !selectedIds.has(s.id)));
+              setSelectedIds(new Set());
+              setSelectedEventId(null);
+            }}
+            style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+          >
+            Delete selected
+          </button>
+        </div>
+      )}
+
+      {/* ─── GROUPS TAB ─── */}
       {tab === 'groups' && (
         <div style={{ padding: '0 4px' }}>
           {groups.map((g) => (
@@ -199,25 +384,158 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
         </div>
       )}
 
+      {/* ─── TABLE VIEW TAB ─── */}
+      {tab === 'table' && (
+        <div style={{ flex: 1, overflow: 'auto', padding: '0 4px' }}>
+          {/* Filter chips for table too */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10, marginTop: 8 }}>
+            <FilterChip
+              label={`All (${schedules.length})`}
+              active={filterMode === 'all'}
+              color="#475569"
+              onClick={() => setFilterMode('all')}
+            />
+            {ungroupedCount > 0 && (
+              <FilterChip
+                label={`Ungrouped (${ungroupedCount})`}
+                active={filterMode === 'ungrouped'}
+                color="#ef4444"
+                onClick={() => setFilterMode('ungrouped')}
+              />
+            )}
+            {groups.map((g) => (
+              <FilterChip
+                key={g.id}
+                label={`${g.nameHebrew} (${schedules.filter((s) => s.groupId === g.id).length})`}
+                active={filterMode === g.id}
+                color={g.color}
+                onClick={() => setFilterMode(g.id)}
+              />
+            ))}
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                <th style={thStyle}>
+                  <input
+                    type="checkbox"
+                    checked={filteredEvents.filter((e) => !e.isPlaceholder).length > 0 && filteredEvents.filter((e) => !e.isPlaceholder).every((e) => selectedIds.has(e.id))}
+                    onChange={toggleSelectAll}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </th>
+                <ThSortable col="name" label="Name" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
+                <ThSortable col="type" label="Type" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
+                <ThSortable col="group" label="Group" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
+                <ThSortable col="time" label="Time" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
+                <ThSortable col="room" label="Room" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
+                <ThSortable col="days" label="Days" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
+                <th style={thStyle}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableSorted.map((ev, idx) => {
+                const isSelected = selectedIds.has(ev.id);
+                return (
+                  <tr
+                    key={ev.id}
+                    style={{
+                      borderBottom: '1px solid #f1f5f9',
+                      background: isSelected ? '#eff6ff' : (idx % 2 === 0 ? '#fff' : '#f9fafb'),
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => { setSelectedEventId(ev.id); setTab('events'); }}
+                  >
+                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                      {!ev.isPlaceholder && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedIds((prev) => {
+                              const n = new Set(prev);
+                              if (n.has(ev.id)) n.delete(ev.id); else n.add(ev.id);
+                              return n;
+                            });
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      )}
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? '#64748b', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500, ...(ev.isPlaceholder ? { fontStyle: 'italic', color: '#94a3b8' } : {}) }}>
+                          {ev.isPlaceholder ? (ev.placeholderLabel || '— spacer —') : ev.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={tdStyle}>{ev.isPlaceholder ? '' : ev.type}</td>
+                    <td style={tdStyle}>
+                      <span style={{
+                        padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+                        background: ev.groupId ? `${groupMap.get(ev.groupId)?.color ?? '#64748b'}20` : '#fee2e2',
+                        color: ev.groupId ? (groupMap.get(ev.groupId)?.color ?? '#64748b') : '#dc2626',
+                      }}>
+                        {getGroupName(ev.groupId)}
+                      </span>
+                    </td>
+                    <td style={tdStyle}>{getTimeDisplay(ev)}</td>
+                    <td style={tdStyle}>{ev.room ?? ''}</td>
+                    <td style={tdStyle}>{ev.isPlaceholder ? '' : getDaysDisplay(ev)}</td>
+                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => deleteEvent(ev.id)}
+                        style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {tableSorted.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: 24 }}>
+                    No events found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ─── EVENTS TAB (list + detail) ─── */}
       {tab === 'events' && (
         <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-          {/* Left: Group tabs + event list */}
+          {/* Left: Group chips + event list */}
           <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e5e7eb', paddingRight: 12 }}>
-            {/* Group chips */}
+            {/* Filter chips */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+              <FilterChip
+                label={`All (${schedules.length})`}
+                active={filterMode === 'all'}
+                color="#475569"
+                onClick={() => { setFilterMode('all'); setSelectedEventId(null); }}
+              />
+              {ungroupedCount > 0 && (
+                <FilterChip
+                  label={`Ungrouped (${ungroupedCount})`}
+                  active={filterMode === 'ungrouped'}
+                  color="#ef4444"
+                  onClick={() => { setFilterMode('ungrouped'); setSelectedEventId(null); }}
+                />
+              )}
               {groups.map((g) => (
-                <button
+                <FilterChip
                   key={g.id}
-                  onClick={() => { setActiveGroupId(g.id); setSelectedEventId(null); }}
-                  style={{
-                    padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    border: activeGroupId === g.id ? `2px solid ${g.color}` : '1px solid #d1d5db',
-                    backgroundColor: activeGroupId === g.id ? `${g.color}15` : '#fff',
-                    color: activeGroupId === g.id ? g.color : '#64748b',
-                  }}
-                >
-                  {g.nameHebrew}
-                </button>
+                  label={g.nameHebrew}
+                  active={filterMode === g.id}
+                  color={g.color}
+                  onClick={() => { setFilterMode(g.id); setSelectedEventId(null); }}
+                />
               ))}
             </div>
 
@@ -225,6 +543,7 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {filteredEvents.map((ev, idx) => {
                 const isSel = ev.id === selectedEventId;
+                const isChecked = selectedIds.has(ev.id);
                 if (ev.isPlaceholder) {
                   return (
                     <div
@@ -249,14 +568,26 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                       display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', marginBottom: 2,
                       borderRadius: 4, cursor: 'pointer',
                       border: isSel ? '1px solid #60a5fa' : '1px solid transparent',
-                      backgroundColor: isSel ? '#eff6ff' : (idx % 2 === 0 ? '#fff' : '#f9fafb'),
+                      backgroundColor: isChecked ? '#dbeafe' : (isSel ? '#eff6ff' : (idx % 2 === 0 ? '#fff' : '#f9fafb')),
                     }}
                   >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => toggleSelect(ev.id, e as any)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ cursor: 'pointer', flexShrink: 0 }}
+                    />
                     <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? '#64748b', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ev.name}</div>
                       <div style={{ fontSize: 10, color: '#94a3b8' }}>
-                        {ev.timeMode === 'dynamic' ? `${ev.baseZman ?? '?'} ${(ev.offset ?? 0) > 0 ? '+' : ''}${ev.offset ?? 0}m` : ev.fixedTime ?? ''}
+                        {getTimeDisplay(ev)}
+                        {filterMode === 'all' && ev.groupId && (
+                          <span style={{ marginLeft: 4, color: groupMap.get(ev.groupId)?.color ?? '#64748b' }}>
+                            [{groupMap.get(ev.groupId)?.nameHebrew ?? ''}]
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -299,7 +630,6 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
               </div>
             ) : (
               <div>
-                {/* Basic info */}
                 <SectionHeader title="Event Details" />
                 <FormRow label="Name">
                   <input value={selectedEvent.name} onChange={(e) => updateEvent(selectedEvent.id, { name: e.target.value })} className="adm-input" />
@@ -319,7 +649,6 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                   <input value={selectedEvent.room ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { room: e.target.value })} className="adm-input" />
                 </FormRow>
 
-                {/* Time settings */}
                 <SectionHeader title="Time" />
                 <FormRow label="Time Mode">
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -369,7 +698,6 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                   <input type="number" value={selectedEvent.durationMinutes ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { durationMinutes: parseInt(e.target.value) || undefined })} placeholder="e.g. 30" className="adm-input" />
                 </FormRow>
 
-                {/* Days active */}
                 <SectionHeader title="Active Days" />
                 <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
                   {DAYS.map((d, i) => {
@@ -396,7 +724,6 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                   })}
                 </div>
 
-                {/* Visibility rules */}
                 <SectionHeader title="Visibility Rules" />
                 <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>Show or hide this event based on calendar conditions.</div>
                 {(selectedEvent.visibilityRules ?? []).map((rule, rIdx) => (
@@ -446,7 +773,6 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                   + Add Rule
                 </button>
 
-                {/* Delete */}
                 <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
                   <button onClick={() => deleteEvent(selectedEvent.id)} className="adm-btnSmallDanger">Delete Event</button>
                 </div>
@@ -456,6 +782,35 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
         </div>
       )}
     </div>
+  );
+}
+
+/* ─── Sub-components ─── */
+
+function FilterChip({ label, active, color, onClick }: { label: string; active: boolean; color: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+        border: active ? `2px solid ${color}` : '1px solid #d1d5db',
+        backgroundColor: active ? `${color}15` : '#fff',
+        color: active ? color : '#64748b',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ThSortable({ col, label, current, dir, onClick }: { col: string; label: string; current: string; dir: string; onClick: (col: string) => void }) {
+  return (
+    <th
+      onClick={() => onClick(col)}
+      style={{ ...thStyle, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+    >
+      {label}{current === col ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}
+    </th>
   );
 }
 
@@ -475,3 +830,18 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
     </div>
   );
 }
+
+const thStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  fontSize: 11,
+  fontWeight: 700,
+  color: '#475569',
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  fontSize: 12,
+  verticalAlign: 'middle',
+};

@@ -284,6 +284,33 @@ const SCHEMA_STATEMENTS: string[] = [
 
 const FIXUP_STATEMENTS: string[] = [
   `UPDATE "Media" SET "sortOrder" = 0 WHERE "sortOrder" > 2147483647`,
+  `UPDATE "Organization" SET "status" = 'active' WHERE "slug" = 'demo' AND "status" = 'pending'`,
+];
+
+/**
+ * The old User table had passwordHash/orgId columns. The new schema uses clerkUserId/isSuperAdmin.
+ * SQLite can't ALTER columns, so we must drop and recreate if the old schema is detected.
+ */
+const USER_TABLE_MIGRATION: string[] = [
+  `DROP TABLE IF EXISTS "User"`,
+  `CREATE TABLE IF NOT EXISTS "User" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "clerkUserId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "isSuperAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "User_clerkUserId_key" ON "User"("clerkUserId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
+];
+
+const SUPER_ADMIN_SEED = [
+  `INSERT OR IGNORE INTO "User" ("id", "clerkUserId", "email", "name", "isSuperAdmin", "createdAt", "updatedAt")
+    VALUES ('superadmin-1', 'pending-clerk-sync', 'mennyg19@gmail.com', 'Menny', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+  `INSERT OR IGNORE INTO "OrgMembership" ("id", "userId", "orgId", "role", "createdAt")
+    VALUES ('membership-superadmin-demo', 'superadmin-1', 'default', 'owner', CURRENT_TIMESTAMP)`,
 ];
 
 /** Idempotent ALTERs for existing Turso/SQLite DBs created before new columns. */
@@ -296,7 +323,27 @@ const ALTER_STATEMENTS: string[] = [
   `ALTER TABLE "Organization" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'pending'`,
 ];
 
+async function needsUserTableMigration(db: PrismaClient): Promise<boolean> {
+  try {
+    const rows = await db.$queryRawUnsafe<{ name: string }[]>(
+      `PRAGMA table_info('User')`
+    );
+    if (!Array.isArray(rows)) return false;
+    return rows.some((r) => r.name === 'passwordHash');
+  } catch {
+    return false;
+  }
+}
+
 export async function ensureTablesExist(db: PrismaClient): Promise<void> {
+  // Check if the old User table schema exists and needs migration
+  const migrateUser = await needsUserTableMigration(db);
+  if (migrateUser) {
+    for (const sql of USER_TABLE_MIGRATION) {
+      await db.$executeRawUnsafe(sql);
+    }
+  }
+
   for (const sql of SCHEMA_STATEMENTS) {
     await db.$executeRawUnsafe(sql);
   }
@@ -309,5 +356,10 @@ export async function ensureTablesExist(db: PrismaClient): Promise<void> {
   }
   for (const sql of FIXUP_STATEMENTS) {
     try { await db.$executeRawUnsafe(sql); } catch { /* table may not exist yet */ }
+  }
+
+  // Seed super admin if not present
+  for (const sql of SUPER_ADMIN_SEED) {
+    try { await db.$executeRawUnsafe(sql); } catch { /* already exists */ }
   }
 }

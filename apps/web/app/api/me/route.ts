@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import * as da from '../_lib/data-access';
 
@@ -9,7 +9,28 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const me = await da.getMeData(clerkUserId);
+    let me = await da.getMeData(clerkUserId);
+
+    // If user not found by clerkUserId, try to auto-create/link from Clerk session
+    if (!me) {
+      try {
+        const clerkUser = await currentUser();
+        if (clerkUser) {
+          const email = clerkUser.emailAddresses.find(
+            (e) => e.id === clerkUser.primaryEmailAddressId,
+          )?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress ?? '';
+          const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || 'User';
+
+          if (email) {
+            await da.getOrCreateUser(clerkUserId, email, name);
+            me = await da.getMeData(clerkUserId);
+          }
+        }
+      } catch (syncErr) {
+        console.error('Auto-sync user failed:', syncErr);
+      }
+    }
+
     if (!me) {
       return NextResponse.json({ error: 'User not found in database. Please wait a moment and refresh.' }, { status: 404 });
     }
