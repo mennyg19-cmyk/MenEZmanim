@@ -197,6 +197,8 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
         <FramePicker
           value={content.frameId as string | undefined}
           onChange={(id) => pContent({ frameId: id })}
+          thickness={typeof content.frameThickness === 'number' ? content.frameThickness : 1}
+          onThicknessChange={(t) => pContent({ frameThickness: t })}
         />
       </Section>
 

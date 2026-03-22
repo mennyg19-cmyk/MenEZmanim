@@ -70,6 +70,8 @@ export interface DisplayStyle {
   backgroundTexture?: string;
   /** Decorative frame id for the full canvas (9-slice border) */
   backgroundFrameId?: string;
+  /** Frame thickness multiplier (default 1.0) */
+  backgroundFrameThickness?: number;
   canvasWidth: number;
   canvasHeight: number;
   objects: DisplayObject[];

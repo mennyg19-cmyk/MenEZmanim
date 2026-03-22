@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { CanvasBackgroundMode, DisplayObject, DisplayStyle } from '@zmanim-app/core';
-import { getTextureCss } from './textures';
+import { getTextureStyles } from './textures';
 
 export type BgMode = 'solid' | 'transparent' | 'image' | 'canvas' | 'gradient' | 'texture';
 
@@ -54,7 +54,7 @@ export function resolveObjBackground(
     }
     case 'texture': {
       const id = typeof obj.content?.textureId === 'string' ? obj.content.textureId : undefined;
-      return { background: getTextureCss(id), backgroundColor: 'transparent' };
+      return { ...getTextureStyles(id), backgroundColor: 'transparent' };
     }
     case 'canvas': {
       const cbgMode = getCanvasBgModeFromExtras(canvasBgColor, canvasBgImage, canvasExtras);
@@ -70,8 +70,7 @@ export function resolveObjBackground(
       }
       if (cbgMode === 'texture') {
         return {
-          background: getTextureCss(canvasExtras?.backgroundTexture),
-          backgroundSize: `${canvasW}px ${canvasH}px`,
+          ...getTextureStyles(canvasExtras?.backgroundTexture),
           backgroundPosition: `-${obj.position.x}px -${obj.position.y}px`,
         };
       }
@@ -92,7 +91,7 @@ export function resolveObjBackground(
 }
 
 /** Inline styles for the display canvas background (inside optional frame). */
-export function resolveCanvasBackground(style: DisplayStyle, canvasW: number, canvasH: number): React.CSSProperties {
+export function resolveCanvasBackground(style: DisplayStyle, _canvasW: number, _canvasH: number): React.CSSProperties {
   const mode = getCanvasBgMode(style);
   switch (mode) {
     case 'image':
@@ -100,8 +99,8 @@ export function resolveCanvasBackground(style: DisplayStyle, canvasW: number, ca
         return {
           backgroundColor: style.backgroundColor || '#000',
           backgroundImage: `url(${style.backgroundImage})`,
-          backgroundSize: `${canvasW}px ${canvasH}px`,
-          backgroundPosition: '0 0',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         };
       }
@@ -114,7 +113,7 @@ export function resolveCanvasBackground(style: DisplayStyle, canvasW: number, ca
     }
     case 'texture': {
       const id = typeof style.backgroundTexture === 'string' ? style.backgroundTexture : undefined;
-      return { background: getTextureCss(id), backgroundColor: 'transparent' };
+      return { ...getTextureStyles(id), backgroundColor: 'transparent' };
     }
     case 'solid':
     default:

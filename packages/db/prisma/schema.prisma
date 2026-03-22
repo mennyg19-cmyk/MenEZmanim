@@ -80,6 +80,7 @@ model Style {
   backgroundGradient String?
   backgroundTexture  String?
   backgroundFrameId  String?
+  backgroundFrameThickness Float? @default(1.0)
   canvasWidth        Int      @default(1920)
   canvasHeight       Int      @default(1080)
   isDefault          Boolean  @default(false)

@@ -83,6 +83,7 @@ export async function seedDemoOrganization(db: PrismaClient = getDbClient()) {
       backgroundGradient: styleRow.backgroundGradient,
       backgroundTexture: styleRow.backgroundTexture,
       backgroundFrameId: styleRow.backgroundFrameId,
+      backgroundFrameThickness: styleRow.backgroundFrameThickness,
       canvasWidth: styleRow.canvasWidth,
       canvasHeight: styleRow.canvasHeight,
       activationRules: styleRow.activationRules,

@@ -35,6 +35,7 @@ const SCHEMA_STATEMENTS: string[] = [
     "backgroundGradient" TEXT,
     "backgroundTexture" TEXT,
     "backgroundFrameId" TEXT,
+    "backgroundFrameThickness" REAL DEFAULT 1.0,
     "canvasWidth" INTEGER NOT NULL DEFAULT 1920,
     "canvasHeight" INTEGER NOT NULL DEFAULT 1080,
     "isDefault" BOOLEAN NOT NULL DEFAULT false,
@@ -258,6 +259,7 @@ const STYLE_ALTER_STATEMENTS: string[] = [
   `ALTER TABLE "Style" ADD COLUMN "backgroundGradient" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundTexture" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameId" TEXT`,
+  `ALTER TABLE "Style" ADD COLUMN "backgroundFrameThickness" REAL DEFAULT 1.0`,
 ];
 
 export async function ensureTablesExist(db: PrismaClient): Promise<void> {

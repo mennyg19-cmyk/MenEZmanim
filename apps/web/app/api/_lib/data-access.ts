@@ -502,6 +502,7 @@ export async function createStyle(orgId: string, body: Record<string, unknown>):
     backgroundGradient: body.backgroundGradient as string | undefined,
     backgroundTexture: body.backgroundTexture as string | undefined,
     backgroundFrameId: body.backgroundFrameId as string | undefined,
+    backgroundFrameThickness: typeof body.backgroundFrameThickness === 'number' ? body.backgroundFrameThickness : undefined,
   };
   const styleRow = styleRowCreateFromDisplayStyle(partial, orgId);
   await db.style.create({
@@ -562,6 +563,7 @@ export async function updateStyle(
       backgroundGradient: styleRow.backgroundGradient,
       backgroundTexture: styleRow.backgroundTexture,
       backgroundFrameId: styleRow.backgroundFrameId,
+      backgroundFrameThickness: styleRow.backgroundFrameThickness,
       canvasWidth: styleRow.canvasWidth,
       canvasHeight: styleRow.canvasHeight,
       activationRules: styleRow.activationRules,

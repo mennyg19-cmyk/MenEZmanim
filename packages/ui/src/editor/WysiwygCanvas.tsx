@@ -675,7 +675,7 @@ export function WysiwygCanvas({
     <div ref={containerRef} style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: '#1e1e2e' }}>
       <div style={{ position: 'absolute', inset: 0, overflow: overflows ? 'auto' : 'hidden' }}>
       <div style={{ position: 'relative', width: overflowsX ? scaledW : containerSize.w || '100%', height: overflowsY ? scaledH : containerSize.h || '100%' }}>
-      <FrameRenderer frameId={style.backgroundFrameId}>
+      <FrameRenderer frameId={style.backgroundFrameId} thickness={style.backgroundFrameThickness ?? 1}>
       <div
         ref={canvasRef}
         style={{
@@ -745,7 +745,7 @@ export function WysiwygCanvas({
                   overflow: 'hidden', boxSizing: 'border-box', transition: 'border-color 0.1s',
                 }}
               >
-                <FrameRenderer frameId={obj.content?.frameId as string | undefined}>
+                <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
                 <div style={{
                   pointerEvents: 'none', overflow: 'hidden', width: '100%', height: '100%',
                   display: 'flex', flexDirection: 'column',
@@ -942,7 +942,12 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
           <span style={{ fontSize: 9, transition: 'transform 0.15s', transform: frameOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>&#9660;</span>
         </button>
         {frameOpen && (
-          <FramePicker value={style.backgroundFrameId} onChange={(id) => onStyleChange({ ...style, backgroundFrameId: id })} />
+          <FramePicker
+            value={style.backgroundFrameId}
+            onChange={(id) => onStyleChange({ ...style, backgroundFrameId: id })}
+            thickness={style.backgroundFrameThickness ?? 1}
+            onThicknessChange={(t) => onStyleChange({ ...style, backgroundFrameThickness: t })}
+          />
         )}
       </div>
     </>

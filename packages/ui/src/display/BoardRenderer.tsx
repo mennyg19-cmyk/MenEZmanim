@@ -390,7 +390,7 @@ export function BoardRenderer({
               overflow: 'hidden',
             }}
           >
-            <FrameRenderer frameId={obj.content?.frameId as string | undefined}>
+            <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
               <div style={{
                 width: '100%',
                 height: '100%',

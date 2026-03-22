@@ -7,10 +7,13 @@ export { resolveObjBackground, getObjBgMode, resolveCanvasBackground, getCanvasB
 export type { BgMode, CanvasBgExtras } from './shared/backgroundUtils';
 export { useBreakpoint } from './shared/useBreakpoint';
 export type { Breakpoint } from './shared/useBreakpoint';
-export { TEXTURE_CATALOG, getTextureCss } from './shared/textures';
+export { TEXTURE_CATALOG, getTextureById, getTextureStyles } from './shared/textures';
+export type { TextureEntry } from './shared/textures';
 export { GRADIENT_PRESETS } from './shared/gradients';
 export { FRAME_CATALOG, getFrameById } from './shared/frames';
+export type { FrameDefinition } from './shared/frames';
 export { FrameRenderer } from './display/FrameRenderer';
+export type { FrameRendererProps } from './display/FrameRenderer';
 export { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, TYPE_LABELS, TYPE_ICONS, ZMANIM_OPTIONS_REGULAR, ZMANIM_OPTIONS_TUKACHINSKY, FONT_CATEGORIES } from './shared/constants';
 
 // Display components

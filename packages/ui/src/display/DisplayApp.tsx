@@ -503,7 +503,7 @@ export function DisplayApp({
       }}
     >
       {/* Scaled canvas (background + content together so they scale identically) */}
-      <FrameRenderer frameId={state.activeStyle?.backgroundFrameId}>
+      <FrameRenderer frameId={state.activeStyle?.backgroundFrameId} thickness={state.activeStyle?.backgroundFrameThickness ?? 1}>
       <div
         style={{
           position: 'absolute',
