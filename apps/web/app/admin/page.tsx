@@ -1,9 +1,21 @@
 'use client';
 
 import { AdminApp } from '@zmanim-app/ui';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
-const DEFAULT_ORG_ID = 'demo';
+interface UserMembership {
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  orgStatus: string;
+  role: string;
+}
+
+interface MeData {
+  user: { id: string; clerkUserId: string; email: string; name: string; isSuperAdmin: boolean };
+  memberships: UserMembership[];
+}
 
 async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(path, options);
@@ -14,22 +26,113 @@ async function apiFetch(path: string, options?: RequestInit) {
   return res.json();
 }
 
+const ORG_STORAGE_KEY = 'zmanim-selected-org';
+
 export default function AdminPage() {
-  const [orgId] = useState(DEFAULT_ORG_ID);
+  const router = useRouter();
+  const [me, setMe] = useState<MeData | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [memberships, setMemberships] = useState<UserMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lockInfo, setLockInfo] = useState<{ locked: boolean; lockedBy?: string } | null>(null);
 
   useEffect(() => {
-    apiFetch(`/api/org/${orgId}`)
-      .then(() => setLoading(false))
-      .catch((err) => {
+    const init = async () => {
+      try {
+        const meData: MeData = await apiFetch('/api/me');
+        setMe(meData);
+
+        const active = meData.memberships.filter((m) => m.orgStatus === 'active');
+        if (active.length === 0 && !meData.user.isSuperAdmin) {
+          const pending = meData.memberships.filter((m) => m.orgStatus === 'pending');
+          if (pending.length > 0) {
+            router.push('/onboarding');
+            return;
+          }
+          if (meData.memberships.length === 0) {
+            router.push('/onboarding');
+            return;
+          }
+        }
+
+        setMemberships(meData.user.isSuperAdmin ? meData.memberships : active);
+
+        const stored = localStorage.getItem(ORG_STORAGE_KEY);
+        const validStored = active.find((m) => m.orgId === stored);
+        const selectedOrg = validStored?.orgId ?? active[0]?.orgId;
+
+        if (selectedOrg) {
+          setOrgId(selectedOrg);
+          localStorage.setItem(ORG_STORAGE_KEY, selectedOrg);
+        } else if (meData.user.isSuperAdmin) {
+          setOrgId(meData.memberships[0]?.orgId ?? 'demo');
+        }
+
+        setLoading(false);
+      } catch (err: any) {
+        if (err.message?.includes('User not found')) {
+          setTimeout(() => window.location.reload(), 2000);
+          return;
+        }
         setError(err.message);
         setLoading(false);
-      });
+      }
+    };
+    init();
+  }, [router]);
+
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    const tryLock = async () => {
+      try {
+        const res = await fetch(`/api/org/${orgId}/lock`, { method: 'POST' });
+        const data = await res.json();
+        if (res.status === 423) {
+          setLockInfo({ locked: true, lockedBy: data.lockedBy });
+        } else {
+          setLockInfo({ locked: false });
+          heartbeatRef.current = setInterval(async () => {
+            try {
+              await fetch(`/api/org/${orgId}/lock`, { method: 'PUT' });
+            } catch { /* ignore */ }
+          }, 2 * 60 * 1000);
+        }
+      } catch {
+        setLockInfo({ locked: false });
+      }
+    };
+
+    tryLock();
+
+    const releaseLock = () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      navigator.sendBeacon?.(`/api/org/${orgId}/lock?_method=DELETE`);
+    };
+
+    window.addEventListener('beforeunload', releaseLock);
+    return () => {
+      releaseLock();
+      window.removeEventListener('beforeunload', releaseLock);
+      fetch(`/api/org/${orgId}/lock`, { method: 'DELETE' }).catch(() => {});
+    };
+  }, [orgId]);
+
+  const switchOrg = useCallback((newOrgId: string) => {
+    if (orgId) {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      fetch(`/api/org/${orgId}/lock`, { method: 'DELETE' }).catch(() => {});
+    }
+    setOrgId(newOrgId);
+    localStorage.setItem(ORG_STORAGE_KEY, newOrgId);
   }, [orgId]);
 
   const onSave = useCallback(
     async (entity: string, data: any) => {
+      if (!orgId) return;
       const base = `/api/org/${orgId}`;
 
       switch (entity) {
@@ -175,6 +278,7 @@ export default function AdminPage() {
 
   const onLoad = useCallback(
     async (entity: string, query?: any) => {
+      if (!orgId) return null;
       const base = `/api/org/${orgId}`;
 
       switch (entity) {
@@ -215,6 +319,7 @@ export default function AdminPage() {
 
   const onDelete = useCallback(
     async (entity: string, id: string) => {
+      if (!orgId) return;
       const base = `/api/org/${orgId}`;
 
       switch (entity) {
@@ -286,12 +391,126 @@ export default function AdminPage() {
     );
   }
 
+  if (!orgId) {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: 18,
+          color: '#6b7280',
+        }}
+      >
+        No organization found. Please contact the administrator.
+      </main>
+    );
+  }
+
   return (
-    <AdminApp
-      orgId={orgId}
-      onSave={onSave}
-      onLoad={onLoad}
-      onDelete={onDelete}
-    />
+    <div>
+      {memberships.length > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 16px',
+            background: '#f1f5f9',
+            borderBottom: '1px solid #e2e8f0',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: 13,
+          }}
+        >
+          <span style={{ fontWeight: 600, color: '#475569' }}>Organization:</span>
+          <select
+            value={orgId}
+            onChange={(e) => switchOrg(e.target.value)}
+            style={{
+              padding: '4px 8px',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              fontSize: 13,
+              background: '#fff',
+            }}
+          >
+            {memberships.map((m) => (
+              <option key={m.orgId} value={m.orgId}>
+                {m.orgName} ({m.role})
+              </option>
+            ))}
+          </select>
+          {me?.user.isSuperAdmin && (
+            <a
+              href="/admin/super"
+              style={{
+                marginLeft: 'auto',
+                padding: '4px 12px',
+                background: '#7c3aed',
+                color: '#fff',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              Super Admin
+            </a>
+          )}
+        </div>
+      )}
+      {me?.user.isSuperAdmin && memberships.length <= 1 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            padding: '8px 16px',
+            background: '#f1f5f9',
+            borderBottom: '1px solid #e2e8f0',
+          }}
+        >
+          <a
+            href="/admin/super"
+            style={{
+              padding: '4px 12px',
+              background: '#7c3aed',
+              color: '#fff',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              textDecoration: 'none',
+              fontFamily: 'system-ui, sans-serif',
+            }}
+          >
+            Super Admin
+          </a>
+        </div>
+      )}
+      {lockInfo?.locked && (
+        <div
+          style={{
+            padding: '10px 16px',
+            background: '#fef3c7',
+            borderBottom: '1px solid #fbbf24',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: 13,
+            color: '#92400e',
+            textAlign: 'center',
+          }}
+        >
+          This organization is currently being edited by <strong>{lockInfo.lockedBy}</strong>.
+          You are in read-only mode.
+        </div>
+      )}
+      <AdminApp
+        orgId={orgId}
+        onSave={onSave}
+        onLoad={onLoad}
+        onDelete={onDelete}
+      />
+    </div>
   );
 }

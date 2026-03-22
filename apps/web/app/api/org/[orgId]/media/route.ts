@@ -4,6 +4,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { json, error, options } from '../../../_lib/response';
 import * as da from '../../../_lib/data-access';
 import type { MediaItem } from '../../../_lib/store-types';
+import { authorizeWrite, isAuthError } from '../../../_lib/auth-helpers';
 
 const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
@@ -38,6 +39,8 @@ async function writeUploadLocal(buffer: Buffer, uniqueName: string): Promise<str
 export async function POST(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId } = await ctx.params;
+    const authResult = await authorizeWrite(orgId);
+    if (isAuthError(authResult)) return authResult;
     const resolvedId = await da.resolveOrgId(orgId);
     if (!resolvedId) return error('Organization not found', 404);
 

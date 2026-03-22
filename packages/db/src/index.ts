@@ -14,4 +14,8 @@ export type {
   Organization as PrismaOrgRow,
   ScheduleGroup as PrismaGroup,
   Screen as PrismaScreen,
+  User as PrismaUser,
+  OrgMembership as PrismaOrgMembership,
+  OrgInvite as PrismaOrgInvite,
+  EditLock as PrismaEditLock,
 } from '@prisma/client';

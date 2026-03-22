@@ -16,8 +16,16 @@ export class UserRepository {
     return this.db.user.findUnique({ where: { email } });
   }
 
+  async findByClerkId(clerkUserId: string): Promise<User | null> {
+    return this.db.user.findUnique({ where: { clerkUserId } });
+  }
+
   async findByOrgId(orgId: string): Promise<User[]> {
-    return this.db.user.findMany({ where: { orgId } });
+    const memberships = await this.db.orgMembership.findMany({
+      where: { orgId },
+      include: { user: true },
+    });
+    return memberships.map((m) => m.user);
   }
 
   async create(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {

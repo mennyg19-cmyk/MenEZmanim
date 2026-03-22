@@ -59,6 +59,10 @@ export default hasClerk
 
       const path = req.nextUrl.pathname;
 
+      if (path.startsWith('/api/webhooks/')) {
+        return NextResponse.next();
+      }
+
       if (path.startsWith('/api/org/')) {
         if (isPublicOrgApiRead(req)) {
           return NextResponse.next();
@@ -72,13 +76,21 @@ export default hasClerk
         return NextResponse.next();
       }
 
+      if (
+        path.startsWith('/api/me') ||
+        path.startsWith('/api/admin') ||
+        path.startsWith('/api/onboarding') ||
+        path.startsWith('/api/invites')
+      ) {
+        await auth.protect();
+        return NextResponse.next();
+      }
+
       if (path.startsWith('/admin')) {
         await auth.protect();
         return NextResponse.next();
       }
 
-      // Public pages (/login, /register, /, /show/..., /mobile, …) must return next — otherwise the
-      // middleware resolves to undefined and Vercel/Next can respond with 404.
       return NextResponse.next();
     })
   : function passthrough(req: NextRequest) {

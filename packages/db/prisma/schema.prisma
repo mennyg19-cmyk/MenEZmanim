@@ -11,6 +11,7 @@ model Organization {
   id                     String   @id @default(cuid())
   name                   String
   slug                   String   @unique
+  status                 String   @default("pending")
   latitude               Float
   longitude              Float
   elevation              Float    @default(0)
@@ -27,7 +28,7 @@ model Organization {
   updatedAt              DateTime @updatedAt
 
   screens          Screen[]
-  users            User[]
+  memberships      OrgMembership[]
   styles           Style[]
   scheduleGroups   ScheduleGroup[]
   zmanimConfigs    ZmanimConfig[]
@@ -37,6 +38,8 @@ model Organization {
   sponsors         Sponsor[]
   media            Media[]
   syncLogs         SyncLog[]
+  invites          OrgInvite[]
+  editLock         EditLock?
 }
 
 model Screen {
@@ -57,17 +60,56 @@ model Screen {
 
 model User {
   id           String   @id @default(cuid())
+  clerkUserId  String   @unique
   email        String   @unique
   name         String
-  passwordHash String
-  orgId        String
-  role         String   @default("admin")
+  isSuperAdmin Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  memberships  OrgMembership[]
+  editLocks    EditLock[]
+}
+
+model OrgMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  orgId     String
+  role      String   @default("editor")
+  createdAt DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+model OrgInvite {
+  id        String    @id @default(cuid())
+  orgId     String
+  email     String
+  role      String    @default("editor")
+  token     String    @unique @default(cuid())
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
+  @@index([email])
+}
+
+model EditLock {
+  id        String   @id @default(cuid())
+  orgId     String   @unique
+  userId    String
+  lockedAt  DateTime @default(now())
+  expiresAt DateTime
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Style {

@@ -59,14 +59,41 @@ const SCHEMA_STATEMENTS: string[] = [
   )`,
   `CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
+    "clerkUserId" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
-    "orgId" TEXT NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'admin',
+    "isSuperAdmin" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "User_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS "OrgMembership" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "orgId" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'editor',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "OrgMembership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "OrgMembership_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE TABLE IF NOT EXISTS "OrgInvite" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "orgId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'editor',
+    "token" TEXT NOT NULL,
+    "expiresAt" DATETIME NOT NULL,
+    "usedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "OrgInvite_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE TABLE IF NOT EXISTS "EditLock" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "orgId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "lockedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" DATETIME NOT NULL,
+    CONSTRAINT "EditLock_orgId_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "EditLock_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE TABLE IF NOT EXISTS "DisplayObject" (
     "id" TEXT NOT NULL PRIMARY KEY,
@@ -234,8 +261,14 @@ const SCHEMA_STATEMENTS: string[] = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Organization_slug_key" ON "Organization"("slug")`,
   `CREATE INDEX IF NOT EXISTS "Screen_orgId_idx" ON "Screen"("orgId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "User_clerkUserId_key" ON "User"("clerkUserId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
-  `CREATE INDEX IF NOT EXISTS "User_orgId_idx" ON "User"("orgId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "OrgMembership_userId_orgId_key" ON "OrgMembership"("userId", "orgId")`,
+  `CREATE INDEX IF NOT EXISTS "OrgMembership_orgId_idx" ON "OrgMembership"("orgId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "OrgInvite_token_key" ON "OrgInvite"("token")`,
+  `CREATE INDEX IF NOT EXISTS "OrgInvite_orgId_idx" ON "OrgInvite"("orgId")`,
+  `CREATE INDEX IF NOT EXISTS "OrgInvite_email_idx" ON "OrgInvite"("email")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "EditLock_orgId_key" ON "EditLock"("orgId")`,
   `CREATE INDEX IF NOT EXISTS "Style_orgId_idx" ON "Style"("orgId")`,
   `CREATE INDEX IF NOT EXISTS "DisplayObject_styleId_idx" ON "DisplayObject"("styleId")`,
   `CREATE INDEX IF NOT EXISTS "ScheduleGroup_orgId_idx" ON "ScheduleGroup"("orgId")`,
@@ -253,20 +286,21 @@ const FIXUP_STATEMENTS: string[] = [
   `UPDATE "Media" SET "sortOrder" = 0 WHERE "sortOrder" > 2147483647`,
 ];
 
-/** Idempotent ALTERs for existing Turso/SQLite DBs created before new Style columns. */
-const STYLE_ALTER_STATEMENTS: string[] = [
+/** Idempotent ALTERs for existing Turso/SQLite DBs created before new columns. */
+const ALTER_STATEMENTS: string[] = [
   `ALTER TABLE "Style" ADD COLUMN "backgroundMode" TEXT NOT NULL DEFAULT 'solid'`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundGradient" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundTexture" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameId" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameThickness" REAL DEFAULT 1.0`,
+  `ALTER TABLE "Organization" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'pending'`,
 ];
 
 export async function ensureTablesExist(db: PrismaClient): Promise<void> {
   for (const sql of SCHEMA_STATEMENTS) {
     await db.$executeRawUnsafe(sql);
   }
-  for (const sql of STYLE_ALTER_STATEMENTS) {
+  for (const sql of ALTER_STATEMENTS) {
     try {
       await db.$executeRawUnsafe(sql);
     } catch {

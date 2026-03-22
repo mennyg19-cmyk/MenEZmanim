@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../../_lib/response';
 import * as da from '../../../../_lib/data-access';
+import { authorizeWrite, isAuthError } from '../../../../_lib/auth-helpers';
 
 type Ctx = { params: Promise<{ orgId: string; screenId: string }> };
 
@@ -48,6 +49,8 @@ export async function GET(_request: NextRequest, ctx: Ctx) {
 export async function PUT(request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, screenId } = await ctx.params;
+    const authResult = await authorizeWrite(orgId);
+    if (isAuthError(authResult)) return authResult;
     const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 
@@ -77,6 +80,8 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
 export async function DELETE(_request: NextRequest, ctx: Ctx) {
   try {
     const { orgId, screenId } = await ctx.params;
+    const authResult = await authorizeWrite(orgId, ['owner', 'admin']);
+    if (isAuthError(authResult)) return authResult;
     const org = await da.getOrg(orgId);
     if (!org) return error('Organization not found', 404);
 

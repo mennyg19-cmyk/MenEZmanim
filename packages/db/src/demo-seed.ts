@@ -52,6 +52,7 @@ export async function seedDemoOrganization(db: PrismaClient = getDbClient()) {
       id: DEMO_ORG_ID,
       name: 'Default Synagogue',
       slug: DEMO_ORG_SLUG,
+      status: 'active',
       latitude: 31.7683,
       longitude: 35.2137,
       elevation: 0,
@@ -67,6 +68,7 @@ export async function seedDemoOrganization(db: PrismaClient = getDbClient()) {
     },
     update: {
       slug: DEMO_ORG_SLUG,
+      status: 'active',
       settings,
     },
   });

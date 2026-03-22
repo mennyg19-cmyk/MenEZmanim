@@ -13,6 +13,8 @@ import {
   type PrismaOrgRow,
   type PrismaSchedule,
   type PrismaScreen,
+  type PrismaUser,
+  type PrismaOrgMembership,
 } from '@zmanim-app/db';
 import type { DisplayStyle } from '@zmanim-app/core';
 import type {
@@ -648,4 +650,294 @@ export async function deleteScreen(orgId: string, screenId: string): Promise<boo
   if (!row) return false;
   await db.screen.delete({ where: { id: screenId } });
   return true;
+}
+
+/* ─── User / Org / Auth helpers ─── */
+
+export interface UserMembership {
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  orgStatus: string;
+  role: string;
+}
+
+export interface MeResponse {
+  user: { id: string; clerkUserId: string; email: string; name: string; isSuperAdmin: boolean };
+  memberships: UserMembership[];
+}
+
+export async function getOrCreateUser(clerkUserId: string, email: string, name: string) {
+  await ensureSeeded();
+  const db = getDbClient();
+  return db.user.upsert({
+    where: { clerkUserId },
+    create: { clerkUserId, email, name },
+    update: { email, name },
+  });
+}
+
+export async function getUserByClerkId(clerkUserId: string) {
+  await ensureSeeded();
+  const db = getDbClient();
+  return db.user.findUnique({ where: { clerkUserId } });
+}
+
+export async function getUserMemberships(userId: string): Promise<UserMembership[]> {
+  const db = getDbClient();
+  const memberships = await db.orgMembership.findMany({
+    where: { userId },
+    include: { organization: true },
+  });
+  return memberships.map((m) => ({
+    orgId: m.orgId,
+    orgName: m.organization.name,
+    orgSlug: m.organization.slug,
+    orgStatus: (m.organization as any).status ?? 'active',
+    role: m.role,
+  }));
+}
+
+export async function getMeData(clerkUserId: string): Promise<MeResponse | null> {
+  const user = await getUserByClerkId(clerkUserId);
+  if (!user) return null;
+  const memberships = await getUserMemberships(user.id);
+  return {
+    user: {
+      id: user.id,
+      clerkUserId: user.clerkUserId,
+      email: user.email,
+      name: user.name,
+      isSuperAdmin: user.isSuperAdmin,
+    },
+    memberships,
+  };
+}
+
+export type AuthResult =
+  | { ok: true; userId: string; role: string; isSuperAdmin: boolean }
+  | { ok: false; status: number; message: string };
+
+export async function authorizeOrgAccess(
+  clerkUserId: string,
+  orgId: string,
+  requiredRoles?: string[],
+): Promise<AuthResult> {
+  await ensureSeeded();
+  const db = getDbClient();
+  const user = await db.user.findUnique({ where: { clerkUserId } });
+  if (!user) return { ok: false, status: 401, message: 'User not found' };
+
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return { ok: false, status: 404, message: 'Organization not found' };
+
+  if (user.isSuperAdmin) {
+    return { ok: true, userId: user.id, role: 'owner', isSuperAdmin: true };
+  }
+
+  const org = await db.organization.findUnique({ where: { id: resolved } });
+  if (org && (org as any).slug === 'demo') {
+    return { ok: false, status: 403, message: 'Demo organization is read-only' };
+  }
+
+  const membership = await db.orgMembership.findUnique({
+    where: { userId_orgId: { userId: user.id, orgId: resolved } },
+  });
+  if (!membership) return { ok: false, status: 403, message: 'Not a member of this organization' };
+
+  if (requiredRoles && requiredRoles.length > 0 && !requiredRoles.includes(membership.role)) {
+    return { ok: false, status: 403, message: 'Insufficient permissions' };
+  }
+
+  return { ok: true, userId: user.id, role: membership.role, isSuperAdmin: false };
+}
+
+export async function createOrganization(data: {
+  name: string;
+  slug: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  elevation?: number;
+  inIsrael?: boolean;
+}, ownerUserId: string) {
+  await ensureSeeded();
+  const db = getDbClient();
+  const org = await db.organization.create({
+    data: {
+      name: data.name,
+      slug: data.slug,
+      status: 'pending',
+      latitude: data.latitude,
+      longitude: data.longitude,
+      elevation: data.elevation ?? 0,
+      timezone: data.timezone,
+      inIsrael: data.inIsrael ?? false,
+      settings: JSON.stringify({ nameHebrew: data.name, locationName: data.name }),
+    },
+  });
+  await db.orgMembership.create({
+    data: { userId: ownerUserId, orgId: org.id, role: 'owner' },
+  });
+  return org;
+}
+
+export async function checkEditLock(orgId: string, userId: string): Promise<{ locked: boolean; lockedBy?: string }> {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return { locked: false };
+
+  const lock = await db.editLock.findUnique({ where: { orgId: resolved } });
+  if (!lock) return { locked: false };
+
+  if (new Date(lock.expiresAt) < new Date()) {
+    await db.editLock.delete({ where: { orgId: resolved } });
+    return { locked: false };
+  }
+
+  if (lock.userId === userId) return { locked: false };
+
+  const lockUser = await db.user.findUnique({ where: { id: lock.userId } });
+  return { locked: true, lockedBy: lockUser?.name ?? 'Another user' };
+}
+
+export async function acquireEditLock(orgId: string, userId: string): Promise<{ ok: boolean; lockedBy?: string }> {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return { ok: false };
+
+  const existing = await db.editLock.findUnique({ where: { orgId: resolved } });
+  if (existing) {
+    if (new Date(existing.expiresAt) < new Date()) {
+      await db.editLock.delete({ where: { orgId: resolved } });
+    } else if (existing.userId !== userId) {
+      const lockUser = await db.user.findUnique({ where: { id: existing.userId } });
+      return { ok: false, lockedBy: lockUser?.name ?? 'Another user' };
+    }
+  }
+
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  await db.editLock.upsert({
+    where: { orgId: resolved },
+    create: { orgId: resolved, userId, expiresAt },
+    update: { userId, expiresAt, lockedAt: new Date() },
+  });
+  return { ok: true };
+}
+
+export async function renewEditLock(orgId: string, userId: string): Promise<boolean> {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return false;
+
+  const lock = await db.editLock.findUnique({ where: { orgId: resolved } });
+  if (!lock || lock.userId !== userId) return false;
+
+  await db.editLock.update({
+    where: { orgId: resolved },
+    data: { expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+  });
+  return true;
+}
+
+export async function releaseEditLock(orgId: string, userId: string): Promise<boolean> {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return false;
+
+  const lock = await db.editLock.findUnique({ where: { orgId: resolved } });
+  if (!lock || lock.userId !== userId) return false;
+
+  await db.editLock.delete({ where: { orgId: resolved } });
+  return true;
+}
+
+export async function getEditLockStatus(orgId: string): Promise<{ locked: boolean; userId?: string; userName?: string; expiresAt?: string }> {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return { locked: false };
+
+  const lock = await db.editLock.findUnique({ where: { orgId: resolved } });
+  if (!lock) return { locked: false };
+
+  if (new Date(lock.expiresAt) < new Date()) {
+    await db.editLock.delete({ where: { orgId: resolved } });
+    return { locked: false };
+  }
+
+  const user = await db.user.findUnique({ where: { id: lock.userId } });
+  return { locked: true, userId: lock.userId, userName: user?.name, expiresAt: lock.expiresAt.toISOString() };
+}
+
+/* ─── Super Admin helpers ─── */
+
+export async function getAllOrgs() {
+  await ensureSeeded();
+  const db = getDbClient();
+  return db.organization.findMany({ orderBy: { createdAt: 'desc' } });
+}
+
+export async function updateOrgStatus(orgId: string, status: string) {
+  const db = getDbClient();
+  return db.organization.update({ where: { id: orgId }, data: { status } as any });
+}
+
+export async function getAllUsers() {
+  await ensureSeeded();
+  const db = getDbClient();
+  return db.user.findMany({
+    include: { memberships: { include: { organization: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/* ─── Invite helpers ─── */
+
+export async function createInvite(orgId: string, email: string, role: string) {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) throw new Error('Org not found');
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  return db.orgInvite.create({
+    data: { orgId: resolved, email: email.toLowerCase(), role, expiresAt },
+  });
+}
+
+export async function getOrgInvites(orgId: string) {
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return [];
+  return db.orgInvite.findMany({
+    where: { orgId: resolved, usedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function acceptInvite(token: string, clerkUserId: string) {
+  const db = getDbClient();
+  const invite = await db.orgInvite.findUnique({ where: { token } });
+  if (!invite) throw new Error('Invite not found');
+  if (invite.usedAt) throw new Error('Invite already used');
+  if (new Date(invite.expiresAt) < new Date()) throw new Error('Invite expired');
+
+  const user = await db.user.findUnique({ where: { clerkUserId } });
+  if (!user) throw new Error('User not found');
+
+  await db.orgMembership.upsert({
+    where: { userId_orgId: { userId: user.id, orgId: invite.orgId } },
+    create: { userId: user.id, orgId: invite.orgId, role: invite.role },
+    update: { role: invite.role },
+  });
+
+  await db.orgInvite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
+  return { orgId: invite.orgId };
+}
+
+export async function getPendingInvitesForEmail(email: string) {
+  const db = getDbClient();
+  return db.orgInvite.findMany({
+    where: { email: email.toLowerCase(), usedAt: null },
+    include: { organization: true },
+  });
 }
