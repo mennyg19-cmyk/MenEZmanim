@@ -244,8 +244,15 @@ const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS "SyncLog_synced_idx" ON "SyncLog"("synced")`,
 ];
 
+const FIXUP_STATEMENTS: string[] = [
+  `UPDATE "Media" SET "sortOrder" = 0 WHERE "sortOrder" > 2147483647`,
+];
+
 export async function ensureTablesExist(db: PrismaClient): Promise<void> {
   for (const sql of SCHEMA_STATEMENTS) {
     await db.$executeRawUnsafe(sql);
+  }
+  for (const sql of FIXUP_STATEMENTS) {
+    try { await db.$executeRawUnsafe(sql); } catch { /* table may not exist yet */ }
   }
 }

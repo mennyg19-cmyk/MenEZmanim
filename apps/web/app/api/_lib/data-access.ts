@@ -464,7 +464,7 @@ export async function createMediaItem(item: MediaItem, filePathForDb: string, fi
       mimeType: item.mimeType,
       fileSize,
       filePath: filePathForDb,
-      sortOrder: Date.now(),
+      sortOrder: 0,
       isActive: true,
     },
   });
