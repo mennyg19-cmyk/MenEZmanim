@@ -265,6 +265,8 @@ export function WysiwygCanvas({
   const [boxBgUploading, setBoxBgUploading] = useState(false);
   const boxBgFileRef = useRef<HTMLInputElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; objId: string | null } | null>(null);
+  const lastFormatRef = useRef<{ font: DisplayObject['font']; backgroundColor: string; language: DisplayObject['language'] } | null>(null);
 
   const popupObj = style.objects.find((o) => o.id === popupId) ?? null;
   const allSelected = selectedIds.size > 0 ? selectedIds : (selectedId ? new Set([selectedId]) : new Set<string>());
@@ -358,6 +360,12 @@ export function WysiwygCanvas({
     const maxZ = style.objects.reduce((m, o) => Math.max(m, o.zIndex), 0);
     const obj = createObject(type, 100, 100);
     obj.zIndex = maxZ + 1;
+    if (lastFormatRef.current) {
+      obj.font = { ...lastFormatRef.current.font };
+      obj.backgroundColor = lastFormatRef.current.backgroundColor;
+      obj.language = lastFormatRef.current.language;
+    }
+    lastFormatRef.current = { font: { ...obj.font }, backgroundColor: obj.backgroundColor, language: obj.language };
     onStyleChange({ ...style, objects: [...style.objects, obj] });
     setSelectedId(obj.id);
     setPopupId(obj.id);
@@ -377,12 +385,105 @@ export function WysiwygCanvas({
       zIndex: maxZ + 1,
       position: { ...source.position, x: source.position.x + 20, y: source.position.y + 20 },
     };
+    lastFormatRef.current = { font: { ...clone.font }, backgroundColor: clone.backgroundColor, language: clone.language };
     onStyleChange({ ...style, objects: [...style.objects, clone] });
     setSelectedId(clone.id);
     setPopupId(clone.id);
     setPopupTab('general');
     setRightPanelOpen(true);
   }, [style, onStyleChange]);
+
+  /* ── Clipboard (cross-screen via localStorage) ─────── */
+  const CLIPBOARD_KEY = 'zmanim-clipboard';
+
+  const copySelected = useCallback(() => {
+    const ids = allSelected;
+    if (ids.size === 0) return;
+    const objs = style.objects.filter((o) => ids.has(o.id));
+    if (objs.length === 0) return;
+    try { localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(objs)); } catch { /* ignore */ }
+  }, [allSelected, style.objects]);
+
+  const pasteFromClipboard = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(CLIPBOARD_KEY);
+      if (!raw) return;
+      const objs: DisplayObject[] = JSON.parse(raw);
+      if (!Array.isArray(objs) || objs.length === 0) return;
+      const maxZ = style.objects.reduce((m, o) => Math.max(m, o.zIndex), 0);
+      const pasted: DisplayObject[] = objs.map((o, i) => ({
+        ...o,
+        id: newId(),
+        name: `${o.name} (paste)`,
+        zIndex: maxZ + 1 + i,
+        position: { ...o.position, x: o.position.x + 30, y: o.position.y + 30 },
+      }));
+      onStyleChange({ ...style, objects: [...style.objects, ...pasted] });
+      const pastedIds = new Set(pasted.map((p) => p.id));
+      setSelectedIds(pastedIds);
+      setSelectedId(pasted[0].id);
+    } catch { /* ignore */ }
+  }, [style, onStyleChange]);
+
+  /* ── Keyboard shortcuts ────────────────────────────── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) return;
+
+      const mod = e.ctrlKey || e.metaKey;
+
+      if (mod && e.key === 'c') { e.preventDefault(); copySelected(); return; }
+      if (mod && e.key === 'v') { e.preventDefault(); pasteFromClipboard(); return; }
+      if (mod && e.key === 'd') {
+        e.preventDefault();
+        if (selectedId) duplicateObj(selectedId);
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        e.preventDefault();
+        deleteObj(selectedId);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSelectedId(null);
+        setSelectedIds(new Set());
+        setContextMenu(null);
+        return;
+      }
+
+      // Arrow keys to nudge objects
+      const NUDGE = e.shiftKey ? 10 : 1;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && allSelected.size > 0) {
+        e.preventDefault();
+        const dx = e.key === 'ArrowLeft' ? -NUDGE : e.key === 'ArrowRight' ? NUDGE : 0;
+        const dy = e.key === 'ArrowUp' ? -NUDGE : e.key === 'ArrowDown' ? NUDGE : 0;
+        const updatedObjects = style.objects.map((o) => {
+          if (!allSelected.has(o.id)) return o;
+          return { ...o, position: { ...o.position, x: o.position.x + dx, y: o.position.y + dy } };
+        });
+        onStyleChange({ ...style, objects: updatedObjects });
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [copySelected, pasteFromClipboard, duplicateObj, deleteObj, selectedId, allSelected, style, onStyleChange]);
+
+  /* ── Context menu ──────────────────────────────────── */
+  const handleContextMenu = useCallback((e: React.MouseEvent, objId: string | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (objId) { setSelectedId(objId); setSelectedIds(new Set()); }
+    setContextMenu({ x: e.clientX, y: e.clientY, objId });
+  }, []);
+
+  // Close context menu on any click
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [contextMenu]);
 
   /* ── Drag ───────────────────────────────────────────── */
   const handleMouseDown = useCallback((e: React.MouseEvent, id: string, handle?: ResizeHandle) => {
@@ -662,6 +763,16 @@ export function WysiwygCanvas({
                 setAddMenuOpen={setAddMenuOpen}
                 onDuplicate={duplicateObj}
                 onDelete={deleteObj}
+                onReorder={(fromId, toId) => {
+                  const objs = [...style.objects];
+                  const fromIdx = objs.findIndex((o) => o.id === fromId);
+                  const toIdx = objs.findIndex((o) => o.id === toId);
+                  if (fromIdx < 0 || toIdx < 0) return;
+                  const [moved] = objs.splice(fromIdx, 1);
+                  objs.splice(toIdx, 0, moved);
+                  objs.forEach((o, i) => { o.zIndex = i; });
+                  onStyleChange({ ...style, objects: objs });
+                }}
               />
             </div>
           )}
@@ -707,6 +818,7 @@ export function WysiwygCanvas({
           userSelect: 'none',
         }}
         onClick={handleCanvasClick}
+        onContextMenu={(e) => handleContextMenu(e, null)}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -756,6 +868,7 @@ export function WysiwygCanvas({
               <div
                 onMouseDown={(e) => handleMouseDown(e, obj.id)}
                 onClick={(e) => handleObjClick(e, obj.id)}
+                onContextMenu={(e) => handleContextMenu(e, obj.id)}
                 style={{
                   position: 'absolute', inset: 0,
                   ...bgStyles,
@@ -767,7 +880,8 @@ export function WysiwygCanvas({
                 <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
                 <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
                 <div style={{
-                  pointerEvents: 'none', overflow: 'hidden', width: '100%', minHeight: '100%',
+                  pointerEvents: 'none', overflow: 'hidden', width: '100%',
+                  ...(obj.content?.scroll?.enabled ? {} : { height: '100%' }),
                   display: 'flex', flexDirection: 'column',
                   justifyContent: (obj.content?.verticalAlign ?? 'top') === 'middle' ? 'center' : (obj.content?.verticalAlign ?? 'top') === 'bottom' ? 'flex-end' : 'flex-start',
                 }}>
@@ -831,6 +945,37 @@ export function WysiwygCanvas({
 
       {/* Alignment Toolbar */}
       <AlignmentToolbar allSelected={allSelected} alignObjects={alignObjects} />
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 100000,
+            background: 'var(--ed-bg)', border: '1px solid var(--ed-border)', borderRadius: 6,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)', padding: '4px 0', minWidth: 160,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.objId && (
+            <>
+              <ContextMenuItem label="Edit" shortcut="" onClick={() => { setPopupId(contextMenu.objId!); setPopupTab('general'); setRightPanelOpen(true); setContextMenu(null); }} />
+              <ContextMenuItem label="Duplicate" shortcut="Ctrl+D" onClick={() => { duplicateObj(contextMenu.objId!); setContextMenu(null); }} />
+              <ContextMenuItem label="Copy" shortcut="Ctrl+C" onClick={() => { copySelected(); setContextMenu(null); }} />
+              <ContextMenuItem label="Delete" shortcut="Del" onClick={() => { deleteObj(contextMenu.objId!); setContextMenu(null); }} />
+              <div style={{ height: 1, background: 'var(--ed-border)', margin: '4px 0' }} />
+              <ContextMenuItem label="Align Left" shortcut="" onClick={() => { alignObjects('left'); setContextMenu(null); }} />
+              <ContextMenuItem label="Center Horizontally" shortcut="" onClick={() => { alignObjects('canvas-center-h'); setContextMenu(null); }} />
+              <ContextMenuItem label="Align Right" shortcut="" onClick={() => { alignObjects('right'); setContextMenu(null); }} />
+              <ContextMenuItem label="Align Top" shortcut="" onClick={() => { alignObjects('top'); setContextMenu(null); }} />
+              <ContextMenuItem label="Center Vertically" shortcut="" onClick={() => { alignObjects('canvas-center-v'); setContextMenu(null); }} />
+              <ContextMenuItem label="Align Bottom" shortcut="" onClick={() => { alignObjects('bottom'); setContextMenu(null); }} />
+            </>
+          )}
+          {!contextMenu.objId && (
+            <ContextMenuItem label="Paste" shortcut="Ctrl+V" onClick={() => { pasteFromClipboard(); setContextMenu(null); }} />
+          )}
+        </div>
+      )}
 
       {/* Zoom Bar */}
       <ZoomBar scale={scale} changeZoom={changeZoom} setZoom={setZoom} zoomMode={zoomMode} setZoomMode={setZoomMode} fillScale={fillScale} fitScale={fitScale} setScale={setScale} canvasWidth={canvasWidth} canvasHeight={canvasHeight} objectCount={style.objects.length} popupObj={popupObj} allSelectedSize={allSelected.size} />
@@ -1033,7 +1178,7 @@ const OBJ_ACTION_STYLE: React.CSSProperties = {
   flexShrink: 0, transition: 'background-color 0.1s, border-color 0.1s',
 };
 
-function ObjectsList({ objects, selectedId, popupId, allSelected, setSelectedId, setSelectedIds, setPopupId, setPopupTab, setAddMenuOpen, onDuplicate, onDelete }: {
+function ObjectsList({ objects, selectedId, popupId, allSelected, setSelectedId, setSelectedIds, setPopupId, setPopupTab, setAddMenuOpen, onDuplicate, onDelete, onReorder }: {
   objects: DisplayObject[];
   selectedId: string | null;
   popupId: string | null;
@@ -1045,7 +1190,9 @@ function ObjectsList({ objects, selectedId, popupId, allSelected, setSelectedId,
   setAddMenuOpen: (v: boolean) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onReorder: (fromId: string, toId: string) => void;
 }) {
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   return (
     <div style={{ padding: '6px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 12px 6px' }}>
@@ -1060,9 +1207,14 @@ function ObjectsList({ objects, selectedId, popupId, allSelected, setSelectedId,
           return (
             <div
               key={obj.id}
+              draggable
+              onDragStart={(e) => { e.dataTransfer.setData('text/plain', obj.id); e.dataTransfer.effectAllowed = 'move'; }}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverId(obj.id); }}
+              onDragLeave={() => setDragOverId(null)}
+              onDrop={(e) => { e.preventDefault(); const fromId = e.dataTransfer.getData('text/plain'); if (fromId && fromId !== obj.id) onReorder(fromId, obj.id); setDragOverId(null); }}
               onClick={() => { setSelectedId(obj.id); setSelectedIds(new Set()); }}
               className={isSel ? "ed-objItemSelected" : "ed-objItem"}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'grab', borderTop: dragOverId === obj.id ? '2px solid #60a5fa' : '2px solid transparent' }}
             >
               <span className="ed-objIcon">{TYPE_ICONS[obj.type]}</span>
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -1165,5 +1317,23 @@ function ZoomBar({ scale, changeZoom, setZoom, zoomMode, setZoomMode, fillScale,
         {allSelectedSize > 1 && <> &middot; {allSelectedSize} selected</>}
       </span>
     </div>
+  );
+}
+
+function ContextMenuItem({ label, shortcut, onClick }: { label: string; shortcut: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        width: '100%', padding: '6px 12px', border: 'none', background: 'none',
+        color: 'var(--ed-text)', fontSize: 12, cursor: 'pointer', textAlign: 'left',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-hover)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+    >
+      <span>{label}</span>
+      {shortcut && <span style={{ color: 'var(--ed-text-dim)', fontSize: 10, marginLeft: 16 }}>{shortcut}</span>}
+    </button>
   );
 }

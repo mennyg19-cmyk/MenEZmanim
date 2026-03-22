@@ -87,6 +87,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   const [screens, setScreens] = useState<any[]>([]);
   const [styles, setStyles] = useState<DisplayStyle[]>([]);
   const [previewCalendar, setPreviewCalendar] = useState<any>(null);
+  const [previewZmanim, setPreviewZmanim] = useState<any[]>([]);
   const [previewSchedules, setPreviewSchedules] = useState<any[]>([]);
 
   // WYSIWYG editor state
@@ -123,6 +124,11 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
       load('media').then((d: any) => d && setMedia(d)),
       load('displayNames').then((d: any) => d && setDisplayNames(d)),
       load('calendar').then((d: any) => d && setPreviewCalendar(d)),
+      load('zmanim').then((d: any) => {
+        if (d?.zmanim) {
+          setPreviewZmanim(d.zmanim.map((z: any) => ({ ...z, time: z.time ? new Date(z.time) : null })));
+        }
+      }),
       Promise.all([load('screens'), load('styles')]).then(([loadedScreens, loadedStyles]: any[]) => {
         if (loadedStyles) {
           setStyles(loadedStyles);
@@ -297,6 +303,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                   onUploadImage={handleUploadImage}
                   previewCalendar={previewCalendar}
                   previewSchedules={previewSchedules}
+                  zmanim={previewZmanim}
                   announcements={announcements}
                   memorials={memorials}
                   media={media}

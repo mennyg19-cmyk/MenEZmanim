@@ -198,6 +198,8 @@ export default function AdminPage() {
         }
         case 'calendar':
           return apiFetch(`/api/calendar?date=${new Date().toISOString()}`);
+        case 'zmanim':
+          return apiFetch(`/api/zmanim?date=${new Date().toISOString()}`);
         case 'import':
           return apiFetch(`${base}/import`, {
             method: 'POST',

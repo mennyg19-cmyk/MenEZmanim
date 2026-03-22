@@ -58,6 +58,8 @@ export interface JewishInfoWidgetProps {
   layout?: 'vertical' | 'horizontal';
   /** Separator string between items in horizontal layout */
   horizontalSeparator?: string;
+  /** Custom display order of item keys */
+  itemOrder?: string[];
   titleSettings?: Record<string, { mode?: 'default' | 'hidden' | 'custom' | 'inline'; customTitle?: string; separator?: string }>;
   displayNames?: DisplayNameOverrides;
 }
@@ -100,6 +102,7 @@ export function JewishInfoWidget({
   showItems = {},
   layout = 'vertical',
   horizontalSeparator = '|',
+  itemOrder,
   titleSettings = {},
   displayNames,
 }: JewishInfoWidgetProps) {
@@ -184,40 +187,43 @@ export function JewishInfoWidget({
     ? <span style={{ marginRight: isRtl ? 8 : 0, marginLeft: isRtl ? 0 : 8 }}>({parsha.specialShabbosHebrew})</span>
     : null;
 
-  const sections: React.ReactNode[] = [];
+  const DEFAULT_ORDER = ['dayOfWeek', 'date', 'parsha', 'holiday', 'omer', 'dafYomi', 'tefilah'];
+  const order = itemOrder && itemOrder.length > 0 ? itemOrder : DEFAULT_ORDER;
+
+  const sectionMap: Record<string, React.ReactNode> = {};
 
   if (show.dayOfWeek && date.dayOfWeekHebrew) {
-    sections.push(
+    sectionMap.dayOfWeek = (
       <div key="dayOfWeek" className="wgt-jiSection" style={sectionStyle}>
         <div style={baseStyle}>{date.dayOfWeekHebrew}</div>
-      </div>,
+      </div>
     );
   }
 
   if (show.date) {
-    sections.push(
+    sectionMap.date = (
       <div key="date" className="wgt-jiSection" style={sectionStyle}>
         <div style={baseStyle}>
           {language === 'hebrew' ? date.formattedHebrew : date.formattedEnglish}
         </div>
-      </div>,
+      </div>
     );
   }
 
   if (show.parsha && parsha) {
-    sections.push(
+    sectionMap.parsha = (
       <React.Fragment key="parsha">
         {renderSection(
           'parsha',
           language === 'hebrew' ? 'פרשת השבוע' : 'Parshas HaShavua',
           <>{parshaValue}{parshaExtra}</>,
         )}
-      </React.Fragment>,
+      </React.Fragment>
     );
   }
 
   if (show.holiday && holiday && (holiday.name || holiday.nameHebrew)) {
-    sections.push(
+    sectionMap.holiday = (
       <React.Fragment key="holiday">
         {renderSection(
           'holiday',
@@ -231,36 +237,36 @@ export function JewishInfoWidget({
             )}
           </>,
         )}
-      </React.Fragment>,
+      </React.Fragment>
     );
   }
 
   if (show.omer && omer) {
-    sections.push(
+    sectionMap.omer = (
       <React.Fragment key="omer">
         {renderSection(
           'omer',
           language === 'hebrew' ? 'ספירת העומר' : 'Sefiras HaOmer',
           language === 'hebrew' ? omer.formattedHebrew : `Day ${omer.day}`,
         )}
-      </React.Fragment>,
+      </React.Fragment>
     );
   }
 
   if (show.dafYomi && dafYomi) {
-    sections.push(
+    sectionMap.dafYomi = (
       <React.Fragment key="dafYomi">
         {renderSection(
           'dafYomi',
           language === 'hebrew' ? 'דף יומי' : 'Daf Yomi',
           language === 'hebrew' ? dafYomi.formattedHebrew : dafYomi.formatted,
         )}
-      </React.Fragment>,
+      </React.Fragment>
     );
   }
 
   if (show.tefilah && activeTefilahItems.length > 0) {
-    sections.push(
+    sectionMap.tefilah = (
       <div key="tefilah" className="wgt-jiSection" style={sectionStyle}>
         {(titleSettings.tefilah?.mode ?? 'default') !== 'hidden' && (
           <div className="wgt-jiTitle" style={titleStyle}>
@@ -283,9 +289,11 @@ export function JewishInfoWidget({
             </span>
           ))}
         </div>
-      </div>,
+      </div>
     );
   }
+
+  const sections = order.map((key) => sectionMap[key]).filter(Boolean);
 
   if (layout === 'horizontal' && sections.length > 0) {
     return (

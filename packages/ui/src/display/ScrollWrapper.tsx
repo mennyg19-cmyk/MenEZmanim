@@ -18,7 +18,7 @@ interface ScrollWrapperProps {
 /**
  * Wraps content and applies continuous CSS-animated scrolling.
  * Content is duplicated so the scroll loops seamlessly.
- * If scrolling is disabled or not configured, renders children directly.
+ * If scrolling is disabled or not configured, renders children as-is (no extra wrapper).
  */
 export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
   const enabled = config?.enabled === true;
@@ -29,6 +29,7 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentSize, setContentSize] = useState(0);
   const [containerSize, setContainerSize] = useState(0);
+  const [ready, setReady] = useState(false);
 
   const isVertical = direction === 'up' || direction === 'down';
 
@@ -41,22 +42,24 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
       setContentSize(contentRef.current.scrollWidth);
       setContainerSize(containerRef.current.clientWidth);
     }
+    setReady(true);
   }, [isVertical]);
 
   useEffect(() => {
-    if (!enabled) return;
-    measure();
+    if (!enabled) { setReady(false); return; }
+    const timer = setTimeout(measure, 50);
     const ro = new ResizeObserver(measure);
     if (containerRef.current) ro.observe(containerRef.current);
     if (contentRef.current) ro.observe(contentRef.current);
-    return () => ro.disconnect();
+    return () => { clearTimeout(timer); ro.disconnect(); };
   }, [enabled, measure]);
 
   if (!enabled) {
-    return <div style={{ width: '100%', height: '100%', ...style }}>{children}</div>;
+    return <>{children}</>;
   }
 
-  const needsScroll = contentSize > containerSize && containerSize > 0;
+  const needsScroll = ready && contentSize > 0 && containerSize > 0;
+
   if (!needsScroll) {
     return (
       <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', ...style }}>
@@ -72,7 +75,7 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
   const from = sign < 0 ? '0' : `-${contentSize}px`;
   const to = sign < 0 ? `-${contentSize}px` : '0';
 
-  const animName = `scroll-${direction}-${Math.round(contentSize)}`;
+  const animName = `scroll-${direction}-${Math.round(contentSize)}-${Math.round(containerSize)}`;
   const keyframes = `@keyframes ${animName} { from { transform: translate${axis}(${from}); } to { transform: translate${axis}(${to}); } }`;
 
   return (

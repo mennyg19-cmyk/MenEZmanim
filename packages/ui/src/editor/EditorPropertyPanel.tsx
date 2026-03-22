@@ -751,29 +751,57 @@ function ScrollSection({ popupObj, pContent }: { popupObj: DisplayObject; pConte
   );
 }
 
+const JI_ALL_ITEMS: [string, string, string][] = [
+  ['dayOfWeek', 'Day of Week', '\u05D9\u05D5\u05DD \u05D1\u05E9\u05D1\u05D5\u05E2'],
+  ['date', 'Hebrew Date', '\u05EA\u05D0\u05E8\u05D9\u05DA \u05E2\u05D1\u05E8\u05D9'],
+  ['parsha', 'Parshat HaShavua', '\u05E4\u05E8\u05E9\u05EA \u05D4\u05E9\u05D1\u05D5\u05E2'],
+  ['holiday', 'Yom Tov / Holiday', '\u05D9\u05D5\u05DD \u05D8\u05D5\u05D1 / \u05D7\u05D2'],
+  ['omer', 'Sefiras HaOmer', '\u05E1\u05E4\u05D9\u05E8\u05EA \u05D4\u05E2\u05D5\u05DE\u05E8'],
+  ['dafYomi', 'Daf Yomi', '\u05D3\u05E3 \u05D9\u05D5\u05DE\u05D9'],
+  ['tefilah', 'Tefillah Changes', '\u05E9\u05D9\u05E0\u05D5\u05D9\u05D9\u05DD \u05D1\u05EA\u05E4\u05D9\u05DC\u05D4'],
+];
+const JI_DEFAULT_ORDER = JI_ALL_ITEMS.map(([k]) => k);
+
 function JewishInfoItemsSection({ popupObj, pContent }: { popupObj: DisplayObject; pContent: (p: Record<string, any>) => void }) {
   const items = popupObj.content?.showItems ?? {};
   const layout = popupObj.content?.layout ?? 'vertical';
   const separator = popupObj.content?.horizontalSeparator ?? '|';
+  const currentOrder: string[] = popupObj.content?.itemOrder ?? JI_DEFAULT_ORDER;
+
+  const orderedItems = currentOrder.map((key) => JI_ALL_ITEMS.find(([k]) => k === key)).filter(Boolean) as [string, string, string][];
+  for (const item of JI_ALL_ITEMS) {
+    if (!currentOrder.includes(item[0])) orderedItems.push(item);
+  }
+
+  const moveItem = (key: string, dir: -1 | 1) => {
+    const arr = [...orderedItems.map(([k]) => k)];
+    const idx = arr.indexOf(key);
+    if (idx < 0) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= arr.length) return;
+    [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+    pContent({ itemOrder: arr });
+  };
+
   return (
     <>
-      <Field label="Show in this box">
-        {([
-          ['dayOfWeek', 'Day of Week', '\u05D9\u05D5\u05DD \u05D1\u05E9\u05D1\u05D5\u05E2'],
-          ['date', 'Hebrew Date', '\u05EA\u05D0\u05E8\u05D9\u05DA \u05E2\u05D1\u05E8\u05D9'],
-          ['parsha', 'Parshat HaShavua', '\u05E4\u05E8\u05E9\u05EA \u05D4\u05E9\u05D1\u05D5\u05E2'],
-          ['holiday', 'Yom Tov / Holiday', '\u05D9\u05D5\u05DD \u05D8\u05D5\u05D1 / \u05D7\u05D2'],
-          ['omer', 'Sefiras HaOmer', '\u05E1\u05E4\u05D9\u05E8\u05EA \u05D4\u05E2\u05D5\u05DE\u05E8'],
-          ['dafYomi', 'Daf Yomi', '\u05D3\u05E3 \u05D9\u05D5\u05DE\u05D9'],
-          ['tefilah', 'Tefillah Changes', '\u05E9\u05D9\u05E0\u05D5\u05D9\u05D9\u05DD \u05D1\u05EA\u05E4\u05D9\u05DC\u05D4'],
-        ] as [string, string, string][]).map(([key, labelEn, labelHe]) => {
+      <Field label="Show in this box (drag to reorder)">
+        {orderedItems.map(([key, labelEn, labelHe], idx) => {
           const checked = key === 'dayOfWeek' ? items[key] === true : items[key] !== false;
           return (
-            <label key={key} className={checked ? "ed-groupItemActive" : "ed-groupItem"} style={{ marginBottom: 6 }}>
-              <input type="checkbox" checked={checked} onChange={(e) => pContent({ showItems: { ...items, [key]: e.target.checked } })} />
-              <span style={{ color: 'var(--ed-text)' }}>{labelHe}</span>
-              <span style={{ color: 'var(--ed-text-dim)', marginLeft: 'auto', fontSize: 11 }}>{labelEn}</span>
-            </label>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <button type="button" disabled={idx === 0} onClick={() => moveItem(key, -1)}
+                  style={{ fontSize: 8, lineHeight: 1, padding: '1px 3px', cursor: idx === 0 ? 'default' : 'pointer', opacity: idx === 0 ? 0.3 : 1, background: 'none', border: 'none', color: 'var(--ed-text-dim)' }}>▲</button>
+                <button type="button" disabled={idx === orderedItems.length - 1} onClick={() => moveItem(key, 1)}
+                  style={{ fontSize: 8, lineHeight: 1, padding: '1px 3px', cursor: idx === orderedItems.length - 1 ? 'default' : 'pointer', opacity: idx === orderedItems.length - 1 ? 0.3 : 1, background: 'none', border: 'none', color: 'var(--ed-text-dim)' }}>▼</button>
+              </div>
+              <label className={checked ? "ed-groupItemActive" : "ed-groupItem"} style={{ flex: 1, marginBottom: 0 }}>
+                <input type="checkbox" checked={checked} onChange={(e) => pContent({ showItems: { ...items, [key]: e.target.checked } })} />
+                <span style={{ color: 'var(--ed-text)' }}>{labelHe}</span>
+                <span style={{ color: 'var(--ed-text-dim)', marginLeft: 'auto', fontSize: 11 }}>{labelEn}</span>
+              </label>
+            </div>
           );
         })}
       </Field>

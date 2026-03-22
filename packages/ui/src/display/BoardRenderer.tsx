@@ -129,6 +129,7 @@ export function renderWidget(
           showItems={content.showItems}
           layout={content.layout}
           horizontalSeparator={content.horizontalSeparator}
+          itemOrder={content.itemOrder}
           titleSettings={content.titleSettings}
           displayNames={displayNames}
         />
@@ -399,7 +400,7 @@ export function BoardRenderer({
               <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
                 <div style={{
                   width: '100%',
-                  minHeight: '100%',
+                  ...(obj.content?.scroll?.enabled ? {} : { height: '100%' }),
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent:
