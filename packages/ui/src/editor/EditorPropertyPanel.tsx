@@ -8,7 +8,8 @@ import { GradientPicker } from './GradientPicker';
 import { TexturePicker } from './TexturePicker';
 import { FramePicker } from './FramePicker';
 import { hexToRgba, extractHex } from '../shared/colorUtils';
-import { contrastTextColor } from '../shared/colorExtract';
+import { bestTextColorFromPalette } from '../shared/colorExtract';
+import { useColorContext } from './ColorContext';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
 
 
@@ -152,6 +153,7 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
 }) {
   const content = popupObj.content || {};
   const isTable = popupObj.type === DisplayObjectType.ZMANIM_TABLE || popupObj.type === DisplayObjectType.EVENTS_TABLE;
+  const { themeColors } = useColorContext();
 
   const effectiveBg = popupObj.backgroundColor === 'transparent' || popupObj.backgroundColor === 'inherit' || !popupObj.backgroundColor
     ? (canvasBgColor || '#000000')
@@ -197,10 +199,10 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
             <ColorInput value={popupObj.font.color} onChange={(v) => pFont({ color: v })} />
             <button
               type="button"
-              onClick={() => pFont({ color: contrastTextColor(effectiveBg) })}
+              onClick={() => pFont({ color: bestTextColorFromPalette(effectiveBg, themeColors) })}
               className="ed-btn"
               style={{ fontSize: 11, padding: '3px 8px' }}
-              title="Auto-pick a text color that contrasts with the object's background"
+              title="Auto-pick a text color that contrasts with the object's background, using theme colors when available"
             >Auto contrast</button>
           </div>
         </Field>

@@ -200,26 +200,58 @@ export function contrastTextColor(bgHex: string): string {
 }
 
 /**
- * Given a background color, pick the best text color from a set of theme/palette colors.
- * Prefers colors with high contrast against the background.
+ * Given a background color and a palette of available colors, pick the best
+ * text color. Prefers palette colors that have sufficient contrast and
+ * visual richness (saturation) over generic black/white.
+ *
+ * For light backgrounds: picks the darkest, most saturated palette color
+ * (e.g. a rich mahogany or deep blue rather than plain black).
+ * For dark backgrounds: picks the lightest, most saturated palette color.
+ * Falls back to a generic high-contrast color if no palette color qualifies.
  */
 export function bestTextColorFromPalette(bgHex: string, palette: string[]): string {
   if (!palette.length) return contrastTextColor(bgHex);
+
   const bgLum = luminance(bgHex);
   const isDarkBg = bgLum < 140;
 
-  // Filter to colors that have good contrast
-  const candidates = palette.filter((c) => {
-    const cLum = luminance(c);
-    return isDarkBg ? cLum > 170 : cLum < 80;
+  // Minimum contrast distance in luminance (0-255 scale) for readability
+  const MIN_CONTRAST = 60;
+
+  // Score each palette color: we want good contrast AND visual richness
+  const scored = palette
+    .map((c) => {
+      const cLum = luminance(c);
+      const contrast = Math.abs(cLum - bgLum);
+      const sat = saturation(c);
+      // On light bg we want darker colors; on dark bg we want lighter colors
+      const directionOk = isDarkBg ? cLum > bgLum : cLum < bgLum;
+      return { color: c, contrast, sat, directionOk, lum: cLum };
+    })
+    .filter((c) => c.contrast >= MIN_CONTRAST && c.directionOk);
+
+  if (scored.length === 0) {
+    // No palette color has enough contrast -- try with a lower threshold
+    const relaxed = palette
+      .map((c) => {
+        const cLum = luminance(c);
+        const contrast = Math.abs(cLum - bgLum);
+        return { color: c, contrast, lum: cLum };
+      })
+      .filter((c) => c.contrast >= 40)
+      .sort((a, b) => b.contrast - a.contrast);
+
+    if (relaxed.length > 0) return relaxed[0].color;
+    return contrastTextColor(bgHex);
+  }
+
+  // Rank by a weighted score: contrast matters most, but saturation is a bonus
+  // so we prefer a rich brown over plain gray at similar contrast levels
+  scored.sort((a, b) => {
+    const scoreA = a.contrast + a.sat * 80;
+    const scoreB = b.contrast + b.sat * 80;
+    return scoreB - scoreA;
   });
 
-  if (candidates.length === 0) return contrastTextColor(bgHex);
-
-  // Pick the one with highest contrast ratio
-  return candidates.sort((a, b) => {
-    const contrastA = Math.abs(luminance(a) - bgLum);
-    const contrastB = Math.abs(luminance(b) - bgLum);
-    return contrastB - contrastA;
-  })[0];
+  return scored[0].color;
 }
