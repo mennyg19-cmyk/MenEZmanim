@@ -545,6 +545,19 @@ export async function updateStyle(
   });
   if (!existing) return null;
   let merged: DisplayStyle = prismaStyleRowToDisplayStyle(existing, existing.displayObjects);
+
+  // Fields that are nullable: if the patch is a full style object (has 'name')
+  // but omits these keys, treat them as explicitly cleared (null).
+  // This handles the case where JSON.stringify strips undefined values.
+  const NULLABLE_FIELDS = ['backgroundImage', 'backgroundGradient', 'backgroundTexture', 'backgroundFrameId', 'backgroundFrameThickness'] as const;
+  if (patch.name !== undefined) {
+    for (const f of NULLABLE_FIELDS) {
+      if (!(f in patch)) {
+        (patch as any)[f] = null;
+      }
+    }
+  }
+
   merged = {
     ...merged,
     ...patch,
