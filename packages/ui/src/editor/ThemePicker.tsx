@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { extractPaletteFromImage, paletteToThemeColors } from '../shared/colorExtract';
 
 
 export interface ColorTheme {
@@ -55,6 +56,8 @@ interface ThemePickerProps {
   onApplyTheme: (theme: ColorTheme) => void;
   onSaveCustomTheme: (theme: ColorTheme) => void;
   onDeleteCustomTheme: (themeId: string) => void;
+  /** Current background image URL for auto-generating a theme palette */
+  backgroundImageUrl?: string;
 }
 
 export function ThemePicker({
@@ -63,11 +66,32 @@ export function ThemePicker({
   onApplyTheme,
   onSaveCustomTheme,
   onDeleteCustomTheme,
+  backgroundImageUrl,
 }: ThemePickerProps) {
   const allThemes = [...BUILT_IN_THEMES, ...customThemes];
   const [editingColors, setEditingColors] = useState<ThemeColors | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingBaseId, setEditingBaseId] = useState<string | null>(null);
+  const [autoGenerating, setAutoGenerating] = useState(false);
+
+  const handleAutoGenerate = async () => {
+    if (!backgroundImageUrl) return;
+    setAutoGenerating(true);
+    try {
+      const palette = await extractPaletteFromImage(backgroundImageUrl, 8);
+      if (palette.length === 0) return;
+      const colors = paletteToThemeColors(palette);
+      const theme: ColorTheme = {
+        id: `auto-${Date.now()}`,
+        name: 'Auto (from background)',
+        builtIn: false,
+        colors,
+      };
+      onApplyTheme(theme);
+    } finally {
+      setAutoGenerating(false);
+    }
+  };
 
   const startCustomize = (theme: ColorTheme) => {
     setEditingColors({ ...theme.colors });
@@ -164,6 +188,23 @@ export function ThemePicker({
   return (
     <div className="ed-panelBody">
       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ed-text)', marginBottom: 12 }}>Color Themes</div>
+
+      {backgroundImageUrl && (
+        <div style={{ marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={handleAutoGenerate}
+            disabled={autoGenerating}
+            className="ed-btnPrimary"
+            style={{ width: '100%', padding: '8px 0', justifyContent: 'center', fontSize: 12 }}
+          >
+            {autoGenerating ? 'Generating...' : 'Auto-Generate from Background'}
+          </button>
+          <div style={{ fontSize: 9, color: 'var(--ed-text-dim)', marginTop: 4, textAlign: 'center' }}>
+            Creates a matching color theme from the background image
+          </div>
+        </div>
+      )}
 
       <div className="ed-sectionLabelSm" style={{ marginBottom: 8 }}>Built-in</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>

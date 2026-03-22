@@ -11,6 +11,8 @@ import { EditorPropertyPanel } from './EditorPropertyPanel';
 import { GradientPicker } from './GradientPicker';
 import { TexturePicker } from './TexturePicker';
 import { FramePicker } from './FramePicker';
+import { ColorProvider } from './ColorContext';
+import { ColorInput } from './FormPrimitives';
 
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -265,6 +267,21 @@ export function WysiwygCanvas({
 
   const popupObj = style.objects.find((o) => o.id === popupId) ?? null;
   const allSelected = selectedIds.size > 0 ? selectedIds : (selectedId ? new Set([selectedId]) : new Set<string>());
+
+  const activeThemeColors = React.useMemo(() => {
+    const allThemes = [...BUILT_IN_THEMES, ...customThemes];
+    const theme = activeThemeId ? allThemes.find((t) => t.id === activeThemeId) : null;
+    if (!theme) return [] as string[];
+    const vals = Object.values(theme.colors) as string[];
+    const unique = [...new Set(vals.map((v) => {
+      if (v.startsWith('rgba')) {
+        const m = v.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (m) return `#${parseInt(m[1]).toString(16).padStart(2, '0')}${parseInt(m[2]).toString(16).padStart(2, '0')}${parseInt(m[3]).toString(16).padStart(2, '0')}`;
+      }
+      return v;
+    }))];
+    return unique;
+  }, [activeThemeId, customThemes]);
 
   const zoomModeRef = useRef(zoomMode);
   zoomModeRef.current = zoomMode;
@@ -592,6 +609,7 @@ export function WysiwygCanvas({
 
   /* ── Render ─────────────────────────────────────────── */
   return (
+    <ColorProvider themeColors={activeThemeColors}>
     <div style={{ display: 'flex', width: '100%', height: '100%', direction: 'ltr' }}>
 
     {/* Left Panel */}
@@ -783,7 +801,7 @@ export function WysiwygCanvas({
             <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ed-text)' }}>Themes</span>
             <button onClick={() => setThemePanelOpen(false)} className="ed-closeBtn" style={{ fontSize: 20 }}>&times;</button>
           </div>
-          <ThemePicker activeThemeId={activeThemeId} customThemes={customThemes} onApplyTheme={(theme) => { applyTheme(theme); }} onSaveCustomTheme={onSaveCustomTheme ?? (() => {})} onDeleteCustomTheme={onDeleteCustomTheme ?? (() => {})} />
+          <ThemePicker activeThemeId={activeThemeId} customThemes={customThemes} onApplyTheme={(theme) => { applyTheme(theme); }} onSaveCustomTheme={onSaveCustomTheme ?? (() => {})} onDeleteCustomTheme={onDeleteCustomTheme ?? (() => {})} backgroundImageUrl={style.backgroundImage} />
         </div>
       )}
 
@@ -815,6 +833,7 @@ export function WysiwygCanvas({
       <ZoomBar scale={scale} changeZoom={changeZoom} setZoom={setZoom} zoomMode={zoomMode} setZoomMode={setZoomMode} fillScale={fillScale} fitScale={fitScale} setScale={setScale} canvasWidth={canvasWidth} canvasHeight={canvasHeight} objectCount={style.objects.length} popupObj={popupObj} allSelectedSize={allSelected.size} />
     </div>
     </div>
+    </ColorProvider>
   );
 }
 
@@ -873,15 +892,10 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
           })}
         </div>
         {bgMode === 'solid' && (
-          <div className="ed-colorRow">
-            <input
-              type="color"
-              value={style.backgroundColor || '#000000'}
-              onChange={(e) => onStyleChange({ ...style, backgroundColor: e.target.value })}
-              className="ed-colorSwatch"
-              style={{ border: '1px solid var(--ed-border)', borderRadius: 4 }}
-            />
-          </div>
+          <ColorInput
+            value={style.backgroundColor || '#000000'}
+            onChange={(v) => onStyleChange({ ...style, backgroundColor: v })}
+          />
         )}
         {bgMode === 'gradient' && (
           <GradientPicker
