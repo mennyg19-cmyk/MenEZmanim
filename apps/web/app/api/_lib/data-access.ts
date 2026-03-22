@@ -1,5 +1,6 @@
 import {
   displayObjectToPrismaFields,
+  ensureTablesExist,
   getDbClient,
   prismaStyleRowToDisplayStyle,
   seedDemoOrganization,
@@ -81,6 +82,9 @@ async function ensureSeeded(): Promise<void> {
   if (!ensureSeededPromise) {
     ensureSeededPromise = (async () => {
       const db = getDbClient();
+      if (process.env.TURSO_DATABASE_URL) {
+        await ensureTablesExist(db);
+      }
       const n = await db.organization.count();
       if (n === 0) {
         await seedDemoOrganization(db);
