@@ -4,6 +4,9 @@ import React from 'react';
 import { DisplayObjectType, type DisplayObject, type Position } from '@zmanim-app/core';
 import { TYPE_LABELS, FONT_CATEGORIES, ZMANIM_OPTIONS_REGULAR, ZMANIM_OPTIONS_TUKACHINSKY } from '../shared/constants';
 import { BgMode, getObjBgMode } from '../shared/backgroundUtils';
+import { GradientPicker } from './GradientPicker';
+import { TexturePicker } from './TexturePicker';
+import { FramePicker } from './FramePicker';
 import { hexToRgba, extractHex } from '../shared/colorUtils';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
 
@@ -190,6 +193,13 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
         <BackgroundSection popupObj={popupObj} pContent={pContent} pUpdate={pUpdate} onUploadImage={onUploadImage} boxBgUploading={boxBgUploading} setBoxBgUploading={setBoxBgUploading} boxBgFileRef={boxBgFileRef} />
       </Section>
 
+      <Section title="Frame" defaultOpen={false}>
+        <FramePicker
+          value={content.frameId as string | undefined}
+          onChange={(id) => pContent({ frameId: id })}
+        />
+      </Section>
+
       {isTable && <TableLayoutSection popupObj={popupObj} pContent={pContent} />}
       {isTable && <BorderSection popupObj={popupObj} pContent={pContent} />}
       {popupObj.type === DisplayObjectType.EVENTS_TABLE && <HeaderRowSection popupObj={popupObj} pContent={pContent} />}
@@ -361,6 +371,8 @@ function BackgroundSection({ popupObj, pContent, pUpdate, onUploadImage, boxBgUp
         {([
           ['solid', 'Solid Color', '\uD83C\uDFA8'],
           ['transparent', 'Transparent', '\uD83D\uDD0D'],
+          ['gradient', 'Gradient', '\u25C6'],
+          ['texture', 'Texture', '\u25A7'],
           ['image', 'Image', '\uD83D\uDDBC\uFE0F'],
           ['canvas', 'Canvas BG', '\uD83E\uDE9F'],
         ] as [BgMode, string, string][]).map(([mode, label, icon]) => {
@@ -368,7 +380,23 @@ function BackgroundSection({ popupObj, pContent, pUpdate, onUploadImage, boxBgUp
           return (
             <button
               key={mode}
-              onClick={() => pContent({ backgroundMode: mode })}
+              onClick={() => {
+                if (mode === 'gradient') {
+                  pContent({
+                    backgroundMode: 'gradient',
+                    gradientValue:
+                      (popupObj.content?.gradientValue as string) ||
+                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  });
+                } else if (mode === 'texture') {
+                  pContent({
+                    backgroundMode: 'texture',
+                    textureId: (popupObj.content?.textureId as string) || 'linen',
+                  });
+                } else {
+                  pContent({ backgroundMode: mode });
+                }
+              }}
               className={active ? "ed-bgModeBtnActive" : "ed-bgModeBtn"}
               title={label}
             >
@@ -410,6 +438,15 @@ function BackgroundSection({ popupObj, pContent, pUpdate, onUploadImage, boxBgUp
             </button>
           )}
         </div>
+      )}
+      {bgMode === 'gradient' && (
+        <GradientPicker onChange={(css) => pContent({ gradientValue: css })} />
+      )}
+      {bgMode === 'texture' && (
+        <TexturePicker
+          value={typeof popupObj.content?.textureId === 'string' ? popupObj.content.textureId : undefined}
+          onChange={(id) => pContent({ textureId: id })}
+        />
       )}
       {bgMode === 'canvas' && (
         <div className="ed-hint">Shows the canvas background (color/image), hiding objects underneath.</div>

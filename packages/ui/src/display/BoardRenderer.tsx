@@ -4,7 +4,8 @@ import React from 'react';
 import type { DisplayObject, DisplayObjectType, DisplayNameOverrides } from '@zmanim-app/core';
 import type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaData, ZmanResult } from '../shared/types';
 import { formatZmanTime, formatEventTime } from '../shared/timeUtils';
-import { resolveObjBackground } from '../shared/backgroundUtils';
+import { resolveObjBackground, type CanvasBgExtras } from '../shared/backgroundUtils';
+import { FrameRenderer } from './FrameRenderer';
 import { ZmanimTable } from './widgets/ZmanimTable';
 import { JewishInfoWidget } from './widgets/JewishInfoWidget';
 import { DigitalClock } from './widgets/DigitalClock';
@@ -26,6 +27,8 @@ export interface BoardRendererProps {
   canvasHeight: number;
   canvasBgColor?: string;
   canvasBgImage?: string;
+  /** For object "Canvas BG" mode when the canvas uses gradient/texture */
+  canvasBgExtras?: CanvasBgExtras;
   zmanim?: ZmanResult[];
   calendarInfo?: CalendarInfo;
   announcements?: AnnouncementData[];
@@ -348,6 +351,7 @@ export function BoardRenderer({
   canvasHeight,
   canvasBgColor = '#000',
   canvasBgImage,
+  canvasBgExtras,
   zmanim,
   calendarInfo,
   announcements,
@@ -371,7 +375,7 @@ export function BoardRenderer({
       }}
     >
       {visibleSorted.map((obj) => {
-        const bgStyles = resolveObjBackground(obj, canvasBgColor, canvasWidth, canvasHeight, canvasBgImage);
+        const bgStyles = resolveObjBackground(obj, canvasBgColor, canvasWidth, canvasHeight, canvasBgImage, canvasBgExtras);
         return (
           <div
             key={obj.id}
@@ -386,20 +390,22 @@ export function BoardRenderer({
               overflow: 'hidden',
             }}
           >
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent:
-                (obj.content?.verticalAlign ?? 'top') === 'middle'
-                  ? 'center'
-                  : (obj.content?.verticalAlign ?? 'top') === 'bottom'
-                    ? 'flex-end'
-                    : 'flex-start',
-            }}>
-              {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
-            </div>
+            <FrameRenderer frameId={obj.content?.frameId as string | undefined}>
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent:
+                  (obj.content?.verticalAlign ?? 'top') === 'middle'
+                    ? 'center'
+                    : (obj.content?.verticalAlign ?? 'top') === 'bottom'
+                      ? 'flex-end'
+                      : 'flex-start',
+              }}>
+                {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
+              </div>
+            </FrameRenderer>
           </div>
         );
       })}

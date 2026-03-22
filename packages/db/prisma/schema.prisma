@@ -71,18 +71,22 @@ model User {
 }
 
 model Style {
-  id               String   @id @default(cuid())
-  name             String
-  orgId            String
-  backgroundImage  String?
-  backgroundColor  String   @default("#0f172a")
-  canvasWidth      Int      @default(1920)
-  canvasHeight     Int      @default(1080)
-  isDefault        Boolean  @default(false)
-  activationRules  String
-  sortOrder        Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  name               String
+  orgId              String
+  backgroundImage    String?
+  backgroundColor    String   @default("#0f172a")
+  backgroundMode     String   @default("solid")
+  backgroundGradient String?
+  backgroundTexture  String?
+  backgroundFrameId  String?
+  canvasWidth        Int      @default(1920)
+  canvasHeight       Int      @default(1080)
+  isDefault          Boolean  @default(false)
+  activationRules    String
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   displayObjects DisplayObject[]

@@ -31,6 +31,10 @@ const SCHEMA_STATEMENTS: string[] = [
     "orgId" TEXT NOT NULL,
     "backgroundImage" TEXT,
     "backgroundColor" TEXT NOT NULL DEFAULT '#0f172a',
+    "backgroundMode" TEXT NOT NULL DEFAULT 'solid',
+    "backgroundGradient" TEXT,
+    "backgroundTexture" TEXT,
+    "backgroundFrameId" TEXT,
     "canvasWidth" INTEGER NOT NULL DEFAULT 1920,
     "canvasHeight" INTEGER NOT NULL DEFAULT 1080,
     "isDefault" BOOLEAN NOT NULL DEFAULT false,
@@ -248,9 +252,24 @@ const FIXUP_STATEMENTS: string[] = [
   `UPDATE "Media" SET "sortOrder" = 0 WHERE "sortOrder" > 2147483647`,
 ];
 
+/** Idempotent ALTERs for existing Turso/SQLite DBs created before new Style columns. */
+const STYLE_ALTER_STATEMENTS: string[] = [
+  `ALTER TABLE "Style" ADD COLUMN "backgroundMode" TEXT NOT NULL DEFAULT 'solid'`,
+  `ALTER TABLE "Style" ADD COLUMN "backgroundGradient" TEXT`,
+  `ALTER TABLE "Style" ADD COLUMN "backgroundTexture" TEXT`,
+  `ALTER TABLE "Style" ADD COLUMN "backgroundFrameId" TEXT`,
+];
+
 export async function ensureTablesExist(db: PrismaClient): Promise<void> {
   for (const sql of SCHEMA_STATEMENTS) {
     await db.$executeRawUnsafe(sql);
+  }
+  for (const sql of STYLE_ALTER_STATEMENTS) {
+    try {
+      await db.$executeRawUnsafe(sql);
+    } catch {
+      /* column already exists */
+    }
   }
   for (const sql of FIXUP_STATEMENTS) {
     try { await db.$executeRawUnsafe(sql); } catch { /* table may not exist yet */ }

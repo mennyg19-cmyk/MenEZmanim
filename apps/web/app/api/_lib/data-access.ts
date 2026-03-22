@@ -498,6 +498,10 @@ export async function createStyle(orgId: string, body: Record<string, unknown>):
     activationRules: (body.activationRules as DisplayStyle['activationRules']) ?? [{ type: 'default' }],
     sortOrder: (body.sortOrder as number) ?? 0,
     backgroundImage: body.backgroundImage as string | undefined,
+    backgroundMode: body.backgroundMode as DisplayStyle['backgroundMode'],
+    backgroundGradient: body.backgroundGradient as string | undefined,
+    backgroundTexture: body.backgroundTexture as string | undefined,
+    backgroundFrameId: body.backgroundFrameId as string | undefined,
   };
   const styleRow = styleRowCreateFromDisplayStyle(partial, orgId);
   await db.style.create({
@@ -554,6 +558,10 @@ export async function updateStyle(
       name: styleRow.name,
       backgroundImage: styleRow.backgroundImage,
       backgroundColor: styleRow.backgroundColor,
+      backgroundMode: styleRow.backgroundMode,
+      backgroundGradient: styleRow.backgroundGradient,
+      backgroundTexture: styleRow.backgroundTexture,
+      backgroundFrameId: styleRow.backgroundFrameId,
       canvasWidth: styleRow.canvasWidth,
       canvasHeight: styleRow.canvasHeight,
       activationRules: styleRow.activationRules,

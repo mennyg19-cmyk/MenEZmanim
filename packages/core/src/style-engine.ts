@@ -55,11 +55,21 @@ export interface StyleActivationRule {
   endDay?: number;
 }
 
+export type CanvasBackgroundMode = 'solid' | 'gradient' | 'texture' | 'image';
+
 export interface DisplayStyle {
   id: string;
   name: string;
   backgroundImage?: string;
   backgroundColor: string;
+  /** When set, controls how the canvas is filled. If omitted, inferred from backgroundImage. */
+  backgroundMode?: CanvasBackgroundMode;
+  /** CSS gradient for canvas when backgroundMode is gradient */
+  backgroundGradient?: string;
+  /** Built-in texture id when backgroundMode is texture */
+  backgroundTexture?: string;
+  /** Decorative frame id for the full canvas (9-slice border) */
+  backgroundFrameId?: string;
   canvasWidth: number;
   canvasHeight: number;
   objects: DisplayObject[];

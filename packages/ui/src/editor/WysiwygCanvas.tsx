@@ -5,8 +5,12 @@ import { DisplayObject, DisplayObjectType, DisplayStyle, Position } from '@zmani
 import { ThemePicker, ColorTheme, ThemeColors, BUILT_IN_THEMES } from './ThemePicker';
 import { renderWidget } from '../display/BoardRenderer';
 import { TYPE_LABELS, TYPE_ICONS, FONT_CATEGORIES } from '../shared/constants';
-import { resolveObjBackground, getObjBgMode } from '../shared/backgroundUtils';
+import { resolveObjBackground, getObjBgMode, resolveCanvasBackground, getCanvasBgMode } from '../shared/backgroundUtils';
+import { FrameRenderer } from '../display/FrameRenderer';
 import { EditorPropertyPanel } from './EditorPropertyPanel';
+import { GradientPicker } from './GradientPicker';
+import { TexturePicker } from './TexturePicker';
+import { FramePicker } from './FramePicker';
 
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -671,15 +675,14 @@ export function WysiwygCanvas({
     <div ref={containerRef} style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: '#1e1e2e' }}>
       <div style={{ position: 'absolute', inset: 0, overflow: overflows ? 'auto' : 'hidden' }}>
       <div style={{ position: 'relative', width: overflowsX ? scaledW : containerSize.w || '100%', height: overflowsY ? scaledH : containerSize.h || '100%' }}>
+      <FrameRenderer frameId={style.backgroundFrameId}>
       <div
         ref={canvasRef}
         style={{
           position: 'absolute', left: offsetX, top: offsetY,
           width: canvasWidth, height: canvasHeight,
           transform: `scale(${scale})`, transformOrigin: 'top left',
-          backgroundColor: style.backgroundColor || '#000',
-          backgroundImage: style.backgroundImage ? `url(${style.backgroundImage})` : undefined,
-          backgroundSize: `${canvasWidth}px ${canvasHeight}px`, backgroundPosition: '0 0',
+          ...resolveCanvasBackground(style, canvasWidth, canvasHeight),
           boxShadow: '0 4px 32px rgba(0,0,0,0.6)',
           cursor: dragState ? 'grabbing' : 'default',
           userSelect: 'none',
@@ -715,7 +718,12 @@ export function WysiwygCanvas({
         {sorted.map((obj) => {
           const sel = obj.id === selectedId || allSelected.has(obj.id);
           const bgMode = getObjBgMode(obj);
-          const bgStyles = resolveObjBackground(obj, style.backgroundColor, canvasWidth, canvasHeight, style.backgroundImage);
+          const bgStyles = resolveObjBackground(obj, style.backgroundColor, canvasWidth, canvasHeight, style.backgroundImage, {
+            backgroundMode: style.backgroundMode,
+            backgroundGradient: style.backgroundGradient,
+            backgroundTexture: style.backgroundTexture,
+            backgroundImage: style.backgroundImage,
+          });
           return (
             <div
               key={obj.id}
@@ -737,6 +745,7 @@ export function WysiwygCanvas({
                   overflow: 'hidden', boxSizing: 'border-box', transition: 'border-color 0.1s',
                 }}
               >
+                <FrameRenderer frameId={obj.content?.frameId as string | undefined}>
                 <div style={{
                   pointerEvents: 'none', overflow: 'hidden', width: '100%', height: '100%',
                   display: 'flex', flexDirection: 'column',
@@ -751,6 +760,7 @@ export function WysiwygCanvas({
                     media?.map((m: any) => ({ id: m.id ?? '', url: m.url ?? '', mimeType: m.mimeType ?? '' })),
                   )}
                 </div>
+                </FrameRenderer>
                 <div className="ed-typeBadge">
                   {TYPE_LABELS[obj.type]}
                 </div>
@@ -762,6 +772,7 @@ export function WysiwygCanvas({
           );
         })}
       </div>
+      </FrameRenderer>
       </div>
       </div>
 
@@ -809,6 +820,121 @@ export function WysiwygCanvas({
 
 /* ── Extracted sub-components ─────────────────────────── */
 
+function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
+  style: DisplayStyle;
+  onStyleChange: (s: DisplayStyle) => void;
+  editorSettings: EditorSettingsProps;
+}) {
+  const bgMode = getCanvasBgMode(style);
+  return (
+    <>
+      <div>
+        <div className="ed-subLabel">Canvas background</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+          {([
+            ['solid', 'Solid'],
+            ['gradient', 'Gradient'],
+            ['texture', 'Texture'],
+            ['image', 'Image'],
+          ] as const).map(([mode, label]) => {
+            const active = bgMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  if (mode === 'solid') {
+                    onStyleChange({ ...style, backgroundMode: 'solid', backgroundImage: undefined });
+                  } else if (mode === 'gradient') {
+                    onStyleChange({
+                      ...style,
+                      backgroundMode: 'gradient',
+                      backgroundGradient: style.backgroundGradient || 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                      backgroundImage: undefined,
+                    });
+                  } else if (mode === 'texture') {
+                    onStyleChange({
+                      ...style,
+                      backgroundMode: 'texture',
+                      backgroundTexture: style.backgroundTexture || 'linen',
+                      backgroundImage: undefined,
+                    });
+                  } else {
+                    onStyleChange({ ...style, backgroundMode: 'image' });
+                  }
+                }}
+                className={active ? 'ed-bgModeBtnActive' : 'ed-bgModeBtn'}
+                style={{ fontSize: 10 }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {bgMode === 'solid' && (
+          <div className="ed-colorRow">
+            <input
+              type="color"
+              value={style.backgroundColor || '#000000'}
+              onChange={(e) => onStyleChange({ ...style, backgroundColor: e.target.value })}
+              className="ed-colorSwatch"
+              style={{ border: '1px solid var(--ed-border)', borderRadius: 4 }}
+            />
+          </div>
+        )}
+        {bgMode === 'gradient' && (
+          <GradientPicker
+            onChange={(css) => onStyleChange({ ...style, backgroundMode: 'gradient', backgroundGradient: css })}
+          />
+        )}
+        {bgMode === 'texture' && (
+          <TexturePicker
+            value={style.backgroundTexture}
+            onChange={(id) => onStyleChange({ ...style, backgroundMode: 'texture', backgroundTexture: id })}
+          />
+        )}
+        {bgMode === 'image' && (
+          <div className="ed-colorRow">
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async () => {
+                  const file = input.files?.[0];
+                  if (file) await editorSettings.onBgUpload(file);
+                };
+                input.click();
+              }}
+              disabled={editorSettings.bgUploading}
+              className="ed-btnSmall"
+              style={{ flex: 1, fontSize: 10 }}
+            >
+              {editorSettings.bgUploading ? 'Uploading...' : style.backgroundImage ? 'Change BG' : 'Upload BG'}
+            </button>
+            {style.backgroundImage && (
+              <button
+                type="button"
+                onClick={() => onStyleChange({ ...style, backgroundImage: undefined })}
+                className="ed-btnDanger"
+                style={{ padding: '3px 6px' }}
+                title="Remove BG"
+              >
+                &times;
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div>
+        <div className="ed-subLabel">Canvas frame</div>
+        <FramePicker value={style.backgroundFrameId} onChange={(id) => onStyleChange({ ...style, backgroundFrameId: id })} />
+      </div>
+    </>
+  );
+}
+
 function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, setSettingsOpen, themePanelOpen, setThemePanelOpen }: {
   editorSettings: EditorSettingsProps;
   style: DisplayStyle;
@@ -845,18 +971,7 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
               )}
             </div>
           </div>
-          <div>
-            <div className="ed-subLabel">Background</div>
-            <div className="ed-colorRow">
-              <input type="color" value={style.backgroundColor || '#000000'} onChange={(e) => onStyleChange({ ...style, backgroundColor: e.target.value })} className="ed-colorSwatch" style={{ border: '1px solid var(--ed-border)', borderRadius: 4 }} />
-              <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = async () => { const file = input.files?.[0]; if (file) await editorSettings.onBgUpload(file); }; input.click(); }} disabled={editorSettings.bgUploading} className="ed-btnSmall" style={{ flex: 1, fontSize: 10 }}>
-                {editorSettings.bgUploading ? 'Uploading...' : style.backgroundImage ? 'Change BG' : 'Upload BG'}
-              </button>
-              {style.backgroundImage && (
-                <button onClick={() => onStyleChange({ ...style, backgroundImage: undefined })} className="ed-btnDanger" style={{ padding: '3px 6px' }} title="Remove BG">&times;</button>
-              )}
-            </div>
-          </div>
+          <CanvasBackgroundSection style={style} onStyleChange={onStyleChange} editorSettings={editorSettings} />
           <div>
             <div className="ed-subLabel">Theme</div>
             <button onClick={() => setThemePanelOpen(!themePanelOpen)} className="ed-btnSmall" style={{ width: '100%', justifyContent: 'center', backgroundColor: themePanelOpen ? '#6366f1' : undefined, color: themePanelOpen ? '#fff' : undefined }}>

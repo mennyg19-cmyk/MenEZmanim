@@ -38,8 +38,8 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
       <header className="border-b border-slate-800/80 backdrop-blur-sm">
         <div className="mx-auto max-w-6xl px-4 py-4 flex flex-wrap items-center justify-between gap-3">
-          <span className="text-xl font-bold tracking-tight">Zmanim App</span>
-          <nav className="flex flex-wrap items-center gap-4 text-sm">
+          <span className="text-lg sm:text-xl font-bold tracking-tight">Zmanim App</span>
+          <nav className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 text-xs sm:text-sm">
             <Link href="/show/demo/1" className="text-sky-400 hover:text-sky-300 transition-colors">
               View demo
             </Link>
@@ -57,27 +57,27 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto max-w-6xl px-4 py-16 md:py-24 text-center">
-          <p className="text-sky-400/90 text-sm font-semibold uppercase tracking-widest mb-3">
+        <section className="mx-auto max-w-6xl px-4 py-12 sm:py-16 md:py-24 text-center">
+          <p className="text-sky-400/90 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-3">
             Synagogue display &amp; zmanim
           </p>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight px-1">
             Smart Zmanim &amp; Synagogue Display Management
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10">
+          <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-8 sm:mb-10 px-1">
             Build beautiful lobby boards, keep minyan times accurate, and share announcements — with
             Hebrew-friendly layouts and a full admin workflow.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500 transition-colors"
+              className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold text-white shadow-lg shadow-sky-900/40 hover:bg-sky-500 transition-colors w-full sm:w-auto"
             >
               Get started
             </Link>
             <Link
               href="/show/demo/1"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-800/50 px-8 py-3 text-lg font-semibold text-slate-100 hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-800/50 px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold text-slate-100 hover:bg-slate-800 transition-colors w-full sm:w-auto"
             >
               View live demo
             </Link>
@@ -89,7 +89,7 @@ export default function HomePage() {
           <p className="text-slate-400 text-center mb-12 max-w-xl mx-auto">
             Everything you need to run a modern zmanim display — from calculation to the big screen.
           </p>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <article
                 key={f.title}

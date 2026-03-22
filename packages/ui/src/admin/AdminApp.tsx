@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useBreakpoint } from '../shared/useBreakpoint';
 import type { DisplayStyle } from '@zmanim-app/core';
 import { LocationSetup } from './LocationSetup';
 import { ZmanimConfig } from './ZmanimConfig';
@@ -67,8 +68,10 @@ const groupLabels: Record<string, string> = {
 };
 
 export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
+  const bp = useBreakpoint();
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [location, setLocation] = useState<any>({});
   const [zmanimConfigs, setZmanimConfigs] = useState<any[]>([]);
@@ -140,6 +143,16 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (bp === 'tablet') setSidebarCollapsed(true);
+  }, [bp]);
+
+  useEffect(() => {
+    if (bp === 'mobile' && activeSection === 'editor') {
+      setActiveSection('dashboard');
+    }
+  }, [bp, activeSection]);
+
   // ── Save handlers ───────────────────────────────────────
   const handleLocationChange = async (loc: any) => { setLocation(loc); await onSave('location', loc); };
   const handleZmanimChange = async (configs: any[]) => { setZmanimConfigs(configs); await onSave('zmanimConfigs', configs); };
@@ -193,6 +206,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
       id: `style-${Date.now()}`,
       name,
       backgroundColor: '#1a1a2e',
+      backgroundMode: 'solid',
       canvasWidth: 1920,
       canvasHeight: 1080,
       objects: [],
@@ -221,13 +235,15 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
               Dashboard
             </h2>
             <div className="adm-dashGrid" style={{ marginBottom: 24 }}>
-              {[
+              {([
                 { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', section: 'schedules' as Section },
                 { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', section: 'announcements' as Section },
                 { label: 'Yahrzeit Entries', value: memorials.length, color: '#f59e0b', section: 'yahrzeit' as Section },
                 { label: 'Display Styles', value: styles.length, color: '#8b5cf6', section: 'editor' as Section },
                 { label: 'Screens', value: screens.length, color: '#ec4899', section: 'screens' as Section },
-              ].map((card) => (
+              ] as const)
+                .filter((card) => bp !== 'mobile' || card.section !== 'editor')
+                .map((card) => (
                 <button
                   key={card.label}
                   onClick={() => setActiveSection(card.section)}
@@ -239,13 +255,15 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                 </button>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="adm-dashQuickGrid">
               <div className="adm-card">
                 <h3 className="adm-sectionTitle" style={{ margin: '0 0 12px' }}>Quick Actions</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <button onClick={() => setActiveSection('editor')} className="adm-quickBtn">Open Display Editor</button>
-                  <button onClick={() => setActiveSection('schedules')} className="adm-quickBtn">Manage Davening Times</button>
-                  <button onClick={() => setActiveSection('announcements')} className="adm-quickBtn">Edit Announcements</button>
+                  {bp !== 'mobile' && (
+                    <button type="button" onClick={() => setActiveSection('editor')} className="adm-quickBtn">Open Display Editor</button>
+                  )}
+                  <button type="button" onClick={() => setActiveSection('schedules')} className="adm-quickBtn">Manage Davening Times</button>
+                  <button type="button" onClick={() => setActiveSection('announcements')} className="adm-quickBtn">Edit Announcements</button>
                 </div>
               </div>
               <div className="adm-card">
@@ -316,7 +334,11 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                           setMedia(updated);
                           const latest = updated[updated.length - 1];
                           if (latest?.url && activeEditorStyle) {
-                            handleStyleChange({ ...activeEditorStyle, backgroundImage: latest.url });
+                            handleStyleChange({
+                              ...activeEditorStyle,
+                              backgroundMode: 'image',
+                              backgroundImage: latest.url,
+                            });
                           }
                         }
                       } catch (err) {
@@ -368,26 +390,46 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
     }
   };
 
-  const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
+  const filteredNavItems = bp === 'mobile' ? navItems.filter((i) => i.key !== 'editor') : navItems;
+
+  const grouped = filteredNavItems.reduce<Record<string, typeof filteredNavItems>>((acc, item) => {
     const g = item.group ?? '_top';
     (acc[g] ??= []).push(item);
     return acc;
   }, {});
 
   const sidebarWidth = sidebarCollapsed ? 60 : 240;
+  const isMobile = bp === 'mobile';
 
   return (
     <div className="adm-page" style={{ height: '100vh', overflow: 'hidden' }}>
+      {isMobile && mobileMenuOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="adm-sidebarBackdrop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
       {/* Left sidebar */}
       <aside
-        className="adm-sidebar"
-        style={{
-          width: sidebarWidth,
-          minWidth: sidebarWidth,
-          transition: 'width 0.2s ease, min-width 0.2s ease',
-          overflow: 'hidden',
-          padding: 0,
-        }}
+        className={`adm-sidebar${isMobile ? ' adm-sidebar--mobile' : ''}${isMobile && mobileMenuOpen ? ' adm-sidebar--open' : ''}`}
+        style={
+          isMobile
+            ? {
+                width: 260,
+                minWidth: 260,
+                overflow: 'hidden',
+                padding: 0,
+              }
+            : {
+                width: sidebarWidth,
+                minWidth: sidebarWidth,
+                transition: 'width 0.2s ease, min-width 0.2s ease',
+                overflow: 'hidden',
+                padding: 0,
+              }
+        }
       >
         <div
           className="adm-sidebarBrand"
@@ -412,7 +454,16 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
         <nav style={{ display: 'flex', flexDirection: 'column', padding: '8px 6px', flex: 1, overflowY: 'auto' }}>
           {(grouped['_top'] ?? []).map((item) => (
-            <NavButton key={item.key} item={item} active={activeSection} collapsed={sidebarCollapsed} onClick={setActiveSection} />
+            <NavButton
+              key={item.key}
+              item={item}
+              active={activeSection}
+              collapsed={sidebarCollapsed}
+              onClick={(key) => {
+                setActiveSection(key);
+                if (isMobile) setMobileMenuOpen(false);
+              }}
+            />
           ))}
 
           {Object.entries(groupLabels).map(([groupKey, groupLabel]) => (
@@ -424,7 +475,16 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
               )}
               {sidebarCollapsed && <div style={{ height: 8 }} />}
               {(grouped[groupKey] ?? []).map((item) => (
-                <NavButton key={item.key} item={item} active={activeSection} collapsed={sidebarCollapsed} onClick={setActiveSection} />
+                <NavButton
+                  key={item.key}
+                  item={item}
+                  active={activeSection}
+                  collapsed={sidebarCollapsed}
+                  onClick={(key) => {
+                    setActiveSection(key);
+                    if (isMobile) setMobileMenuOpen(false);
+                  }}
+                />
               ))}
             </React.Fragment>
           ))}
@@ -453,8 +513,18 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
       {/* Main content */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header className="adm-pageHeader" style={{ padding: '12px 24px', backgroundColor: 'var(--adm-bg)', borderBottom: '1px solid var(--adm-border)', flexShrink: 0 }}>
-          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--adm-text)' }}>
+        <header className="adm-pageHeader" style={{ padding: '12px 24px', backgroundColor: 'var(--adm-bg)', borderBottom: '1px solid var(--adm-border)', flexShrink: 0, gap: 12 }}>
+          {isMobile && (
+            <button
+              type="button"
+              className="adm-menuHamburger"
+              aria-label="Open menu"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              ☰
+            </button>
+          )}
+          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--adm-text)', flex: 1, minWidth: 0 }}>
             {navItems.find((n) => n.key === activeSection)?.icon}{' '}
             {navItems.find((n) => n.key === activeSection)?.labelEn}
             <span style={{ color: 'var(--adm-text-dim)', fontWeight: 400, marginLeft: 8, fontSize: 13 }}>

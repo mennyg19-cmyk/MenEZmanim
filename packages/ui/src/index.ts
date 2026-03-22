@@ -3,8 +3,14 @@ export type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaDat
 export { formatTime12h, formatZmanTime, formatEventTime, parseTime12 } from './shared/timeUtils';
 export { splitEven, splitFill, buildColumnData } from './shared/tableUtils';
 export { hexToRgba, extractHex } from './shared/colorUtils';
-export { resolveObjBackground, getObjBgMode } from './shared/backgroundUtils';
-export type { BgMode } from './shared/backgroundUtils';
+export { resolveObjBackground, getObjBgMode, resolveCanvasBackground, getCanvasBgMode } from './shared/backgroundUtils';
+export type { BgMode, CanvasBgExtras } from './shared/backgroundUtils';
+export { useBreakpoint } from './shared/useBreakpoint';
+export type { Breakpoint } from './shared/useBreakpoint';
+export { TEXTURE_CATALOG, getTextureCss } from './shared/textures';
+export { GRADIENT_PRESETS } from './shared/gradients';
+export { FRAME_CATALOG, getFrameById } from './shared/frames';
+export { FrameRenderer } from './display/FrameRenderer';
 export { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, TYPE_LABELS, TYPE_ICONS, ZMANIM_OPTIONS_REGULAR, ZMANIM_OPTIONS_TUKACHINSKY, FONT_CATEGORIES } from './shared/constants';
 
 // Display components

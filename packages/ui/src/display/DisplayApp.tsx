@@ -5,6 +5,8 @@ import type { DisplayStyle, DisplayObject } from '@zmanim-app/core';
 import { getActiveStyle, getVisibleObjects } from '@zmanim-app/core';
 import { buildScheduleContext } from '@zmanim-app/core';
 import { BoardRenderer } from './BoardRenderer';
+import { FrameRenderer } from './FrameRenderer';
+import { resolveCanvasBackground } from '../shared/backgroundUtils';
 import type { DisplayNameOverrides } from '@zmanim-app/core';
 import type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaData, ZmanResult } from '../shared/types';
 import { formatTime12h } from '../shared/timeUtils';
@@ -424,9 +426,6 @@ export function DisplayApp({
   const canvasH = state.activeStyle?.canvasHeight ?? 1080;
   const { scale, offsetX, offsetY } = useScreenScale(canvasW, canvasH);
 
-  const bgImage = state.activeStyle?.backgroundImage;
-  const bgColor = state.activeStyle?.backgroundColor ?? '#000';
-
   if (state.loading) {
     return (
       <div
@@ -504,6 +503,7 @@ export function DisplayApp({
       }}
     >
       {/* Scaled canvas (background + content together so they scale identically) */}
+      <FrameRenderer frameId={state.activeStyle?.backgroundFrameId}>
       <div
         style={{
           position: 'absolute',
@@ -513,23 +513,25 @@ export function DisplayApp({
           transform: `scale(${scale})`,
           width: canvasW,
           height: canvasH,
-          backgroundColor: bgColor,
-          ...(bgImage
-            ? {
-                backgroundImage: `url(${bgImage})`,
-                backgroundSize: `${canvasW}px ${canvasH}px`,
-                backgroundPosition: '0 0',
-                backgroundRepeat: 'no-repeat',
-              }
-            : {}),
+          ...(state.activeStyle ? resolveCanvasBackground(state.activeStyle, canvasW, canvasH) : { backgroundColor: '#000' }),
         }}
       >
         <BoardRenderer
           objects={state.visibleObjects}
           canvasWidth={canvasW}
           canvasHeight={canvasH}
-          canvasBgColor={bgColor}
-          canvasBgImage={bgImage}
+          canvasBgColor={state.activeStyle?.backgroundColor ?? '#000'}
+          canvasBgImage={state.activeStyle?.backgroundImage}
+          canvasBgExtras={
+            state.activeStyle
+              ? {
+                  backgroundMode: state.activeStyle.backgroundMode,
+                  backgroundGradient: state.activeStyle.backgroundGradient,
+                  backgroundTexture: state.activeStyle.backgroundTexture,
+                  backgroundImage: state.activeStyle.backgroundImage,
+                }
+              : undefined
+          }
           zmanim={state.zmanim}
           calendarInfo={state.calendarInfo ?? undefined}
           announcements={state.announcements}
@@ -539,6 +541,7 @@ export function DisplayApp({
           displayNames={state.displayNames}
         />
       </div>
+      </FrameRenderer>
 
       {/* Error toast overlay */}
       {state.error && (
