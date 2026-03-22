@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 
@@ -17,6 +17,22 @@ interface MeData {
 }
 
 export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <main style={styles.container}>
+          <div style={styles.card}>
+            <p style={{ color: '#6b7280', textAlign: 'center' as const }}>Loading...</p>
+          </div>
+        </main>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
+  );
+}
+
+function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: clerkUser, isLoaded } = useUser();
