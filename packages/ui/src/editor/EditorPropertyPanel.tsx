@@ -8,6 +8,7 @@ import { GradientPicker } from './GradientPicker';
 import { TexturePicker } from './TexturePicker';
 import { FramePicker } from './FramePicker';
 import { hexToRgba, extractHex } from '../shared/colorUtils';
+import { contrastTextColor } from '../shared/colorExtract';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
 
 
@@ -35,12 +36,13 @@ interface EditorPropertyPanelProps {
   boxBgUploading: boolean;
   setBoxBgUploading: (v: boolean) => void;
   boxBgFileRef: React.RefObject<HTMLInputElement | null>;
+  canvasBgColor?: string;
 }
 
 export function EditorPropertyPanel({
   popupObj, popupTab, setPopupTab, setPopupId, setSelectedId, setSelectedIds,
   pUpdate, pPos, pFont, pContent, deleteObj, daveningGroups, onUploadImage,
-  boxBgUploading, setBoxBgUploading, boxBgFileRef,
+  boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor,
 }: EditorPropertyPanelProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -79,6 +81,7 @@ export function EditorPropertyPanel({
             boxBgUploading={boxBgUploading}
             setBoxBgUploading={setBoxBgUploading}
             boxBgFileRef={boxBgFileRef}
+            canvasBgColor={canvasBgColor}
           />
         )}
         {popupTab === 'content' && (
@@ -136,7 +139,7 @@ function GeneralTab({ popupObj, pUpdate, pPos }: {
 
 /* ── Tab: Appearance ──────────────────────────────────── */
 
-function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxBgUploading, setBoxBgUploading, boxBgFileRef }: {
+function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor }: {
   popupObj: DisplayObject;
   pFont: (patch: Partial<DisplayObject['font']>) => void;
   pContent: (patch: Record<string, any>) => void;
@@ -145,9 +148,14 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
   boxBgUploading: boolean;
   setBoxBgUploading: (v: boolean) => void;
   boxBgFileRef: React.RefObject<HTMLInputElement | null>;
+  canvasBgColor?: string;
 }) {
   const content = popupObj.content || {};
   const isTable = popupObj.type === DisplayObjectType.ZMANIM_TABLE || popupObj.type === DisplayObjectType.EVENTS_TABLE;
+
+  const effectiveBg = popupObj.backgroundColor === 'transparent' || popupObj.backgroundColor === 'inherit' || !popupObj.backgroundColor
+    ? (canvasBgColor || '#000000')
+    : (extractHex(popupObj.backgroundColor) || canvasBgColor || '#000000');
 
   return (
     <>
@@ -184,7 +192,18 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
             <input type="checkbox" checked={popupObj.font.italic} onChange={(e) => pFont({ italic: e.target.checked })} /> Italic
           </label>
         </div>
-        <Field label="Text Color"><ColorInput value={popupObj.font.color} onChange={(v) => pFont({ color: v })} /></Field>
+        <Field label="Text Color">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <ColorInput value={popupObj.font.color} onChange={(v) => pFont({ color: v })} />
+            <button
+              type="button"
+              onClick={() => pFont({ color: contrastTextColor(effectiveBg) })}
+              className="ed-btn"
+              style={{ fontSize: 11, padding: '3px 8px' }}
+              title="Auto-pick a text color that contrasts with the object's background"
+            >Auto contrast</button>
+          </div>
+        </Field>
         <TextAlignField popupObj={popupObj} pContent={pContent} />
         <VerticalAlignField popupObj={popupObj} pContent={pContent} />
       </Section>

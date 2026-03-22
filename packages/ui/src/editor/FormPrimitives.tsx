@@ -59,7 +59,7 @@ export function ColorInput({ value, onChange, recentColors: recentProp, themeCol
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div className="ed-colorRow">
         <input type="color" value={value} onChange={handleNativeChange} className="ed-colorSwatch" />
-        <input value={value} onChange={(e) => onChange(e.target.value)} className="ed-input" style={{ flex: 1 }} />
+        <input value={value} onChange={(e) => onChange(e.target.value)} onBlur={() => trackColor(value)} className="ed-input" style={{ flex: 1 }} />
       </div>
       {theme.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>

@@ -272,19 +272,33 @@ export function WysiwygCanvas({
   const allSelected = selectedIds.size > 0 ? selectedIds : (selectedId ? new Set([selectedId]) : new Set<string>());
 
   const activeThemeColors = React.useMemo(() => {
-    const allThemes = [...BUILT_IN_THEMES, ...customThemes];
-    const theme = activeThemeId ? allThemes.find((t) => t.id === activeThemeId) : null;
-    if (!theme) return [] as string[];
-    const vals = Object.values(theme.colors) as string[];
-    const unique = [...new Set(vals.map((v) => {
-      if (v.startsWith('rgba')) {
+    const toHex = (v: string) => {
+      if (v.startsWith('rgba') || v.startsWith('rgb')) {
         const m = v.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
         if (m) return `#${parseInt(m[1]).toString(16).padStart(2, '0')}${parseInt(m[2]).toString(16).padStart(2, '0')}${parseInt(m[3]).toString(16).padStart(2, '0')}`;
       }
       return v;
-    }))];
-    return unique;
-  }, [activeThemeId, customThemes]);
+    };
+
+    const allThemes = [...BUILT_IN_THEMES, ...customThemes];
+    const theme = activeThemeId ? allThemes.find((t) => t.id === activeThemeId) : null;
+
+    let vals: string[];
+    if (theme) {
+      vals = Object.values(theme.colors) as string[];
+    } else {
+      // Derive useful colors from the current style when no theme is active
+      const styleColors = [
+        style.backgroundColor,
+        ...style.objects.map((o) => o.font.color),
+        ...style.objects.map((o) => o.backgroundColor),
+      ].filter((c): c is string => !!c && c !== 'transparent' && c !== 'inherit');
+      vals = styleColors;
+    }
+
+    const unique = [...new Set(vals.map(toHex))].filter((c) => c.startsWith('#') && c.length >= 4);
+    return unique.slice(0, 16);
+  }, [activeThemeId, customThemes, style.backgroundColor, style.objects]);
 
   const zoomModeRef = useRef(zoomMode);
   zoomModeRef.current = zoomMode;
@@ -797,6 +811,7 @@ export function WysiwygCanvas({
           boxBgUploading={boxBgUploading}
           setBoxBgUploading={setBoxBgUploading}
           boxBgFileRef={boxBgFileRef}
+          canvasBgColor={style.backgroundColor || '#000000'}
         />
       )}
     </div>

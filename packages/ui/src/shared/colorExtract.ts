@@ -3,7 +3,7 @@ import type { ThemeColors } from '../editor/ThemePicker';
 /**
  * Extract a dominant color palette from an image URL using canvas downsampling + median-cut quantization.
  */
-export async function extractPaletteFromImage(imageUrl: string, count = 8): Promise<string[]> {
+export async function extractPaletteFromImage(imageUrl: string, count = 12): Promise<string[]> {
   if (typeof document === 'undefined') return [];
 
   return new Promise((resolve) => {
@@ -11,7 +11,7 @@ export async function extractPaletteFromImage(imageUrl: string, count = 8): Prom
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
-        const size = 64;
+        const size = 128;
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
@@ -30,10 +30,15 @@ export async function extractPaletteFromImage(imageUrl: string, count = 8): Prom
 
         if (pixels.length === 0) { resolve([]); return; }
 
-        const palette = medianCut(pixels, count);
-        resolve(palette.map(([r, g, b]) =>
+        // Extract more colors than needed, then deduplicate
+        const rawPalette = medianCut(pixels, count * 2);
+        const hexColors = rawPalette.map(([r, g, b]) =>
           `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
-        ));
+        );
+
+        // Remove near-duplicate colors (within distance 30 in RGB space)
+        const deduped = deduplicateColors(hexColors, 30);
+        resolve(deduped.slice(0, count));
       } catch {
         resolve([]);
       }
@@ -41,6 +46,22 @@ export async function extractPaletteFromImage(imageUrl: string, count = 8): Prom
     img.onerror = () => resolve([]);
     img.src = imageUrl;
   });
+}
+
+function colorDistance(hex1: string, hex2: string): number {
+  const r1 = parseInt(hex1.slice(1, 3), 16), g1 = parseInt(hex1.slice(3, 5), 16), b1 = parseInt(hex1.slice(5, 7), 16);
+  const r2 = parseInt(hex2.slice(1, 3), 16), g2 = parseInt(hex2.slice(3, 5), 16), b2 = parseInt(hex2.slice(5, 7), 16);
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+}
+
+function deduplicateColors(colors: string[], minDist: number): string[] {
+  const result: string[] = [];
+  for (const c of colors) {
+    if (result.every((r) => colorDistance(c, r) >= minDist)) {
+      result.push(c);
+    }
+  }
+  return result;
 }
 
 function medianCut(pixels: [number, number, number][], depth: number): [number, number, number][] {
@@ -103,7 +124,9 @@ function lighten(hex: string, factor: number): string {
 }
 
 /**
- * Map an extracted palette to ThemeColors by luminance and saturation.
+ * Map an extracted palette to ThemeColors.
+ * Analyzes the dominant background color and creates a harmonious theme
+ * with good contrast ratios for readability.
  */
 export function paletteToThemeColors(palette: string[]): ThemeColors {
   if (palette.length === 0) {
@@ -118,26 +141,85 @@ export function paletteToThemeColors(palette: string[]): ThemeColors {
   const sorted = [...palette].sort((a, b) => luminance(a) - luminance(b));
   const darkest = sorted[0];
   const lightest = sorted[sorted.length - 1];
+  const bgLum = luminance(sorted[0]);
 
+  // Determine if the image is predominantly dark or light
+  const avgLum = palette.reduce((s, c) => s + luminance(c), 0) / palette.length;
+  const isDark = avgLum < 140;
+
+  // Find the most saturated color for accent, but ensure it has decent saturation
   const bySat = [...palette].sort((a, b) => saturation(b) - saturation(a));
-  const mostSaturated = bySat[0];
+  let accent = bySat[0];
+  if (saturation(accent) < 0.15) {
+    // Palette is very desaturated (e.g. marble, wood) -- generate a complementary accent
+    accent = isDark ? '#60a5fa' : '#2563eb';
+  }
 
-  const midDark = sorted[Math.floor(sorted.length * 0.25)] || darkest;
-  const midLight = sorted[Math.floor(sorted.length * 0.75)] || lightest;
+  // For dark backgrounds: light text, slightly lighter widget bg
+  // For light backgrounds: dark text, slightly darker widget bg
+  if (isDark) {
+    const bg = bgLum < 30 ? darkest : darken(darkest, 0.7);
+    return {
+      canvasBg: bg,
+      widgetBg: lighten(bg, 0.06),
+      widgetBorder: lighten(bg, 0.14),
+      textPrimary: '#f1f5f9',
+      textSecondary: '#cbd5e1',
+      accent,
+      headerBg: lighten(bg, 0.08),
+      headerText: '#f8fafc',
+      tickerBg: lighten(bg, 0.04),
+      tickerText: accent,
+      rowAltBg: lighten(bg, 0.03),
+    };
+  } else {
+    const bg = lightest;
+    return {
+      canvasBg: bg,
+      widgetBg: darken(bg, 0.97),
+      widgetBorder: darken(bg, 0.88),
+      textPrimary: '#1e293b',
+      textSecondary: '#475569',
+      accent,
+      headerBg: darken(bg, 0.95),
+      headerText: '#0f172a',
+      tickerBg: darken(bg, 0.97),
+      tickerText: accent,
+      rowAltBg: darken(bg, 0.98),
+    };
+  }
+}
 
-  const isDarkBg = luminance(darkest) < 128;
+/**
+ * Given a background color (hex), return a contrasting text color.
+ * Returns white for dark backgrounds, dark slate for light backgrounds.
+ */
+export function contrastTextColor(bgHex: string): string {
+  const lum = luminance(bgHex);
+  return lum < 140 ? '#f1f5f9' : '#1e293b';
+}
 
-  return {
-    canvasBg: darkest,
-    widgetBg: isDarkBg ? lighten(darkest, 0.08) : darken(lightest, 0.95),
-    widgetBorder: isDarkBg ? lighten(darkest, 0.15) : darken(lightest, 0.85),
-    textPrimary: isDarkBg ? lightest : darkest,
-    textSecondary: midLight,
-    accent: mostSaturated,
-    headerBg: midDark,
-    headerText: isDarkBg ? lightest : darkest,
-    tickerBg: midDark,
-    tickerText: mostSaturated,
-    rowAltBg: isDarkBg ? lighten(darkest, 0.05) : darken(lightest, 0.97),
-  };
+/**
+ * Given a background color, pick the best text color from a set of theme/palette colors.
+ * Prefers colors with high contrast against the background.
+ */
+export function bestTextColorFromPalette(bgHex: string, palette: string[]): string {
+  if (!palette.length) return contrastTextColor(bgHex);
+  const bgLum = luminance(bgHex);
+  const isDarkBg = bgLum < 140;
+
+  // Filter to colors that have good contrast
+  const candidates = palette.filter((c) => {
+    const cLum = luminance(c);
+    return isDarkBg ? cLum > 170 : cLum < 80;
+  });
+
+  if (candidates.length === 0) return contrastTextColor(bgHex);
+
+  // Pick the one with highest contrast ratio
+  return candidates.sort((a, b) => {
+    const contrastA = Math.abs(luminance(a) - bgLum);
+    const contrastB = Math.abs(luminance(b) - bgLum);
+    return contrastB - contrastA;
+  })[0];
 }

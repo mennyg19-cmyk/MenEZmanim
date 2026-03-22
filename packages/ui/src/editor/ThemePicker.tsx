@@ -78,7 +78,7 @@ export function ThemePicker({
     if (!backgroundImageUrl) return;
     setAutoGenerating(true);
     try {
-      const palette = await extractPaletteFromImage(backgroundImageUrl, 8);
+      const palette = await extractPaletteFromImage(backgroundImageUrl, 12);
       if (palette.length === 0) return;
       const colors = paletteToThemeColors(palette);
       const theme: ColorTheme = {
@@ -87,6 +87,7 @@ export function ThemePicker({
         builtIn: false,
         colors,
       };
+      onSaveCustomTheme(theme);
       onApplyTheme(theme);
     } finally {
       setAutoGenerating(false);
