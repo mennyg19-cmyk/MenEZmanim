@@ -8,8 +8,7 @@ import { GradientPicker } from './GradientPicker';
 import { TexturePicker } from './TexturePicker';
 import { FramePicker } from './FramePicker';
 import { hexToRgba, extractHex } from '../shared/colorUtils';
-import { bestTextColorFromPalette } from '../shared/colorExtract';
-import { getTextureById } from '../shared/textures';
+import { bestTextColorFromPalette, sampleBackgroundAtObject } from '../shared/colorExtract';
 import { useColorContext } from './ColorContext';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
 
@@ -38,15 +37,15 @@ interface EditorPropertyPanelProps {
   boxBgUploading: boolean;
   setBoxBgUploading: (v: boolean) => void;
   boxBgFileRef: React.RefObject<HTMLInputElement | null>;
-  canvasBgColor?: string;
-  canvasBgMode?: string;
-  canvasBgTexture?: string;
+  canvasStyle?: import('@zmanim-app/core').DisplayStyle;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }
 
 export function EditorPropertyPanel({
   popupObj, popupTab, setPopupTab, setPopupId, setSelectedId, setSelectedIds,
   pUpdate, pPos, pFont, pContent, deleteObj, daveningGroups, onUploadImage,
-  boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor, canvasBgMode, canvasBgTexture,
+  boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasStyle, canvasWidth, canvasHeight,
 }: EditorPropertyPanelProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -85,9 +84,9 @@ export function EditorPropertyPanel({
             boxBgUploading={boxBgUploading}
             setBoxBgUploading={setBoxBgUploading}
             boxBgFileRef={boxBgFileRef}
-            canvasBgColor={canvasBgColor}
-            canvasBgMode={canvasBgMode}
-            canvasBgTexture={canvasBgTexture}
+            canvasStyle={canvasStyle}
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
           />
         )}
         {popupTab === 'content' && (
@@ -145,7 +144,7 @@ function GeneralTab({ popupObj, pUpdate, pPos }: {
 
 /* ── Tab: Appearance ──────────────────────────────────── */
 
-function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor, canvasBgMode, canvasBgTexture }: {
+function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasStyle, canvasWidth, canvasHeight }: {
   popupObj: DisplayObject;
   pFont: (patch: Partial<DisplayObject['font']>) => void;
   pContent: (patch: Record<string, any>) => void;
@@ -154,30 +153,43 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
   boxBgUploading: boolean;
   setBoxBgUploading: (v: boolean) => void;
   boxBgFileRef: React.RefObject<HTMLInputElement | null>;
-  canvasBgColor?: string;
-  canvasBgMode?: string;
-  canvasBgTexture?: string;
+  canvasStyle?: import('@zmanim-app/core').DisplayStyle;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }) {
   const content = popupObj.content || {};
   const isTable = popupObj.type === DisplayObjectType.ZMANIM_TABLE || popupObj.type === DisplayObjectType.EVENTS_TABLE;
   const { themeColors } = useColorContext();
+  const [autoContrastBusy, setAutoContrastBusy] = React.useState(false);
 
-  // Determine the visual background color behind this object
-  // If the object has its own opaque background, use that;
-  // otherwise use the canvas background, accounting for textures/images
-  let resolvedCanvasBg = canvasBgColor || '#000000';
-  if (canvasBgMode === 'texture' && canvasBgTexture) {
-    const tex = getTextureById(canvasBgTexture);
-    if (tex) resolvedCanvasBg = tex.dominantColor;
-  } else if (canvasBgMode === 'image') {
-    // Background is an uploaded image -- we can't sample it here,
-    // so use a neutral mid-gray to avoid biasing toward dark or light
-    resolvedCanvasBg = '#808080';
-  }
+  const handleAutoContrast = React.useCallback(async () => {
+    if (!canvasStyle) return;
+    setAutoContrastBusy(true);
+    try {
+      // If the object has its own opaque solid background, use that directly
+      const objBgMode = (popupObj.content?.backgroundMode as string) ?? 'solid';
+      const hasOwnBg = objBgMode === 'solid' && popupObj.backgroundColor
+        && popupObj.backgroundColor !== 'transparent' && popupObj.backgroundColor !== 'inherit';
 
-  const effectiveBg = popupObj.backgroundColor === 'transparent' || popupObj.backgroundColor === 'inherit' || !popupObj.backgroundColor
-    ? resolvedCanvasBg
-    : (extractHex(popupObj.backgroundColor) || resolvedCanvasBg);
+      let bgColor: string;
+      if (hasOwnBg) {
+        bgColor = extractHex(popupObj.backgroundColor!) || '#000000';
+      } else {
+        // Sample the actual canvas background at the object's position
+        bgColor = await sampleBackgroundAtObject(
+          popupObj,
+          canvasStyle,
+          canvasWidth || 1920,
+          canvasHeight || 1080,
+        );
+      }
+
+      const textColor = bestTextColorFromPalette(bgColor, themeColors);
+      pFont({ color: textColor });
+    } finally {
+      setAutoContrastBusy(false);
+    }
+  }, [popupObj, canvasStyle, canvasWidth, canvasHeight, themeColors, pFont]);
 
   return (
     <>
@@ -219,11 +231,12 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
             <ColorInput value={popupObj.font.color} onChange={(v) => pFont({ color: v })} />
             <button
               type="button"
-              onClick={() => pFont({ color: bestTextColorFromPalette(effectiveBg, themeColors) })}
+              onClick={handleAutoContrast}
+              disabled={autoContrastBusy}
               className="ed-btn"
               style={{ fontSize: 11, padding: '3px 8px' }}
-              title="Auto-pick a text color that contrasts with the object's background, using theme colors when available"
-            >Auto contrast</button>
+              title="Samples the actual background behind this object and picks a readable text color"
+            >{autoContrastBusy ? 'Sampling...' : 'Auto contrast'}</button>
           </div>
         </Field>
         <TextAlignField popupObj={popupObj} pContent={pContent} />

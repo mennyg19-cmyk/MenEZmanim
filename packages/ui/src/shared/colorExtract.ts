@@ -1,4 +1,223 @@
 import type { ThemeColors } from '../editor/ThemePicker';
+import type { DisplayObject, DisplayStyle } from '@zmanim-app/core';
+import { getTextureById } from './textures';
+
+/**
+ * Sample the actual visual background behind an object by rendering it
+ * to an offscreen canvas and extracting the average color of that region.
+ * Works for solid colors, gradients, textures, and uploaded images.
+ * Returns a promise that resolves to a hex color string.
+ */
+export async function sampleBackgroundAtObject(
+  obj: DisplayObject,
+  style: DisplayStyle,
+  canvasW: number,
+  canvasH: number,
+): Promise<string> {
+  if (typeof document === 'undefined') return '#808080';
+
+  const bgMode = style.backgroundMode ?? (style.backgroundImage ? 'image' : 'solid');
+
+  // For solid color, no need to render
+  if (bgMode === 'solid') {
+    return style.backgroundColor || '#000000';
+  }
+
+  // For textures with known dominant colors, use that as a fast path
+  if (bgMode === 'texture' && style.backgroundTexture) {
+    const tex = getTextureById(style.backgroundTexture);
+    if (tex) return tex.dominantColor;
+  }
+
+  // For gradients, render to canvas and sample
+  if (bgMode === 'gradient' && style.backgroundGradient) {
+    return sampleGradientAtRegion(
+      style.backgroundGradient,
+      canvasW, canvasH,
+      obj.position.x, obj.position.y,
+      obj.position.width, obj.position.height,
+    );
+  }
+
+  // For images, load and sample the region behind the object
+  const imgUrl = style.backgroundImage;
+  if (bgMode === 'image' && imgUrl) {
+    return sampleImageAtRegion(
+      imgUrl,
+      canvasW, canvasH,
+      obj.position.x, obj.position.y,
+      obj.position.width, obj.position.height,
+    );
+  }
+
+  // For textures without a known dominant color, try loading the image
+  if (bgMode === 'texture' && style.backgroundTexture) {
+    const tex = getTextureById(style.backgroundTexture);
+    if (tex) {
+      return sampleImageAverage(tex.imageUrl);
+    }
+  }
+
+  return style.backgroundColor || '#808080';
+}
+
+function sampleGradientAtRegion(
+  gradient: string,
+  fullW: number, fullH: number,
+  x: number, y: number, w: number, h: number,
+): string {
+  try {
+    const canvas = document.createElement('canvas');
+    const sampleW = 32, sampleH = 32;
+    canvas.width = sampleW;
+    canvas.height = sampleH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '#808080';
+
+    // Scale the gradient to the full canvas size, then offset to the object region
+    const scaleX = sampleW / w;
+    const scaleY = sampleH / h;
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+    ctx.translate(-x, -y);
+
+    // Create a temporary div to parse the CSS gradient
+    const div = document.createElement('div');
+    div.style.cssText = `position:fixed;left:-9999px;width:${fullW}px;height:${fullH}px;background:${gradient}`;
+    document.body.appendChild(div);
+    const computed = getComputedStyle(div).backgroundImage;
+    document.body.removeChild(div);
+
+    // Draw a rect with the gradient -- we can approximate by filling with the
+    // average of the gradient at this position
+    ctx.restore();
+
+    // Simpler approach: just compute what percentage through the canvas the object center is
+    const cx = (x + w / 2) / fullW;
+    const cy = (y + h / 2) / fullH;
+    const t = (cx + cy) / 2; // rough position along a typical diagonal gradient
+    // Parse gradient colors
+    const colorMatches = computed.match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g);
+    if (colorMatches && colorMatches.length >= 2) {
+      return interpolateColors(colorMatches[0], colorMatches[colorMatches.length - 1], t);
+    }
+    return '#808080';
+  } catch {
+    return '#808080';
+  }
+}
+
+function interpolateColors(c1: string, c2: string, t: number): string {
+  const rgb1 = parseColorToRgb(c1);
+  const rgb2 = parseColorToRgb(c2);
+  if (!rgb1 || !rgb2) return c1;
+  const r = Math.round(rgb1[0] + (rgb2[0] - rgb1[0]) * t);
+  const g = Math.round(rgb1[1] + (rgb2[1] - rgb1[1]) * t);
+  const b = Math.round(rgb1[2] + (rgb2[2] - rgb1[2]) * t);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+function parseColorToRgb(color: string): [number, number, number] | null {
+  if (color.startsWith('#')) {
+    const hex = color.length === 4
+      ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
+      : color;
+    return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+  }
+  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (m) return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+  return null;
+}
+
+function sampleImageAtRegion(
+  imageUrl: string,
+  fullW: number, fullH: number,
+  x: number, y: number, w: number, h: number,
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const sampleSize = 32;
+        const canvas = document.createElement('canvas');
+        canvas.width = sampleSize;
+        canvas.height = sampleSize;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve('#808080'); return; }
+
+        // The background image is displayed as "cover" on the full canvas.
+        // Compute the cover transform.
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        const canvasAspect = fullW / fullH;
+        let drawW: number, drawH: number, drawX: number, drawY: number;
+        if (imgAspect > canvasAspect) {
+          drawH = fullH;
+          drawW = fullH * imgAspect;
+          drawX = (fullW - drawW) / 2;
+          drawY = 0;
+        } else {
+          drawW = fullW;
+          drawH = fullW / imgAspect;
+          drawX = 0;
+          drawY = (fullH - drawH) / 2;
+        }
+
+        // Map the object region to image coordinates
+        const scaleX = sampleSize / w;
+        const scaleY = sampleSize / h;
+        ctx.scale(scaleX, scaleY);
+        ctx.translate(-x, -y);
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+        const data = ctx.getImageData(0, 0, sampleSize, sampleSize).data;
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          rSum += data[i]; gSum += data[i + 1]; bSum += data[i + 2];
+          count++;
+        }
+        if (count === 0) { resolve('#808080'); return; }
+        const r = Math.round(rSum / count);
+        const g = Math.round(gSum / count);
+        const b = Math.round(bSum / count);
+        resolve(`#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
+      } catch {
+        resolve('#808080');
+      }
+    };
+    img.onerror = () => resolve('#808080');
+    img.src = imageUrl;
+  });
+}
+
+function sampleImageAverage(imageUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const size = 32;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve('#808080'); return; }
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          rSum += data[i]; gSum += data[i + 1]; bSum += data[i + 2]; count++;
+        }
+        if (count === 0) { resolve('#808080'); return; }
+        const r = Math.round(rSum / count);
+        const g = Math.round(gSum / count);
+        const b = Math.round(bSum / count);
+        resolve(`#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
+      } catch { resolve('#808080'); }
+    };
+    img.onerror = () => resolve('#808080');
+    img.src = imageUrl;
+  });
+}
 
 /**
  * Extract a dominant color palette from an image URL using canvas downsampling + median-cut quantization.

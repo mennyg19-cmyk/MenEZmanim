@@ -8,7 +8,7 @@ export type { BgMode, CanvasBgExtras } from './shared/backgroundUtils';
 export { useBreakpoint } from './shared/useBreakpoint';
 export type { Breakpoint } from './shared/useBreakpoint';
 export { useRecentColors } from './shared/useRecentColors';
-export { extractPaletteFromImage, paletteToThemeColors, contrastTextColor, bestTextColorFromPalette } from './shared/colorExtract';
+export { extractPaletteFromImage, paletteToThemeColors, contrastTextColor, bestTextColorFromPalette, sampleBackgroundAtObject } from './shared/colorExtract';
 export { ColorProvider, useColorContext } from './editor/ColorContext';
 export { TEXTURE_CATALOG, getTextureById, getTextureStyles } from './shared/textures';
 export type { TextureEntry } from './shared/textures';
