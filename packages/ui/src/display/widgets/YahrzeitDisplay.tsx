@@ -88,11 +88,9 @@ export function YahrzeitDisplay({
       className="wgt-yzContainer"
       style={{
         width: '100%',
-        height: '100%',
         fontFamily,
         direction: isRtl ? 'rtl' : 'ltr',
         border: showBorder ? `1px solid var(--wgt-border)` : 'none',
-        borderRadius: 8,
       }}
     >
       {/* Title */}

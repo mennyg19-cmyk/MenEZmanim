@@ -63,7 +63,6 @@ export function CountdownTimer({
       className="wgt-countdown"
       style={{
         width: '100%',
-        height: '100%',
         fontFamily,
         direction: isRtl ? 'rtl' : 'ltr',
         padding: 24,

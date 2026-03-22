@@ -25,7 +25,6 @@ export function PlainText({
   color,
   textAlign,
   direction,
-  verticalAlign,
 }: PlainTextProps) {
   const lines = text.split('\n');
 
@@ -33,10 +32,6 @@ export function PlainText({
     <div
       style={{
         width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: verticalAlignMap[verticalAlign],
         padding: 16,
         boxSizing: 'border-box',
       }}

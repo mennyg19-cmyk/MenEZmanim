@@ -25,15 +25,12 @@ export function SefiraCounter({
     <div
       style={{
         width: '100%',
-        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
         fontFamily,
         padding: 24,
         boxSizing: 'border-box',
-        borderRadius: 8,
       }}
     >
       {/* Hebrew count */}

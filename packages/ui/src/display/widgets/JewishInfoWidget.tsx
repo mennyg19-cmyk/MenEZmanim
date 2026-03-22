@@ -300,7 +300,7 @@ export function JewishInfoWidget({
       <div
         className="wgt-jiContainer"
         style={{
-          padding: 16, fontFamily, width: '100%', height: '100%',
+          padding: 16, fontFamily, width: '100%',
           display: 'flex', flexWrap: 'wrap', alignItems: 'center',
           gap: 0,
           flexDirection: isRtl ? 'row-reverse' : 'row',
@@ -320,7 +320,7 @@ export function JewishInfoWidget({
   }
 
   return (
-    <div className="wgt-jiContainer" style={{ padding: 16, fontFamily, width: '100%', height: '100%' }}>
+    <div className="wgt-jiContainer" style={{ padding: 16, fontFamily, width: '100%' }}>
       {sections}
     </div>
   );

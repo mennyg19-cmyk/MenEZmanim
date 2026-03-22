@@ -89,7 +89,6 @@ export function resolveTableProps(props: BaseTableProps) {
 
   const containerStyle: React.CSSProperties = {
     width: '100%',
-    height: '100%',
     fontFamily,
     direction: isRtl ? 'rtl' : 'ltr',
     border: hasBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
