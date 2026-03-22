@@ -826,6 +826,7 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
   editorSettings: EditorSettingsProps;
 }) {
   const bgMode = getCanvasBgMode(style);
+  const [frameOpen, setFrameOpen] = React.useState(false);
   return (
     <>
       <div>
@@ -928,8 +929,21 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
         )}
       </div>
       <div>
-        <div className="ed-subLabel">Canvas frame</div>
-        <FramePicker value={style.backgroundFrameId} onChange={(id) => onStyleChange({ ...style, backgroundFrameId: id })} />
+        <button
+          type="button"
+          onClick={() => setFrameOpen(!frameOpen)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+            padding: '2px 0', color: 'var(--ed-text-dim)', fontSize: 11, fontWeight: 600,
+          }}
+        >
+          <span className="ed-subLabel" style={{ margin: 0 }}>Canvas frame</span>
+          <span style={{ fontSize: 9, transition: 'transform 0.15s', transform: frameOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>&#9660;</span>
+        </button>
+        {frameOpen && (
+          <FramePicker value={style.backgroundFrameId} onChange={(id) => onStyleChange({ ...style, backgroundFrameId: id })} />
+        )}
       </div>
     </>
   );
