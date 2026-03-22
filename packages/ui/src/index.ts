@@ -17,6 +17,8 @@ export { FRAME_CATALOG, getFrameById } from './shared/frames';
 export type { FrameDefinition } from './shared/frames';
 export { FrameRenderer } from './display/FrameRenderer';
 export type { FrameRendererProps } from './display/FrameRenderer';
+export { ScrollWrapper } from './display/ScrollWrapper';
+export type { ScrollConfig } from './display/ScrollWrapper';
 export { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, TYPE_LABELS, TYPE_ICONS, ZMANIM_OPTIONS_REGULAR, ZMANIM_OPTIONS_TUKACHINSKY, FONT_CATEGORIES } from './shared/constants';
 
 // Display components

@@ -202,6 +202,8 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
         />
       </Section>
 
+      <ScrollSection popupObj={popupObj} pContent={pContent} />
+
       {isTable && <TableLayoutSection popupObj={popupObj} pContent={pContent} />}
       {isTable && <BorderSection popupObj={popupObj} pContent={pContent} />}
       {popupObj.type === DisplayObjectType.EVENTS_TABLE && <HeaderRowSection popupObj={popupObj} pContent={pContent} />}
@@ -704,28 +706,99 @@ function EmphasisSection({ popupObj, pContent }: { popupObj: DisplayObject; pCon
   );
 }
 
+function ScrollSection({ popupObj, pContent }: { popupObj: DisplayObject; pContent: (p: Record<string, any>) => void }) {
+  const scroll = popupObj.content?.scroll ?? {};
+  const enabled = scroll.enabled === true;
+  return (
+    <Section title="Scrolling" defaultOpen={false}>
+      <label className="ed-checkRow" style={{ marginBottom: 8 }}>
+        <input type="checkbox" checked={enabled} onChange={(e) => pContent({ scroll: { ...scroll, enabled: e.target.checked } })} />
+        Enable scrolling
+      </label>
+      {enabled && (
+        <>
+          <Field label="Direction">
+            <select
+              value={scroll.direction ?? 'up'}
+              onChange={(e) => pContent({ scroll: { ...scroll, direction: e.target.value } })}
+              className="ed-input"
+            >
+              <option value="up">Up</option>
+              <option value="down">Down</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </Field>
+          <Field label="Speed (px/sec)">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="range"
+                min={5}
+                max={200}
+                step={5}
+                value={scroll.speed ?? 30}
+                onChange={(e) => pContent({ scroll: { ...scroll, speed: Number(e.target.value) } })}
+                style={{ flex: 1 }}
+              />
+              <span style={{ fontSize: 11, color: 'var(--ed-text-dim)', minWidth: 32, textAlign: 'right' }}>
+                {scroll.speed ?? 30}
+              </span>
+            </div>
+          </Field>
+        </>
+      )}
+    </Section>
+  );
+}
+
 function JewishInfoItemsSection({ popupObj, pContent }: { popupObj: DisplayObject; pContent: (p: Record<string, any>) => void }) {
   const items = popupObj.content?.showItems ?? {};
+  const layout = popupObj.content?.layout ?? 'vertical';
+  const separator = popupObj.content?.horizontalSeparator ?? '|';
   return (
-    <Field label="Show in this box">
-      {([
-        ['date', 'Hebrew Date', '\u05EA\u05D0\u05E8\u05D9\u05DA \u05E2\u05D1\u05E8\u05D9'],
-        ['parsha', 'Parshat HaShavua', '\u05E4\u05E8\u05E9\u05EA \u05D4\u05E9\u05D1\u05D5\u05E2'],
-        ['holiday', 'Yom Tov / Holiday', '\u05D9\u05D5\u05DD \u05D8\u05D5\u05D1 / \u05D7\u05D2'],
-        ['omer', 'Sefiras HaOmer', '\u05E1\u05E4\u05D9\u05E8\u05EA \u05D4\u05E2\u05D5\u05DE\u05E8'],
-        ['dafYomi', 'Daf Yomi', '\u05D3\u05E3 \u05D9\u05D5\u05DE\u05D9'],
-        ['tefilah', 'Tefillah Changes', '\u05E9\u05D9\u05E0\u05D5\u05D9\u05D9\u05DD \u05D1\u05EA\u05E4\u05D9\u05DC\u05D4'],
-      ] as [string, string, string][]).map(([key, labelEn, labelHe]) => {
-        const checked = items[key] !== false;
-        return (
-          <label key={key} className={checked ? "ed-groupItemActive" : "ed-groupItem"} style={{ marginBottom: 6 }}>
-            <input type="checkbox" checked={checked} onChange={(e) => pContent({ showItems: { ...items, [key]: e.target.checked } })} />
-            <span style={{ color: 'var(--ed-text)' }}>{labelHe}</span>
-            <span style={{ color: 'var(--ed-text-dim)', marginLeft: 'auto', fontSize: 11 }}>{labelEn}</span>
-          </label>
-        );
-      })}
-    </Field>
+    <>
+      <Field label="Show in this box">
+        {([
+          ['dayOfWeek', 'Day of Week', '\u05D9\u05D5\u05DD \u05D1\u05E9\u05D1\u05D5\u05E2'],
+          ['date', 'Hebrew Date', '\u05EA\u05D0\u05E8\u05D9\u05DA \u05E2\u05D1\u05E8\u05D9'],
+          ['parsha', 'Parshat HaShavua', '\u05E4\u05E8\u05E9\u05EA \u05D4\u05E9\u05D1\u05D5\u05E2'],
+          ['holiday', 'Yom Tov / Holiday', '\u05D9\u05D5\u05DD \u05D8\u05D5\u05D1 / \u05D7\u05D2'],
+          ['omer', 'Sefiras HaOmer', '\u05E1\u05E4\u05D9\u05E8\u05EA \u05D4\u05E2\u05D5\u05DE\u05E8'],
+          ['dafYomi', 'Daf Yomi', '\u05D3\u05E3 \u05D9\u05D5\u05DE\u05D9'],
+          ['tefilah', 'Tefillah Changes', '\u05E9\u05D9\u05E0\u05D5\u05D9\u05D9\u05DD \u05D1\u05EA\u05E4\u05D9\u05DC\u05D4'],
+        ] as [string, string, string][]).map(([key, labelEn, labelHe]) => {
+          const checked = key === 'dayOfWeek' ? items[key] === true : items[key] !== false;
+          return (
+            <label key={key} className={checked ? "ed-groupItemActive" : "ed-groupItem"} style={{ marginBottom: 6 }}>
+              <input type="checkbox" checked={checked} onChange={(e) => pContent({ showItems: { ...items, [key]: e.target.checked } })} />
+              <span style={{ color: 'var(--ed-text)' }}>{labelHe}</span>
+              <span style={{ color: 'var(--ed-text-dim)', marginLeft: 'auto', fontSize: 11 }}>{labelEn}</span>
+            </label>
+          );
+        })}
+      </Field>
+      <Field label="Layout">
+        <select
+          value={layout}
+          onChange={(e) => pContent({ layout: e.target.value })}
+          className="ed-input"
+        >
+          <option value="vertical">Vertical (stacked)</option>
+          <option value="horizontal">Horizontal (row)</option>
+        </select>
+        {layout === 'horizontal' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+            <span className="ed-hint">Separator:</span>
+            <input
+              value={separator}
+              onChange={(e) => pContent({ horizontalSeparator: e.target.value })}
+              className="ed-input" style={{ width: 60, textAlign: 'center' }}
+              placeholder="|"
+            />
+          </div>
+        )}
+      </Field>
+    </>
   );
 }
 

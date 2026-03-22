@@ -41,6 +41,8 @@ export interface JewishInfoWidgetProps {
   language?: 'hebrew' | 'english';
   fontSize?: number;
   fontFamily?: string;
+  fontBold?: boolean;
+  fontItalic?: boolean;
   textColor?: string;
   textAlign?: 'left' | 'center' | 'right';
   showItems?: {
@@ -50,7 +52,12 @@ export interface JewishInfoWidgetProps {
     omer?: boolean;
     dafYomi?: boolean;
     tefilah?: boolean;
+    dayOfWeek?: boolean;
   };
+  /** 'vertical' stacks sections, 'horizontal' puts them in a row */
+  layout?: 'vertical' | 'horizontal';
+  /** Separator string between items in horizontal layout */
+  horizontalSeparator?: string;
   titleSettings?: Record<string, { mode?: 'default' | 'hidden' | 'custom' | 'inline'; customTitle?: string; separator?: string }>;
   displayNames?: DisplayNameOverrides;
 }
@@ -86,9 +93,13 @@ export function JewishInfoWidget({
   language = 'english',
   fontSize = defaultFontSize,
   fontFamily = defaultFontFamily,
+  fontBold = false,
+  fontItalic = false,
   textColor = 'var(--wgt-text)',
   textAlign: textAlignProp,
   showItems = {},
+  layout = 'vertical',
+  horizontalSeparator = '|',
   titleSettings = {},
   displayNames,
 }: JewishInfoWidgetProps) {
@@ -101,11 +112,14 @@ export function JewishInfoWidget({
     omer: showItems.omer !== false,
     dafYomi: showItems.dafYomi !== false,
     tefilah: showItems.tefilah !== false,
+    dayOfWeek: showItems.dayOfWeek === true,
   };
 
   const baseStyle: React.CSSProperties = {
     fontSize,
     fontFamily,
+    fontWeight: fontBold ? 'bold' : 'normal',
+    fontStyle: fontItalic ? 'italic' : 'normal',
     color: textColor,
     direction: isRtl ? 'rtl' : 'ltr',
     textAlign: resolvedAlign,
@@ -118,7 +132,7 @@ export function JewishInfoWidget({
 
   const titleStyle: React.CSSProperties = {
     ...baseStyle,
-    fontSize: fontSize * 0.85,
+    lineHeight: 1.4,
   };
 
   const resolveTefilahLabel = (key: string): string => {
@@ -150,7 +164,7 @@ export function JewishInfoWidget({
       return (
         <div className="wgt-jiSection" style={{ ...sectionStyle, ...extraStyle }}>
           <div style={baseStyle}>
-            <span style={{ opacity: 0.75 }}>{titleText}{sep} </span>{value}
+            <span>{titleText}{sep} </span>{value}
           </div>
         </div>
       );
@@ -170,82 +184,136 @@ export function JewishInfoWidget({
     ? <span style={{ marginRight: isRtl ? 8 : 0, marginLeft: isRtl ? 0 : 8 }}>({parsha.specialShabbosHebrew})</span>
     : null;
 
+  const sections: React.ReactNode[] = [];
+
+  if (show.dayOfWeek && date.dayOfWeekHebrew) {
+    sections.push(
+      <div key="dayOfWeek" className="wgt-jiSection" style={sectionStyle}>
+        <div style={baseStyle}>{date.dayOfWeekHebrew}</div>
+      </div>,
+    );
+  }
+
+  if (show.date) {
+    sections.push(
+      <div key="date" className="wgt-jiSection" style={sectionStyle}>
+        <div style={baseStyle}>
+          {language === 'hebrew' ? date.formattedHebrew : date.formattedEnglish}
+        </div>
+      </div>,
+    );
+  }
+
+  if (show.parsha && parsha) {
+    sections.push(
+      <React.Fragment key="parsha">
+        {renderSection(
+          'parsha',
+          language === 'hebrew' ? 'פרשת השבוע' : 'Parshas HaShavua',
+          <>{parshaValue}{parshaExtra}</>,
+        )}
+      </React.Fragment>,
+    );
+  }
+
+  if (show.holiday && holiday && (holiday.name || holiday.nameHebrew)) {
+    sections.push(
+      <React.Fragment key="holiday">
+        {renderSection(
+          'holiday',
+          language === 'hebrew' ? 'יום טוב' : 'Yom Tov',
+          <>
+            {language === 'hebrew' ? holiday.nameHebrew : holiday.name}
+            {holiday.isChanukah && holiday.chanukahDay > 0 && (
+              <span style={{ marginRight: isRtl ? 8 : 0, marginLeft: isRtl ? 0 : 8 }}>
+                — {language === 'hebrew' ? `ליל ${holiday.chanukahDay}` : `Night ${holiday.chanukahDay}`}
+              </span>
+            )}
+          </>,
+        )}
+      </React.Fragment>,
+    );
+  }
+
+  if (show.omer && omer) {
+    sections.push(
+      <React.Fragment key="omer">
+        {renderSection(
+          'omer',
+          language === 'hebrew' ? 'ספירת העומר' : 'Sefiras HaOmer',
+          language === 'hebrew' ? omer.formattedHebrew : `Day ${omer.day}`,
+        )}
+      </React.Fragment>,
+    );
+  }
+
+  if (show.dafYomi && dafYomi) {
+    sections.push(
+      <React.Fragment key="dafYomi">
+        {renderSection(
+          'dafYomi',
+          language === 'hebrew' ? 'דף יומי' : 'Daf Yomi',
+          language === 'hebrew' ? dafYomi.formattedHebrew : dafYomi.formatted,
+        )}
+      </React.Fragment>,
+    );
+  }
+
+  if (show.tefilah && activeTefilahItems.length > 0) {
+    sections.push(
+      <div key="tefilah" className="wgt-jiSection" style={sectionStyle}>
+        {(titleSettings.tefilah?.mode ?? 'default') !== 'hidden' && (
+          <div className="wgt-jiTitle" style={titleStyle}>
+            {titleSettings.tefilah?.mode === 'custom' ? titleSettings.tefilah.customTitle : (language === 'hebrew' ? 'שינויים בתפילה' : 'Tefillah Changes')}
+          </div>
+        )}
+        <div
+          style={{
+            ...baseStyle,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            flexDirection: isRtl ? 'row-reverse' : 'row',
+            justifyContent: resolvedAlign === 'center' ? 'center' : resolvedAlign === 'right' ? 'flex-end' : 'flex-start',
+          }}
+        >
+          {activeTefilahItems.map((item) => (
+            <span key={item} className="wgt-jiTefilahItem" style={baseStyle}>
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>,
+    );
+  }
+
+  if (layout === 'horizontal' && sections.length > 0) {
+    return (
+      <div
+        className="wgt-jiContainer"
+        style={{
+          padding: 16, fontFamily, width: '100%', height: '100%',
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+          gap: 0,
+          flexDirection: isRtl ? 'row-reverse' : 'row',
+          justifyContent: resolvedAlign === 'center' ? 'center' : resolvedAlign === 'right' ? 'flex-end' : 'flex-start',
+        }}
+      >
+        {sections.map((section, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && horizontalSeparator && (
+              <span style={{ ...baseStyle, margin: '0 8px', opacity: 0.5 }}>{horizontalSeparator}</span>
+            )}
+            {section}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="wgt-jiContainer" style={{ padding: 16, fontFamily, width: '100%', height: '100%' }}>
-      {show.date && (
-        <div className="wgt-jiSection" style={sectionStyle}>
-          <div style={{ ...baseStyle, fontSize: fontSize * 1.15, fontWeight: 600 }}>
-            {language === 'hebrew' ? date.formattedHebrew : date.formattedEnglish}
-          </div>
-          {(titleSettings.date?.mode ?? 'default') !== 'hidden' && date.dayOfWeekHebrew && (
-            <div className="wgt-jiTitle" style={titleStyle}>{date.dayOfWeekHebrew}</div>
-          )}
-        </div>
-      )}
-
-      {show.parsha && parsha && renderSection(
-        'parsha',
-        language === 'hebrew' ? 'פרשת השבוע' : 'Parshas HaShavua',
-        <>{parshaValue}{parshaExtra}</>,
-      )}
-
-      {show.holiday && holiday && (holiday.name || holiday.nameHebrew) && renderSection(
-        'holiday',
-        language === 'hebrew' ? 'יום טוב' : 'Yom Tov',
-        <>
-          {language === 'hebrew' ? holiday.nameHebrew : holiday.name}
-          {holiday.isChanukah && holiday.chanukahDay > 0 && (
-            <span style={{ marginRight: isRtl ? 8 : 0, marginLeft: isRtl ? 0 : 8 }}>
-              — {language === 'hebrew' ? `ליל ${holiday.chanukahDay}` : `Night ${holiday.chanukahDay}`}
-            </span>
-          )}
-        </>,
-        { fontWeight: 600 },
-      )}
-
-      {show.omer && omer && renderSection(
-        'omer',
-        language === 'hebrew' ? 'ספירת העומר' : 'Sefiras HaOmer',
-        language === 'hebrew' ? omer.formattedHebrew : `Day ${omer.day}`,
-      )}
-
-      {show.dafYomi && dafYomi && renderSection(
-        'dafYomi',
-        language === 'hebrew' ? 'דף יומי' : 'Daf Yomi',
-        language === 'hebrew' ? dafYomi.formattedHebrew : dafYomi.formatted,
-      )}
-
-      {show.tefilah && activeTefilahItems.length > 0 && (
-        <div className="wgt-jiSection" style={sectionStyle}>
-          {(titleSettings.tefilah?.mode ?? 'default') !== 'hidden' && (
-            <div className="wgt-jiTitle" style={titleStyle}>
-              {titleSettings.tefilah?.mode === 'custom' ? titleSettings.tefilah.customTitle : (language === 'hebrew' ? 'שינויים בתפילה' : 'Tefillah Changes')}
-            </div>
-          )}
-          <div
-            style={{
-              ...baseStyle,
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              flexDirection: isRtl ? 'row-reverse' : 'row',
-              justifyContent: resolvedAlign === 'center' ? 'center' : resolvedAlign === 'right' ? 'flex-end' : 'flex-start',
-            }}
-          >
-            {activeTefilahItems.map((item) => (
-              <span
-                key={item}
-                className="wgt-jiTefilahItem"
-                style={{
-                  ...baseStyle,
-                }}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {sections}
     </div>
   );
 }

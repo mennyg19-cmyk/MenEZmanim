@@ -7,6 +7,7 @@ import { renderWidget } from '../display/BoardRenderer';
 import { TYPE_LABELS, TYPE_ICONS, FONT_CATEGORIES } from '../shared/constants';
 import { resolveObjBackground, getObjBgMode, resolveCanvasBackground, getCanvasBgMode } from '../shared/backgroundUtils';
 import { FrameRenderer } from '../display/FrameRenderer';
+import { ScrollWrapper, type ScrollConfig } from '../display/ScrollWrapper';
 import { EditorPropertyPanel } from './EditorPropertyPanel';
 import { GradientPicker } from './GradientPicker';
 import { TexturePicker } from './TexturePicker';
@@ -764,8 +765,9 @@ export function WysiwygCanvas({
                 }}
               >
                 <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
+                <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
                 <div style={{
-                  pointerEvents: 'none', overflow: 'hidden', width: '100%', height: '100%',
+                  pointerEvents: 'none', overflow: 'hidden', width: '100%', minHeight: '100%',
                   display: 'flex', flexDirection: 'column',
                   justifyContent: (obj.content?.verticalAlign ?? 'top') === 'middle' ? 'center' : (obj.content?.verticalAlign ?? 'top') === 'bottom' ? 'flex-end' : 'flex-start',
                 }}>
@@ -778,6 +780,7 @@ export function WysiwygCanvas({
                     media?.map((m: any) => ({ id: m.id ?? '', url: m.url ?? '', mimeType: m.mimeType ?? '' })),
                   )}
                 </div>
+                </ScrollWrapper>
                 </FrameRenderer>
                 <div className="ed-typeBadge">
                   {TYPE_LABELS[obj.type]}

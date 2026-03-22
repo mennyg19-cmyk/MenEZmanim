@@ -6,6 +6,7 @@ import type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaDat
 import { formatZmanTime, formatEventTime } from '../shared/timeUtils';
 import { resolveObjBackground, type CanvasBgExtras } from '../shared/backgroundUtils';
 import { FrameRenderer } from './FrameRenderer';
+import { ScrollWrapper, type ScrollConfig } from './ScrollWrapper';
 import { ZmanimTable } from './widgets/ZmanimTable';
 import { JewishInfoWidget } from './widgets/JewishInfoWidget';
 import { DigitalClock } from './widgets/DigitalClock';
@@ -121,9 +122,13 @@ export function renderWidget(
           language={lang}
           fontSize={font?.size}
           fontFamily={font?.family}
+          fontBold={font?.bold}
+          fontItalic={font?.italic}
           textColor={font?.color}
           textAlign={content.textAlign}
           showItems={content.showItems}
+          layout={content.layout}
+          horizontalSeparator={content.horizontalSeparator}
           titleSettings={content.titleSettings}
           displayNames={displayNames}
         />
@@ -391,20 +396,22 @@ export function BoardRenderer({
             }}
           >
             <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
-              <div style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent:
-                  (obj.content?.verticalAlign ?? 'top') === 'middle'
-                    ? 'center'
-                    : (obj.content?.verticalAlign ?? 'top') === 'bottom'
-                      ? 'flex-end'
-                      : 'flex-start',
-              }}>
-                {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
-              </div>
+              <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
+                <div style={{
+                  width: '100%',
+                  minHeight: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent:
+                    (obj.content?.verticalAlign ?? 'top') === 'middle'
+                      ? 'center'
+                      : (obj.content?.verticalAlign ?? 'top') === 'bottom'
+                        ? 'flex-end'
+                        : 'flex-start',
+                }}>
+                  {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
+                </div>
+              </ScrollWrapper>
             </FrameRenderer>
           </div>
         );
