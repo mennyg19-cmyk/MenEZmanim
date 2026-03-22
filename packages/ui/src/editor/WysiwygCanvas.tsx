@@ -812,6 +812,8 @@ export function WysiwygCanvas({
           setBoxBgUploading={setBoxBgUploading}
           boxBgFileRef={boxBgFileRef}
           canvasBgColor={style.backgroundColor || '#000000'}
+          canvasBgMode={style.backgroundMode}
+          canvasBgTexture={style.backgroundTexture}
         />
       )}
     </div>

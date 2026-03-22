@@ -9,6 +9,7 @@ import { TexturePicker } from './TexturePicker';
 import { FramePicker } from './FramePicker';
 import { hexToRgba, extractHex } from '../shared/colorUtils';
 import { bestTextColorFromPalette } from '../shared/colorExtract';
+import { getTextureById } from '../shared/textures';
 import { useColorContext } from './ColorContext';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
 
@@ -38,12 +39,14 @@ interface EditorPropertyPanelProps {
   setBoxBgUploading: (v: boolean) => void;
   boxBgFileRef: React.RefObject<HTMLInputElement | null>;
   canvasBgColor?: string;
+  canvasBgMode?: string;
+  canvasBgTexture?: string;
 }
 
 export function EditorPropertyPanel({
   popupObj, popupTab, setPopupTab, setPopupId, setSelectedId, setSelectedIds,
   pUpdate, pPos, pFont, pContent, deleteObj, daveningGroups, onUploadImage,
-  boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor,
+  boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor, canvasBgMode, canvasBgTexture,
 }: EditorPropertyPanelProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -83,6 +86,8 @@ export function EditorPropertyPanel({
             setBoxBgUploading={setBoxBgUploading}
             boxBgFileRef={boxBgFileRef}
             canvasBgColor={canvasBgColor}
+            canvasBgMode={canvasBgMode}
+            canvasBgTexture={canvasBgTexture}
           />
         )}
         {popupTab === 'content' && (
@@ -140,7 +145,7 @@ function GeneralTab({ popupObj, pUpdate, pPos }: {
 
 /* ── Tab: Appearance ──────────────────────────────────── */
 
-function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor }: {
+function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasBgColor, canvasBgMode, canvasBgTexture }: {
   popupObj: DisplayObject;
   pFont: (patch: Partial<DisplayObject['font']>) => void;
   pContent: (patch: Record<string, any>) => void;
@@ -150,14 +155,29 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
   setBoxBgUploading: (v: boolean) => void;
   boxBgFileRef: React.RefObject<HTMLInputElement | null>;
   canvasBgColor?: string;
+  canvasBgMode?: string;
+  canvasBgTexture?: string;
 }) {
   const content = popupObj.content || {};
   const isTable = popupObj.type === DisplayObjectType.ZMANIM_TABLE || popupObj.type === DisplayObjectType.EVENTS_TABLE;
   const { themeColors } = useColorContext();
 
+  // Determine the visual background color behind this object
+  // If the object has its own opaque background, use that;
+  // otherwise use the canvas background, accounting for textures/images
+  let resolvedCanvasBg = canvasBgColor || '#000000';
+  if (canvasBgMode === 'texture' && canvasBgTexture) {
+    const tex = getTextureById(canvasBgTexture);
+    if (tex) resolvedCanvasBg = tex.dominantColor;
+  } else if (canvasBgMode === 'image') {
+    // Background is an uploaded image -- we can't sample it here,
+    // so use a neutral mid-gray to avoid biasing toward dark or light
+    resolvedCanvasBg = '#808080';
+  }
+
   const effectiveBg = popupObj.backgroundColor === 'transparent' || popupObj.backgroundColor === 'inherit' || !popupObj.backgroundColor
-    ? (canvasBgColor || '#000000')
-    : (extractHex(popupObj.backgroundColor) || canvasBgColor || '#000000');
+    ? resolvedCanvasBg
+    : (extractHex(popupObj.backgroundColor) || resolvedCanvasBg);
 
   return (
     <>

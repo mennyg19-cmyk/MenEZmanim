@@ -216,7 +216,7 @@ export function bestTextColorFromPalette(bgHex: string, palette: string[]): stri
   const isDarkBg = bgLum < 140;
 
   // Minimum contrast distance in luminance (0-255 scale) for readability
-  const MIN_CONTRAST = 60;
+  const MIN_CONTRAST = 80;
 
   // Score each palette color: we want good contrast AND visual richness
   const scored = palette
@@ -224,34 +224,23 @@ export function bestTextColorFromPalette(bgHex: string, palette: string[]): stri
       const cLum = luminance(c);
       const contrast = Math.abs(cLum - bgLum);
       const sat = saturation(c);
-      // On light bg we want darker colors; on dark bg we want lighter colors
       const directionOk = isDarkBg ? cLum > bgLum : cLum < bgLum;
       return { color: c, contrast, sat, directionOk, lum: cLum };
     })
     .filter((c) => c.contrast >= MIN_CONTRAST && c.directionOk);
 
-  if (scored.length === 0) {
-    // No palette color has enough contrast -- try with a lower threshold
-    const relaxed = palette
-      .map((c) => {
-        const cLum = luminance(c);
-        const contrast = Math.abs(cLum - bgLum);
-        return { color: c, contrast, lum: cLum };
-      })
-      .filter((c) => c.contrast >= 40)
-      .sort((a, b) => b.contrast - a.contrast);
-
-    if (relaxed.length > 0) return relaxed[0].color;
-    return contrastTextColor(bgHex);
+  if (scored.length > 0) {
+    // Rank by weighted score: contrast matters most, saturation is a bonus
+    // so we prefer a rich brown over plain gray at similar contrast levels
+    scored.sort((a, b) => {
+      const scoreA = a.contrast + a.sat * 80;
+      const scoreB = b.contrast + b.sat * 80;
+      return scoreB - scoreA;
+    });
+    return scored[0].color;
   }
 
-  // Rank by a weighted score: contrast matters most, but saturation is a bonus
-  // so we prefer a rich brown over plain gray at similar contrast levels
-  scored.sort((a, b) => {
-    const scoreA = a.contrast + a.sat * 80;
-    const scoreB = b.contrast + b.sat * 80;
-    return scoreB - scoreA;
-  });
-
-  return scored[0].color;
+  // No palette color qualifies -- always fall back to a guaranteed readable color.
+  // Use the generic contrast color (white on dark, dark slate on light).
+  return contrastTextColor(bgHex);
 }
