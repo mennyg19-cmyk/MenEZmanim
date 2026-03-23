@@ -66,6 +66,7 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     if (body.styleId !== undefined) updates.styleId = body.styleId;
     if (body.resolution !== undefined) updates.resolution = body.resolution;
     if (body.active !== undefined) updates.active = body.active;
+    if (body.styleSchedules !== undefined) updates.styleSchedules = body.styleSchedules;
 
     const updated = await da.updateScreen(resolvedId, screenId, updates);
     if (!updated) return error('Screen not found', 404);

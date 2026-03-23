@@ -1,11 +1,22 @@
-import { getActiveStyle } from './style-engine';
-import type { DisplayStyle } from './style-engine';
+import {
+  getActiveStyle,
+  evaluateStyleScheduleRules,
+  orderedScreenSchedulesForBreakpoint,
+  resolveScreenStyleSchedules,
+  type DisplayStyle,
+  type DisplayBreakpoint,
+  type ScreenStyleSchedule,
+} from './style-engine';
 
 export interface ScreenConfig {
   id: string;
   name: string;
   orgId: string;
   assignedStyleId?: string;
+  /** Persisted schedules (preferred). When empty, use legacy assignedStyleId + style activation rules. */
+  styleSchedules?: ScreenStyleSchedule[] | null;
+  /** Raw DB JSON; used when styleSchedules is not provided */
+  styleSchedulesJson?: string | null;
   resolution: { width: number; height: number };
   isActive: boolean;
 }
@@ -68,12 +79,36 @@ export class ScreenManager {
     screen: ScreenConfig,
     allStyles: DisplayStyle[],
     date: Date,
-    inIsrael: boolean
+    inIsrael: boolean,
+    breakpoint: DisplayBreakpoint,
   ): DisplayStyle | null {
+    let schedules: ScreenStyleSchedule[] = [];
+
+    if (screen.styleSchedules && screen.styleSchedules.length > 0) {
+      schedules = screen.styleSchedules;
+    } else {
+      schedules = resolveScreenStyleSchedules(
+        screen.styleSchedulesJson ?? null,
+        screen.assignedStyleId ?? undefined,
+        allStyles,
+      );
+    }
+
+    if (schedules.length > 0) {
+      const ordered = orderedScreenSchedulesForBreakpoint(schedules, breakpoint);
+      for (const entry of ordered) {
+        if (evaluateStyleScheduleRules(entry.rules, date)) {
+          const chosen = allStyles.find((s) => s.id === entry.styleId);
+          if (chosen) return chosen;
+        }
+      }
+    }
+
     if (screen.assignedStyleId) {
       const assigned = allStyles.find((s) => s.id === screen.assignedStyleId);
       if (assigned) return assigned;
     }
+
     return getActiveStyle(allStyles, date, inIsrael);
   }
 }

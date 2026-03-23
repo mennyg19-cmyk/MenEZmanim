@@ -17,6 +17,7 @@ import {
   type PrismaOrgMembership,
 } from '@zmanim-app/db';
 import type { DisplayStyle } from '@zmanim-app/core';
+import { parseScreenStyleSchedulesJson } from '@zmanim-app/core';
 import type {
   Announcement,
   DaveningGroup,
@@ -259,6 +260,7 @@ function screenFromPrisma(s: PrismaScreen): Screen {
     styleId: s.assignedStyleId ?? '',
     active: s.isActive,
     resolution: s.resolution,
+    styleSchedules: parseScreenStyleSchedulesJson(s.styleSchedules) ?? undefined,
   };
 }
 
@@ -656,12 +658,16 @@ export async function deleteStyle(orgId: string, styleId: string): Promise<boole
 export async function createScreen(orgId: string, body: Record<string, unknown>): Promise<Screen> {
   const db = getDbClient();
   const id = (body.id as string) ?? `screen-${Date.now()}`;
+  const styleSchedulesRaw = body.styleSchedules as unknown;
+  const styleSchedulesJson =
+    styleSchedulesRaw != null ? JSON.stringify(styleSchedulesRaw) : null;
   const row = await db.screen.create({
     data: {
       id,
       orgId,
       name: (body.name as string) ?? 'New Screen',
       assignedStyleId: (body.styleId as string) || null,
+      styleSchedules: styleSchedulesJson,
       isActive: (body.active as boolean) ?? true,
       resolution: (body.resolution as string) ?? '1920x1080',
     },
@@ -672,7 +678,7 @@ export async function createScreen(orgId: string, body: Record<string, unknown>)
 export async function updateScreen(
   orgId: string,
   screenId: string,
-  patch: Partial<Pick<Screen, 'name' | 'styleId' | 'active' | 'resolution'>>,
+  patch: Partial<Pick<Screen, 'name' | 'styleId' | 'active' | 'resolution' | 'styleSchedules'>>,
 ): Promise<Screen | null> {
   const db = getDbClient();
   const row = await db.screen.findFirst({ where: { id: screenId, orgId } });
@@ -685,6 +691,14 @@ export async function updateScreen(
         patch.styleId === undefined ? undefined : patch.styleId === '' ? null : patch.styleId,
       isActive: patch.active,
       resolution: patch.resolution,
+      ...(patch.styleSchedules !== undefined
+        ? {
+            styleSchedules:
+              patch.styleSchedules === null || patch.styleSchedules.length === 0
+                ? null
+                : JSON.stringify(patch.styleSchedules),
+          }
+        : {}),
     },
   });
   return screenFromPrisma(updated);

@@ -7,6 +7,7 @@ export { resolveObjBackground, getObjBgMode, resolveCanvasBackground, getCanvasB
 export type { BgMode, CanvasBgExtras } from './shared/backgroundUtils';
 export { useBreakpoint } from './shared/useBreakpoint';
 export type { Breakpoint } from './shared/useBreakpoint';
+export { useDisplayBreakpoint } from './shared/useDisplayBreakpoint';
 export { useRecentColors } from './shared/useRecentColors';
 export { extractPaletteFromImage, paletteToThemeColors, contrastTextColor, bestTextColorFromPalette, sampleBackgroundAtObject } from './shared/colorExtract';
 export { ColorProvider, useColorContext } from './editor/ColorContext';

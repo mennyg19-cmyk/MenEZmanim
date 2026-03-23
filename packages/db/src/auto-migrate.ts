@@ -50,6 +50,7 @@ const SCHEMA_STATEMENTS: string[] = [
     "name" TEXT NOT NULL,
     "orgId" TEXT NOT NULL,
     "assignedStyleId" TEXT,
+    "styleSchedules" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "resolution" TEXT NOT NULL DEFAULT '1920x1080',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -321,6 +322,7 @@ const ALTER_STATEMENTS: string[] = [
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameId" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameThickness" REAL DEFAULT 1.0`,
   `ALTER TABLE "Organization" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'pending'`,
+  `ALTER TABLE "Screen" ADD COLUMN "styleSchedules" TEXT`,
 ];
 
 async function needsUserTableMigration(db: PrismaClient): Promise<boolean> {

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { DisplayStyle, DisplayObject } from '@zmanim-app/core';
+import type { DisplayStyle, DisplayObject, DisplayBreakpoint } from '@zmanim-app/core';
 import { getActiveStyle, getVisibleObjects } from '@zmanim-app/core';
 import { buildScheduleContext } from '@zmanim-app/core';
+import { useDisplayBreakpoint } from '../shared/useDisplayBreakpoint';
 import { BoardRenderer } from './BoardRenderer';
 import { FrameRenderer } from './FrameRenderer';
 import { resolveCanvasBackground } from '../shared/backgroundUtils';
@@ -105,7 +106,7 @@ export interface DisplayAppProps {
   screenId: string;
   getStyles: () => Promise<DisplayStyle[]>;
   /** When provided, use this instead of getStyles + getActiveStyle for screen-specific style resolution */
-  getResolvedStyle?: () => Promise<DisplayStyle | null>;
+  getResolvedStyle?: (breakpoint: DisplayBreakpoint) => Promise<DisplayStyle | null>;
   getZmanim: (date: Date) => Promise<ZmanResult[]>;
   getCalendarInfo: (date: Date) => Promise<CalendarInfo>;
   getAnnouncements: () => Promise<AnnouncementData[]>;
@@ -180,6 +181,7 @@ export function DisplayApp({
   getDisplayNames,
   onError,
 }: DisplayAppProps) {
+  const displayBreakpoint = useDisplayBreakpoint();
   const [state, setState] = useState<DisplayState>({
     styles: [],
     activeStyle: null,
@@ -274,7 +276,7 @@ export function DisplayApp({
     try {
       let activeStyle: DisplayStyle | null = null;
       if (getResolvedStyle) {
-        activeStyle = await getResolvedStyle();
+        activeStyle = await getResolvedStyle(displayBreakpoint);
       } else {
         const styles = await getStyles();
         activeStyle = getActiveStyle(styles, new Date(), false);
@@ -294,7 +296,7 @@ export function DisplayApp({
     } catch {
       // Silently ignore style refresh failures to avoid flashing errors
     }
-  }, [getResolvedStyle, getStyles, resolveVisibleObjects]);
+  }, [getResolvedStyle, getStyles, resolveVisibleObjects, displayBreakpoint]);
 
   const fullRefresh = useCallback(async () => {
     try {
@@ -306,7 +308,7 @@ export function DisplayApp({
       if (getResolvedStyle) {
         const [resolved, zmanim, calendarInfo, announcements, memorials, rawSchedules, media, displayNames] =
           await Promise.all([
-            getResolvedStyle(),
+            getResolvedStyle(displayBreakpoint),
             getZmanim(now),
             getCalendarInfo(now),
             getAnnouncements(),
@@ -393,6 +395,7 @@ export function DisplayApp({
     getDisplayNames,
     handleError,
     resolveVisibleObjects,
+    displayBreakpoint,
   ]);
 
   const scheduleMidnightRefresh = useCallback(() => {
@@ -421,6 +424,12 @@ export function DisplayApp({
       if (midnightTimerRef.current) clearTimeout(midnightTimerRef.current);
     };
   }, [fullRefresh, refreshZmanimAndCalendar, refreshSecondary, refreshStyle, scheduleMidnightRefresh]);
+
+  useEffect(() => {
+    if (getResolvedStyle) {
+      refreshStyle();
+    }
+  }, [displayBreakpoint, getResolvedStyle, refreshStyle]);
 
   const canvasW = state.activeStyle?.canvasWidth ?? 1920;
   const canvasH = state.activeStyle?.canvasHeight ?? 1080;

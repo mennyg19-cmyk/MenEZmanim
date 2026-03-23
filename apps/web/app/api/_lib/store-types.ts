@@ -1,4 +1,4 @@
-import type { DisplayStyle } from '@zmanim-app/core';
+import type { DisplayStyle, ScreenStyleSchedule } from '@zmanim-app/core';
 
 export interface Organization {
   id: string;
@@ -23,6 +23,8 @@ export interface Screen {
   styleId: string;
   active: boolean;
   resolution?: string;
+  /** Per-screen style rules (when omitted, server/runtime migrates from styleId + style activation rules). */
+  styleSchedules?: ScreenStyleSchedule[] | null;
 }
 
 export interface Announcement {

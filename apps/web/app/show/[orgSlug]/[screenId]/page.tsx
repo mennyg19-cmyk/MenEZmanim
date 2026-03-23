@@ -2,6 +2,7 @@
 
 import { DisplayApp } from '@zmanim-app/ui';
 import { ScreenManager } from '@zmanim-app/core';
+import type { DisplayBreakpoint, ScreenStyleSchedule } from '@zmanim-app/core';
 import { use, useCallback } from 'react';
 
 async function apiFetch<T = any>(path: string): Promise<T> {
@@ -30,13 +31,14 @@ export default function DisplayPage({ params }: Props) {
     return apiFetch(`/api/org/${orgId}/styles`);
   }, [orgId]);
 
-  const getResolvedStyle = useCallback(async () => {
+  const getResolvedStyle = useCallback(async (breakpoint: DisplayBreakpoint) => {
     const [screenRes, styles, org] = await Promise.all([
       apiFetch<{
         id: string;
         orgId: string;
         name: string;
         styleId?: string;
+        styleSchedules?: ScreenStyleSchedule[] | null;
         active?: boolean;
         resolution?: { width: number; height: number };
       }>(`/api/org/${orgId}/screens/${screenId}`),
@@ -48,6 +50,7 @@ export default function DisplayPage({ params }: Props) {
       name: screenRes.name,
       orgId: screenRes.orgId,
       assignedStyleId: screenRes.styleId || undefined,
+      styleSchedules: screenRes.styleSchedules ?? null,
       resolution: screenRes.resolution ?? { width: 1920, height: 1080 },
       isActive: screenRes.active ?? true,
     };
@@ -57,6 +60,7 @@ export default function DisplayPage({ params }: Props) {
       styles,
       new Date(),
       org?.location?.inIsrael ?? false,
+      breakpoint,
     );
   }, [orgId, screenId]);
 

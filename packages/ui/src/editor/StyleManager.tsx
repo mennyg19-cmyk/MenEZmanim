@@ -14,15 +14,6 @@ interface StyleManagerProps {
   onStyleRename: (styleId: string, name: string) => void;
 }
 
-function getActivationSummary(style: DisplayStyle): string {
-  if (style.activationRules.length === 0) return 'No rules';
-  const types = style.activationRules.map(r => r.type);
-  if (types.includes('default') && types.length === 1) return 'Default';
-  if (types.includes('hebrew_date_range')) return 'Hebrew date range';
-  if (types.includes('gregorian_date_range')) return 'Gregorian date range';
-  return `${style.activationRules.length} rule(s)`;
-}
-
 export function StyleManager({
   styles: styleList,
   activeStyleId,
@@ -150,7 +141,7 @@ export function StyleManager({
               )}
 
               <div className="ed-smMeta">
-                {getActivationSummary(style)} · {style.objects.length} object{style.objects.length !== 1 ? 's' : ''}
+                {style.objects.length} object{style.objects.length !== 1 ? 's' : ''}
               </div>
 
               <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>

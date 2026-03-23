@@ -1,6 +1,70 @@
 import { JewishCalendar } from 'kosher-zmanim';
 import { ScheduleConfig, ScheduleContext, isScheduleActive } from './scheduler';
 
+/** Public display layout bucket (orientation-aware). */
+export type DisplayBreakpoint = 'mobile' | 'tablet' | 'full';
+
+export type ScreenScheduleBreakpoint = DisplayBreakpoint | 'all';
+
+export type DayType =
+  | 'weekday'
+  | 'shabbos'
+  | 'erev_shabbos'
+  | 'erev_yom_tov'
+  | 'yom_tov'
+  | 'chol_hamoed'
+  | 'rosh_chodesh'
+  | 'erev_pesach'
+  | 'chanukah'
+  | 'yom_kippur'
+  | 'fast_day'
+  | 'purim';
+
+export const DAY_TYPE_OPTIONS: { value: DayType; label: string }[] = [
+  { value: 'weekday', label: 'Weekday' },
+  { value: 'shabbos', label: 'Shabbos' },
+  { value: 'erev_shabbos', label: 'Erev Shabbos' },
+  { value: 'erev_yom_tov', label: 'Erev Yom Tov' },
+  { value: 'yom_tov', label: 'Yom Tov' },
+  { value: 'chol_hamoed', label: 'Chol HaMoed' },
+  { value: 'rosh_chodesh', label: 'Rosh Chodesh' },
+  { value: 'erev_pesach', label: 'Erev Pesach' },
+  { value: 'chanukah', label: 'Chanukah' },
+  { value: 'yom_kippur', label: 'Yom Kippur' },
+  { value: 'fast_day', label: 'Fast day' },
+  { value: 'purim', label: 'Purim' },
+];
+
+export type StyleScheduleRule =
+  | { type: 'default' }
+  | {
+      type: 'hebrew_date_range';
+      startMonth: number;
+      startDay: number;
+      endMonth: number;
+      endDay: number;
+    }
+  | {
+      type: 'gregorian_date_range';
+      startMonth: number;
+      startDay: number;
+      endMonth: number;
+      endDay: number;
+    }
+  | { type: 'hebrew_month'; month: number }
+  | { type: 'gregorian_month'; month: number }
+  | { type: 'day_of_week'; days: number[] }
+  | { type: 'day_type'; dayType: DayType }
+  | { type: 'week_of_month'; week: number };
+
+export interface ScreenStyleSchedule {
+  id: string;
+  styleId: string;
+  breakpoint: ScreenScheduleBreakpoint;
+  rules: StyleScheduleRule[];
+  priority: number;
+}
+
 export enum DisplayObjectType {
   ZMANIM_TABLE = 'ZMANIM_TABLE',
   JEWISH_INFO = 'JEWISH_INFO',
@@ -75,6 +139,10 @@ export interface DisplayStyle {
   canvasWidth: number;
   canvasHeight: number;
   objects: DisplayObject[];
+  /**
+   * Legacy: global style activation. Prefer `Screen.styleSchedules` for when a style applies per screen.
+   * Kept for backward compatibility and `getActiveStyle` fallback.
+   */
   activationRules: StyleActivationRule[];
   sortOrder: number;
 }
@@ -154,6 +222,241 @@ function isHebrewRangeActive(
     return current >= start && current <= end;
   }
   return current >= start || current <= end;
+}
+
+function isGregorianDateRangeMatch(
+  startMonth: number,
+  startDay: number,
+  endMonth: number,
+  endDay: number,
+  gregMonth: number,
+  gregDay: number,
+): boolean {
+  const current = gregorianDayOfYear(gregMonth, gregDay);
+  const start = gregorianDayOfYear(startMonth, startDay);
+  const end = gregorianDayOfYear(endMonth, endDay);
+  if (start <= end) {
+    return current >= start && current <= end;
+  }
+  return current >= start || current <= end;
+}
+
+function isHebrewDateRangeMatch(
+  startMonth: number,
+  startDay: number,
+  endMonth: number,
+  endDay: number,
+  jewishMonth: number,
+  jewishDay: number,
+): boolean {
+  const current = hebrewOrdinal(jewishMonth, jewishDay);
+  const start = hebrewOrdinal(startMonth, startDay);
+  const end = hebrewOrdinal(endMonth, endDay);
+  if (start <= end) {
+    return current >= start && current <= end;
+  }
+  return current >= start || current <= end;
+}
+
+function weekOfMonthFromDate(d: Date): number {
+  return Math.floor((d.getDate() - 1) / 7) + 1;
+}
+
+/**
+ * Evaluate calendar day-type conditions for screen style scheduling.
+ * Uses kosher-zmanim JewishCalendar (1=Nissan … 12=Adar, 13=Adar II).
+ */
+export function evaluateDayType(dayType: DayType, date: Date, jCal: JewishCalendar): boolean {
+  const dow = date.getDay();
+  const m = jCal.getJewishMonth();
+  const day = jCal.getJewishDayOfMonth();
+
+  switch (dayType) {
+    case 'weekday':
+      return dow >= 0 && dow <= 4 && !jCal.isYomTov() && !jCal.isCholHamoed();
+    case 'shabbos':
+      return dow === 6;
+    case 'erev_shabbos':
+      return dow === 5;
+    case 'erev_yom_tov':
+      return jCal.isErevYomTov();
+    case 'yom_tov':
+      return jCal.isYomTov();
+    case 'chol_hamoed':
+      return jCal.isCholHamoed();
+    case 'rosh_chodesh':
+      return jCal.isRoshChodesh();
+    case 'erev_pesach':
+      return m === 1 && day === 14;
+    case 'chanukah':
+      return jCal.isChanukah();
+    case 'yom_kippur':
+      return m === 7 && day === 10;
+    case 'fast_day':
+      return jCal.isTaanis();
+    case 'purim':
+      return (
+        (m === 12 && (day === 14 || day === 15)) ||
+        (m === 13 && (day === 14 || day === 15))
+      );
+    default:
+      return false;
+  }
+}
+
+export function evaluateStyleScheduleRule(rule: StyleScheduleRule, date: Date, jCal: JewishCalendar): boolean {
+  const gregMonth = date.getMonth() + 1;
+  const gregDay = date.getDate();
+  const jewishMonth = jCal.getJewishMonth();
+  const jewishDay = jCal.getJewishDayOfMonth();
+
+  switch (rule.type) {
+    case 'default':
+      return true;
+    case 'gregorian_date_range':
+      return isGregorianDateRangeMatch(
+        rule.startMonth,
+        rule.startDay,
+        rule.endMonth,
+        rule.endDay,
+        gregMonth,
+        gregDay,
+      );
+    case 'hebrew_date_range':
+      return isHebrewDateRangeMatch(
+        rule.startMonth,
+        rule.startDay,
+        rule.endMonth,
+        rule.endDay,
+        jewishMonth,
+        jewishDay,
+      );
+    case 'gregorian_month':
+      return gregMonth === rule.month;
+    case 'hebrew_month':
+      return jewishMonth === rule.month;
+    case 'day_of_week':
+      return rule.days.includes(date.getDay());
+    case 'day_type':
+      return evaluateDayType(rule.dayType, date, jCal);
+    case 'week_of_month':
+      return weekOfMonthFromDate(date) === rule.week;
+    default:
+      return false;
+  }
+}
+
+/** All rules in an entry must match (AND). Empty rules never match. */
+export function evaluateStyleScheduleRules(rules: StyleScheduleRule[], date: Date): boolean {
+  if (rules.length === 0) return false;
+  const jCal = new JewishCalendar(date);
+  return rules.every((r) => evaluateStyleScheduleRule(r, date, jCal));
+}
+
+export function parseScreenStyleSchedulesJson(raw: string | null | undefined): ScreenStyleSchedule[] | null {
+  if (raw == null || raw === '') return null;
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (!Array.isArray(v)) return null;
+    return v as ScreenStyleSchedule[];
+  } catch {
+    return null;
+  }
+}
+
+function styleActivationRuleToScheduleRule(rule: StyleActivationRule): StyleScheduleRule | null {
+  if (rule.type === 'default') return { type: 'default' };
+  if (rule.type === 'gregorian_date_range' &&
+    rule.startMonth != null && rule.startDay != null && rule.endMonth != null && rule.endDay != null) {
+    return {
+      type: 'gregorian_date_range',
+      startMonth: rule.startMonth,
+      startDay: rule.startDay,
+      endMonth: rule.endMonth,
+      endDay: rule.endDay,
+    };
+  }
+  if (rule.type === 'hebrew_date_range' &&
+    rule.startMonth != null && rule.startDay != null && rule.endMonth != null && rule.endDay != null) {
+    return {
+      type: 'hebrew_date_range',
+      startMonth: rule.startMonth,
+      startDay: rule.startDay,
+      endMonth: rule.endMonth,
+      endDay: rule.endDay,
+    };
+  }
+  return null;
+}
+
+/**
+ * Build effective screen schedules: DB JSON, or migrate from legacy assignedStyleId + style activation rules.
+ */
+export function resolveScreenStyleSchedules(
+  styleSchedulesJson: string | null | undefined,
+  assignedStyleId: string | null | undefined,
+  styles: DisplayStyle[],
+): ScreenStyleSchedule[] {
+  const parsed = parseScreenStyleSchedulesJson(styleSchedulesJson);
+  if (parsed && parsed.length > 0) {
+    return parsed;
+  }
+
+  if (!assignedStyleId) {
+    return [];
+  }
+
+  const style = styles.find((s) => s.id === assignedStyleId);
+  const rules = style?.activationRules ?? [{ type: 'default' as const }];
+  const specific = rules.filter((r) => r.type !== 'default');
+  const hasDefault = rules.some((r) => r.type === 'default');
+
+  const out: ScreenStyleSchedule[] = [];
+  let p = 0;
+  for (const ar of specific) {
+    const sr = styleActivationRuleToScheduleRule(ar);
+    if (sr && sr.type !== 'default') {
+      out.push({
+        id: `mig-${assignedStyleId}-${p}`,
+        styleId: assignedStyleId,
+        breakpoint: 'all',
+        rules: [sr],
+        priority: p++,
+      });
+    }
+  }
+  if (hasDefault) {
+    out.push({
+      id: `mig-${assignedStyleId}-def`,
+      styleId: assignedStyleId,
+      breakpoint: 'all',
+      rules: [{ type: 'default' }],
+      priority: p,
+    });
+  }
+  if (out.length === 0) {
+    out.push({
+      id: `mig-${assignedStyleId}-fallback`,
+      styleId: assignedStyleId,
+      breakpoint: 'all',
+      rules: [{ type: 'default' }],
+      priority: 0,
+    });
+  }
+  return out;
+}
+
+export function orderedScreenSchedulesForBreakpoint(
+  schedules: ScreenStyleSchedule[],
+  breakpoint: DisplayBreakpoint,
+): ScreenStyleSchedule[] {
+  const specific = schedules
+    .filter((s) => s.breakpoint === breakpoint)
+    .sort((a, b) => a.priority - b.priority);
+  const allBp = schedules
+    .filter((s) => s.breakpoint === 'all')
+    .sort((a, b) => a.priority - b.priority);
+  return [...specific, ...allBp];
 }
 
 function isStyleActiveForDate(

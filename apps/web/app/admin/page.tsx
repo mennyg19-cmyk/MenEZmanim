@@ -255,12 +255,21 @@ export default function AdminPage() {
 
         case 'screens':
           for (const s of data) {
-            if (!s.id?.startsWith('screen-')) {
+            const url = `${base}/screens/${encodeURIComponent(s.id)}`;
+            const res = await fetch(url, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(s),
+            });
+            if (res.status === 404) {
               await apiFetch(`${base}/screens`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(s),
               });
+            } else if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body.error ?? `Request failed: ${res.status}`);
             }
           }
           break;

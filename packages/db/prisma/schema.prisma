@@ -47,6 +47,8 @@ model Screen {
   name            String
   orgId           String
   assignedStyleId String?
+  /** JSON array of ScreenStyleSchedule (per-screen style rules, optional breakpoints) */
+  styleSchedules  String?
   isActive        Boolean  @default(true)
   resolution      String   @default("1920x1080")
   createdAt       DateTime @default(now())
