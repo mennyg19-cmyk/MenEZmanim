@@ -41,6 +41,8 @@ export interface Announcement {
   startDate?: string;
   endDate?: string;
   createdAt: string;
+  /** Same calendar visibility rules as minyan events (`scheduleRules` JSON in DB). */
+  visibilityRules?: VisibilityRule[];
 }
 
 export interface Memorial {

@@ -16,7 +16,7 @@ import {
   type PrismaUser,
   type PrismaOrgMembership,
 } from '@zmanim-app/db';
-import type { DisplayStyle } from '@zmanim-app/core';
+import type { DisplayStyle, VisibilityRule } from '@zmanim-app/core';
 import { parseScreenStyleSchedulesJson } from '@zmanim-app/core';
 import type {
   Announcement,
@@ -211,6 +211,29 @@ function groupFromPrisma(g: PrismaGroup): DaveningGroup {
   };
 }
 
+function parseVisibilityRulesFromScheduleRules(raw: string | null | undefined): VisibilityRule[] {
+  if (!raw || !String(raw).trim()) return [];
+  try {
+    const j = JSON.parse(raw) as unknown;
+    if (Array.isArray(j)) return j as VisibilityRule[];
+    if (j && typeof j === 'object' && Array.isArray((j as { rules?: unknown }).rules)) {
+      return (j as { rules: VisibilityRule[] }).rules;
+    }
+  } catch {
+    /* legacy non-JSON text in scheduleRules */
+  }
+  return [];
+}
+
+function serializeVisibilityRulesColumn(body: Record<string, unknown>): string | null {
+  const vr = body.visibilityRules as unknown;
+  if (Array.isArray(vr)) {
+    if (vr.length === 0) return null;
+    return JSON.stringify({ rules: vr });
+  }
+  return null;
+}
+
 function announcementFromPrisma(a: PrismaAnnouncement): Announcement {
   return {
     id: a.id,
@@ -224,6 +247,7 @@ function announcementFromPrisma(a: PrismaAnnouncement): Announcement {
     startDate: a.startDate ?? undefined,
     endDate: a.endDate ?? undefined,
     createdAt: a.createdAt.toISOString(),
+    visibilityRules: parseVisibilityRulesFromScheduleRules(a.scheduleRules),
   };
 }
 
@@ -444,6 +468,8 @@ export async function appendGroup(orgId: string, g: DaveningGroup): Promise<Dave
 export async function createAnnouncement(orgId: string, body: Record<string, unknown>): Promise<Announcement> {
   const db = getDbClient();
   const id = (body.id as string) ?? `ann-${Date.now()}`;
+  const sched = serializeVisibilityRulesColumn(body);
+
   const row = await db.announcement.create({
     data: {
       id,
@@ -456,6 +482,7 @@ export async function createAnnouncement(orgId: string, body: Record<string, unk
       isActive: (body.active as boolean) ?? true,
       startDate: (body.startDate as string) ?? null,
       endDate: (body.endDate as string) ?? null,
+      scheduleRules: sched,
     },
   });
   return announcementFromPrisma(row);
@@ -467,6 +494,10 @@ export async function updateAnnouncement(orgId: string, body: Record<string, unk
   const db = getDbClient();
   const existing = await db.announcement.findFirst({ where: { id, orgId } });
   if (!existing) return null;
+  const schedUpd = Object.prototype.hasOwnProperty.call(body, 'visibilityRules')
+    ? serializeVisibilityRulesColumn(body)
+    : undefined;
+
   const row = await db.announcement.update({
     where: { id },
     data: {
@@ -478,6 +509,7 @@ export async function updateAnnouncement(orgId: string, body: Record<string, unk
       isActive: body.active as boolean | undefined,
       startDate: body.startDate as string | null | undefined,
       endDate: body.endDate as string | null | undefined,
+      ...(schedUpd !== undefined ? { scheduleRules: schedUpd } : {}),
     },
   });
   return announcementFromPrisma(row);

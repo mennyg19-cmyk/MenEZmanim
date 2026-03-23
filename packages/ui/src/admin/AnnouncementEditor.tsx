@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-
+import type { VisibilityRule } from '@zmanim-app/core';
+import { VisibilityRulesEditor } from '../shared/VisibilityRulesEditor';
 
 interface AnnouncementEditorProps {
   announcements: any[];
@@ -14,7 +15,7 @@ const emptyAnnouncement = () => ({
   content: '',
   priority: 0,
   active: true,
-  scheduleRules: '',
+  visibilityRules: [] as VisibilityRule[],
 });
 
 export function AnnouncementEditor({ announcements, onChange }: AnnouncementEditorProps) {
@@ -25,7 +26,10 @@ export function AnnouncementEditor({ announcements, onChange }: AnnouncementEdit
   };
 
   const handleEdit = (ann: any) => {
-    setEditing({ ...ann });
+    setEditing({
+      ...ann,
+      visibilityRules: Array.isArray(ann.visibilityRules) ? ann.visibilityRules : [],
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -70,16 +74,17 @@ export function AnnouncementEditor({ announcements, onChange }: AnnouncementEdit
               <label className="adm-labelSm">Title</label>
               <input className="adm-input" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label className="adm-labelSm">Priority</label>
-                <input className="adm-input" type="number" value={editing.priority} onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="adm-labelSm">Schedule Rules</label>
-                <input className="adm-input" value={editing.scheduleRules} onChange={(e) => setEditing({ ...editing, scheduleRules: e.target.value })} placeholder="e.g. shabbat, weekday" />
-              </div>
+            <div>
+              <label className="adm-labelSm">Priority</label>
+              <input className="adm-input" type="number" value={editing.priority} onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })} />
             </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label className="adm-labelSm">Visibility (calendar)</label>
+            <VisibilityRulesEditor
+              rules={editing.visibilityRules ?? []}
+              onChange={(visibilityRules) => setEditing({ ...editing, visibilityRules })}
+            />
           </div>
           <div style={{ marginTop: 12 }}>
             <label className="adm-labelSm">Content</label>

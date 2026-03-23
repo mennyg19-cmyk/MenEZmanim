@@ -284,17 +284,23 @@ export function renderWidget(
     }
 
     case 'SCROLLING_TICKER': {
-      const items = (announcements || [])
-        .sort((a, b) => b.priority - a.priority)
-        .map((a) => a.title);
+      const useAll = content.tickerUseAllAnnouncements !== false;
+      const pickIds = content.tickerAnnouncementIds as string[] | undefined;
+      let list = [...(announcements || [])];
+      if (!useAll && pickIds && pickIds.length > 0) {
+        const allow = new Set(pickIds);
+        list = list.filter((a) => a.id && allow.has(a.id));
+      }
+      list.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+      const items = list.map((a) => a.title).filter(Boolean);
+      const rtl = obj.language === 'hebrew' || obj.language === 'yiddish';
       return (
         <ScrollingTicker
           items={items}
-          speed={content.speed ?? 60}
           fontSize={font?.size ?? 24}
           fontFamily={font?.family ?? 'system-ui, sans-serif'}
-          color={font?.color ?? '#fff'}
-          direction={obj.language === 'hebrew' || obj.language === 'yiddish' ? 'rtl' : 'ltr'}
+          color={font?.color ?? 'var(--wgt-on-canvas-muted)'}
+          textDirection={rtl ? 'rtl' : 'ltr'}
           separator={content.separator ?? '•'}
         />
       );

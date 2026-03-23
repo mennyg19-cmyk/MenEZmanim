@@ -1,0 +1,16 @@
+---
+description: After code changes or fixes, commit and push to GitHub
+alwaysApply: true
+---
+
+# Git: commit and push after changes
+
+Whenever you make **any** code change, fix, or feature for this project:
+
+1. **Stage** the relevant files (`git add`).
+2. **Commit** with a clear message summarizing what changed.
+3. **Push** to `origin` on the current branch (usually `main`), e.g. `git push origin HEAD`.
+
+Do this **before** considering the task done. If the user has no remote or push fails (auth/network), say so and give the exact commands to run locally.
+
+Do not skip push because the change was "small" — the user expects GitHub to stay in sync after every request.

@@ -49,6 +49,8 @@ interface EditorPropertyPanelProps {
   canvasWidth?: number;
   canvasHeight?: number;
   media?: MediaItem[];
+  /** For ticker: which org announcements exist (editor preview / admin data) */
+  previewAnnouncements?: Array<{ id: string; title: string; priority?: number }>;
 }
 
 export function EditorPropertyPanel({
@@ -56,6 +58,7 @@ export function EditorPropertyPanel({
   pUpdate, pPos, pFont, pContent, deleteObj, daveningGroups, onUploadImage,
   boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasStyle, canvasWidth, canvasHeight,
   media,
+  previewAnnouncements,
 }: EditorPropertyPanelProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -100,7 +103,14 @@ export function EditorPropertyPanel({
           />
         )}
         {popupTab === 'content' && (
-          <ContentTab popupObj={popupObj} pContent={pContent} daveningGroups={daveningGroups} media={media} onUploadImage={onUploadImage} />
+          <ContentTab
+            popupObj={popupObj}
+            pContent={pContent}
+            daveningGroups={daveningGroups}
+            media={media}
+            onUploadImage={onUploadImage}
+            previewAnnouncements={previewAnnouncements}
+          />
         )}
       </div>
 
@@ -291,12 +301,73 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
 
 /* ── Tab: Content ─────────────────────────────────────── */
 
-function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage }: {
+function TickerContentSection({
+  popupObj,
+  pContent,
+  announcements,
+}: {
+  popupObj: DisplayObject;
+  pContent: (patch: Record<string, any>) => void;
+  announcements: Array<{ id: string; title: string; priority?: number }>;
+}) {
+  const content = popupObj.content || {};
+  const useAll = content.tickerUseAllAnnouncements !== false;
+  const selected = new Set<string>((content.tickerAnnouncementIds as string[] | undefined) ?? []);
+
+  const toggleId = (id: string, checked: boolean) => {
+    const cur = new Set((content.tickerAnnouncementIds as string[] | undefined) ?? []);
+    if (checked) cur.add(id);
+    else cur.delete(id);
+    pContent({ tickerAnnouncementIds: [...cur], tickerUseAllAnnouncements: false });
+  };
+
+  return (
+    <Section title="Ticker content">
+      <Field label="Separator between titles">
+        <Input value={content.separator ?? '•'} onChange={(v) => pContent({ separator: v })} placeholder="•" />
+      </Field>
+      <label className="ed-checkRow" style={{ marginBottom: 8 }}>
+        <input
+          type="checkbox"
+          checked={useAll}
+          onChange={(e) => {
+            if (e.target.checked) {
+              pContent({ tickerUseAllAnnouncements: true, tickerAnnouncementIds: undefined });
+            } else {
+              pContent({ tickerUseAllAnnouncements: false });
+            }
+          }}
+        />
+        Show all announcements (by priority)
+      </label>
+      {!useAll && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {announcements.length === 0 ? (
+            <div className="ed-hintSm">No announcements in preview. Open Admin → Announcements or reload the editor after announcements sync.</div>
+          ) : (
+            announcements.map((a) => (
+              <label key={a.id} className="ed-checkRow">
+                <input type="checkbox" checked={selected.has(a.id)} onChange={(e) => toggleId(a.id, e.target.checked)} />
+                <span style={{ color: 'var(--ed-text)' }}>{a.title || '(Untitled)'}</span>
+              </label>
+            ))
+          )}
+        </div>
+      )}
+      <div className="ed-hintSm" style={{ marginTop: 10 }}>
+        Scrolling speed and direction are controlled under <strong>Appearance → Scrolling</strong> (enable horizontal left/right for a marquee).
+      </div>
+    </Section>
+  );
+}
+
+function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage, previewAnnouncements }: {
   popupObj: DisplayObject;
   pContent: (patch: Record<string, any>) => void;
   daveningGroups: DaveningGroupInfo[];
   media?: MediaItem[];
   onUploadImage?: (file: File) => Promise<string | null>;
+  previewAnnouncements?: Array<{ id: string; title: string; priority?: number }>;
 }) {
   const content = popupObj.content || {};
 
@@ -347,9 +418,7 @@ function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage }
         <MediaContentSection popupObj={popupObj} pContent={pContent} media={media} onUploadImage={onUploadImage} />
       )}
       {popupObj.type === DisplayObjectType.SCROLLING_TICKER && (
-        <Field label="Ticker Text">
-          <textarea value={content.text || ''} onChange={(e) => pContent({ text: e.target.value })} rows={3} className="ed-input" style={{ resize: 'vertical' }} />
-        </Field>
+        <TickerContentSection popupObj={popupObj} pContent={pContent} announcements={previewAnnouncements ?? []} />
       )}
       {popupObj.type === DisplayObjectType.COUNTDOWN_TIMER && (
         <Field label="Target Label"><Input value={content.label || ''} onChange={(v) => pContent({ label: v })} placeholder="e.g. Shabbos" /></Field>

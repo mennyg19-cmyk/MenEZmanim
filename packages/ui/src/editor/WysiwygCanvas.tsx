@@ -804,6 +804,11 @@ export function WysiwygCanvas({
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}
           media={media?.map((m: any) => ({ id: m.id ?? '', url: m.url ?? '', mimeType: m.mimeType ?? '', filename: m.filename }))}
+          previewAnnouncements={(announcements ?? []).map((a: any) => ({
+            id: String(a.id ?? ''),
+            title: String(a.title ?? ''),
+            priority: typeof a.priority === 'number' ? a.priority : 0,
+          }))}
         />
       )}
     </div>

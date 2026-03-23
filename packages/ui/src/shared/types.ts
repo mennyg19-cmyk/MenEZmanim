@@ -1,3 +1,5 @@
+import type { VisibilityRule } from '@zmanim-app/core';
+
 export interface CalendarInfo {
   date: any;
   parsha: any;
@@ -12,6 +14,8 @@ export interface AnnouncementData {
   title: string;
   content: any;
   priority: number;
+  /** When set, evaluated server-side with minyan-style visibility rules */
+  visibilityRules?: VisibilityRule[];
 }
 
 export interface MemorialData {
