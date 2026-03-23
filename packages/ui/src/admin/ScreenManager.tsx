@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import type { DisplayStyle } from '@zmanim-app/core';
+import { resolveCanvasBackground } from '../shared/backgroundUtils';
 import {
   DAY_TYPE_OPTIONS,
   evaluateStyleScheduleRules,
@@ -592,64 +593,74 @@ function StyleListPanel({
         <div className="adm-cardGrid">
         {sorted.map((style) => {
           const isExpanded = expandedId === style.id;
+          const cw = style.canvasWidth || 1920;
+          const ch = style.canvasHeight || 1080;
+          const aspect = ch / cw;
+          const bgCss = resolveCanvasBackground(style, cw, ch);
+
           return (
             <div key={style.id} style={{
               border: '1px solid var(--adm-border)', borderRadius: 8,
               overflow: 'hidden', background: 'var(--adm-bg)',
             }}>
-              {/* Style preview + name */}
+              {/* Square-ish preview thumbnail */}
               <div
                 onClick={() => setExpandedId(isExpanded ? null : style.id)}
-                style={{ padding: '8px 10px', cursor: 'pointer', userSelect: 'none' }}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
               >
                 <div style={{
-                  width: '100%', height: 36, borderRadius: 4, marginBottom: 6,
-                  backgroundColor: style.backgroundColor || '#000',
-                  backgroundImage: style.backgroundImage ? `url(${style.backgroundImage})` : undefined,
-                  backgroundSize: 'cover', backgroundPosition: 'center',
-                  position: 'relative', overflow: 'hidden',
-                  border: '1px solid var(--adm-border)',
+                  width: '100%',
+                  paddingBottom: `${Math.min(aspect * 100, 75)}%`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  borderBottom: '1px solid var(--adm-border)',
+                  ...bgCss,
                 }}>
-                  {style.objects.slice(0, 5).map((obj) => (
+                  {style.objects.map((obj) => (
                     <div key={obj.id} style={{
                       position: 'absolute',
-                      left: `${(obj.position.x / (style.canvasWidth || 1920)) * 100}%`,
-                      top: `${(obj.position.y / (style.canvasHeight || 1080)) * 100}%`,
-                      width: `${(obj.position.width / (style.canvasWidth || 1920)) * 100}%`,
-                      height: `${(obj.position.height / (style.canvasHeight || 1080)) * 100}%`,
-                      backgroundColor: 'rgba(74, 158, 255, 0.3)',
-                      border: '1px solid rgba(74, 158, 255, 0.5)',
+                      left: `${(obj.position.x / cw) * 100}%`,
+                      top: `${(obj.position.y / ch) * 100}%`,
+                      width: `${(obj.position.width / cw) * 100}%`,
+                      height: `${(obj.position.height / ch) * 100}%`,
+                      backgroundColor: obj.backgroundColor && obj.backgroundColor !== 'transparent'
+                        ? obj.backgroundColor
+                        : 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
                       borderRadius: 1,
+                      fontSize: 0,
                     }} />
                   ))}
                 </div>
 
-                {renamingId === style.id ? (
-                  <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                    <input
-                      className="adm-input"
-                      style={{ flex: 1, fontSize: 12, padding: '3px 6px' }}
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleRename(style.id); if (e.key === 'Escape') setRenamingId(null); }}
-                      autoFocus
-                    />
-                    <button className="adm-btnSave" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handleRename(style.id)}>OK</button>
+                {/* Name + meta below thumbnail */}
+                <div style={{ padding: '8px 10px' }}>
+                  {renamingId === style.id ? (
+                    <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        className="adm-input"
+                        style={{ flex: 1, fontSize: 12, padding: '3px 6px' }}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleRename(style.id); if (e.key === 'Escape') setRenamingId(null); }}
+                        autoFocus
+                      />
+                      <button className="adm-btnSave" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handleRename(style.id)}>OK</button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{style.name}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginTop: 2 }}>
+                    {styleResLabel(style)} &middot; {style.objects.length} object{style.objects.length !== 1 ? 's' : ''}
                   </div>
-                ) : (
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{style.name}</div>
-                )}
-                <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginTop: 1 }}>
-                  {styleResLabel(style)} &middot; {style.objects.length} object{style.objects.length !== 1 ? 's' : ''}
                 </div>
               </div>
 
               {/* Expanded actions */}
               {isExpanded && (
-                <div style={{ padding: '0 10px 10px', borderTop: '1px solid var(--adm-border)' }}>
-                  {/* Resolution changer */}
+                <div style={{ padding: '8px 10px 10px', borderTop: '1px solid var(--adm-border)' }}>
                   {onStyleChange && (
-                    <div style={{ marginTop: 8, marginBottom: 8 }}>
+                    <div style={{ marginBottom: 8 }}>
                       <label className="adm-labelSm">Resolution</label>
                       <select
                         className="adm-select"
@@ -944,68 +955,89 @@ export function ScreenManager({
             {screens.map((s) => {
               const eff = effectiveSchedules(s, styles);
               const bps: DisplayBreakpoint[] = ['full', 'tablet', 'mobile'];
+              const defaultStyle = previewStyleForBp(eff, styles, 'full');
+              const cw = defaultStyle?.canvasWidth || 1920;
+              const ch = defaultStyle?.canvasHeight || 1080;
+              const thumbBg = defaultStyle ? resolveCanvasBackground(defaultStyle, cw, ch) : { backgroundColor: '#111' };
+
               return (
                 <div key={s.id} style={{
                   border: '1px solid var(--adm-border)', borderRadius: 8,
-                  padding: 14, background: 'var(--adm-bg-muted)',
+                  overflow: 'hidden', background: 'var(--adm-bg)',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>
-                        {s.name || 'Unnamed screen'}
-                        <span className={s.active ? 'adm-badgeSuccess' : 'adm-badgeMuted'} style={{ marginLeft: 8, fontSize: 11 }}>
-                          {s.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginTop: 2 }}>
-                        {eff.length} schedule {eff.length === 1 ? 'entry' : 'entries'}
-                      </div>
+                  {/* Thumbnail showing the default/full style */}
+                  <div style={{
+                    width: '100%',
+                    paddingBottom: `${Math.min((ch / cw) * 100, 60)}%`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderBottom: '1px solid var(--adm-border)',
+                    ...thumbBg,
+                  }}>
+                    {defaultStyle?.objects.map((obj) => (
+                      <div key={obj.id} style={{
+                        position: 'absolute',
+                        left: `${(obj.position.x / cw) * 100}%`,
+                        top: `${(obj.position.y / ch) * 100}%`,
+                        width: `${(obj.position.width / cw) * 100}%`,
+                        height: `${(obj.position.height / ch) * 100}%`,
+                        backgroundColor: obj.backgroundColor && obj.backgroundColor !== 'transparent'
+                          ? obj.backgroundColor
+                          : 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: 1,
+                        fontSize: 0,
+                      }} />
+                    ))}
+                    {/* Status badge overlay */}
+                    <span
+                      className={s.active ? 'adm-badgeSuccess' : 'adm-badgeMuted'}
+                      style={{ position: 'absolute', top: 6, right: 6, fontSize: 10, padding: '2px 7px' }}
+                    >
+                      {s.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+
+                  {/* Card body */}
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {s.name || 'Unnamed screen'}
                     </div>
-                    <div className="adm-inlineGroup" style={{ gap: 6 }}>
+
+                    {/* Today's active per breakpoint */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 8 }}>
+                      {bps.map((bp) => {
+                        const st = previewStyleForBp(eff, styles, bp);
+                        return (
+                          <div key={bp} style={{ fontSize: 11, color: 'var(--adm-text-muted)', display: 'flex', gap: 4 }}>
+                            <span style={{ fontWeight: 600, minWidth: 50 }}>{BP_LABELS[bp]}:</span>
+                            <span>{st?.name ?? '—'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginBottom: 8 }}>
+                      {eff.length} schedule {eff.length === 1 ? 'entry' : 'entries'}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <button onClick={() => handleEdit(s)} className="adm-btnPrimary" style={{ padding: '4px 10px', fontSize: 12, flex: 1 }}>
+                        Edit
+                      </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          window.open(`/show/${encodeURIComponent(orgSlug)}/${encodeURIComponent(s.id)}`, '_blank');
-                        }}
+                        onClick={() => window.open(`/show/${encodeURIComponent(orgSlug)}/${encodeURIComponent(s.id)}`, '_blank')}
                         className="adm-btn"
-                        style={{ backgroundColor: 'var(--adm-preview-btn)', color: '#fff', padding: '5px 12px', fontSize: 13 }}
+                        style={{ padding: '4px 10px', fontSize: 12, flex: 1 }}
                       >
                         Preview
                       </button>
-                      <button onClick={() => handleEdit(s)} className="adm-btnEdit" style={{ padding: '5px 12px', fontSize: 13 }}>
-                        Edit
-                      </button>
-                      <button onClick={() => handleDelete(s.id)} className="adm-btnDanger" style={{ padding: '5px 12px', fontSize: 13 }}>
-                        Delete
+                      <button onClick={() => handleDelete(s.id)} className="adm-btnDanger" style={{ padding: '4px 8px', fontSize: 12 }}>
+                        ✕
                       </button>
                     </div>
-                  </div>
-
-                  {/* Schedule summary */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
-                    {eff.slice(0, 4).map((entry) => (
-                      <div key={entry.id} style={{ fontSize: 12, color: 'var(--adm-text-muted)', display: 'flex', gap: 6 }}>
-                        <span style={{ opacity: 0.5, minWidth: 60 }}>{BP_LABELS[entry.breakpoint]}</span>
-                        <span>{entrySummary(entry, styles)}</span>
-                      </div>
-                    ))}
-                    {eff.length > 4 && (
-                      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>
-                        +{eff.length - 4} more…
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Today's active */}
-                  <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-                    {bps.map((bp) => {
-                      const st = previewStyleForBp(eff, styles, bp);
-                      return (
-                        <span key={bp} style={{ color: 'var(--adm-text-muted)' }}>
-                          <strong>{BP_LABELS[bp]}:</strong> {st?.name ?? '—'}
-                        </span>
-                      );
-                    })}
                   </div>
                 </div>
               );
