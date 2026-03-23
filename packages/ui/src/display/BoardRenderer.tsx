@@ -132,6 +132,7 @@ export function renderWidget(
           itemOrder={content.itemOrder}
           titleSettings={content.titleSettings}
           displayNames={displayNames}
+          lineHeight={content.lineHeight}
         />
       );
     }
@@ -174,6 +175,7 @@ export function renderWidget(
           textAlign={content.textAlign ?? 'left'}
           direction={obj.language === 'hebrew' || obj.language === 'yiddish' ? 'rtl' : 'ltr'}
           verticalAlign={content.verticalAlign ?? 'top'}
+          lineHeight={content.lineHeight}
         />
       );
     }
@@ -186,6 +188,7 @@ export function renderWidget(
           fontFamily={font?.family ?? 'system-ui, sans-serif'}
           color={font?.color ?? '#333'}
           direction={obj.language === 'hebrew' || obj.language === 'yiddish' ? 'rtl' : 'ltr'}
+          lineHeight={content.lineHeight}
         />
       );
     }
@@ -301,6 +304,7 @@ export function renderWidget(
           fontSize={font?.size ?? 36}
           textColor={font?.color ?? '#333'}
           showEnglish={content.showEnglish ?? true}
+          lineHeight={content.lineHeight}
         />
       );
     }

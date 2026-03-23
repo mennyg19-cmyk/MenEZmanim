@@ -62,6 +62,7 @@ export interface JewishInfoWidgetProps {
   itemOrder?: string[];
   titleSettings?: Record<string, { mode?: 'default' | 'hidden' | 'custom' | 'inline'; customTitle?: string; separator?: string }>;
   displayNames?: DisplayNameOverrides;
+  lineHeight?: number;
 }
 
 const defaultFontSize = 22;
@@ -105,6 +106,7 @@ export function JewishInfoWidget({
   itemOrder,
   titleSettings = {},
   displayNames,
+  lineHeight: lineHeightProp,
 }: JewishInfoWidgetProps) {
   const isRtl = language === 'hebrew';
   const resolvedAlign = textAlignProp ?? (isRtl ? 'right' : 'left');
@@ -128,14 +130,16 @@ export function JewishInfoWidget({
     textAlign: resolvedAlign,
   };
 
+  const lh = lineHeightProp ?? 1.4;
+
   const sectionStyle: React.CSSProperties = {
     ...baseStyle,
-    lineHeight: 1.4,
+    lineHeight: lh,
   };
 
   const titleStyle: React.CSSProperties = {
     ...baseStyle,
-    lineHeight: 1.4,
+    lineHeight: lh,
   };
 
   const resolveTefilahLabel = (key: string): string => {

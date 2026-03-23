@@ -21,6 +21,7 @@ export interface RichTextProps {
   fontFamily: string;
   color: string;
   direction: 'rtl' | 'ltr';
+  lineHeight?: number;
 }
 
 export function RichText({
@@ -29,7 +30,9 @@ export function RichText({
   fontFamily,
   color,
   direction,
+  lineHeight: lineHeightProp,
 }: RichTextProps) {
+  const lh = lineHeightProp ?? 1.5;
   const renderInline = (node: RichTextInline, index: number) => {
     if (!node.content) return null;
 
@@ -54,7 +57,7 @@ export function RichText({
           style={{
             margin: 0,
             marginBottom: fontSize * 0.5,
-            lineHeight: 1.5,
+            lineHeight: lh,
           }}
         >
           {block.content.map(renderInline)}
@@ -63,7 +66,7 @@ export function RichText({
     }
 
     return (
-      <div key={index} style={{ marginBottom: fontSize * 0.5, lineHeight: 1.5 }}>
+      <div key={index} style={{ marginBottom: fontSize * 0.5, lineHeight: lh }}>
         {block.content.map(renderInline)}
       </div>
     );

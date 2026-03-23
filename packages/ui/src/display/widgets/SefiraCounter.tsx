@@ -8,6 +8,7 @@ export interface SefiraCounterProps {
   fontSize: number;
   textColor: string;
   showEnglish: boolean;
+  lineHeight?: number;
 }
 
 export function SefiraCounter({
@@ -16,6 +17,7 @@ export function SefiraCounter({
   fontSize,
   textColor,
   showEnglish,
+  lineHeight: lineHeightProp,
 }: SefiraCounterProps) {
   if (day === null) return null;
 
@@ -41,7 +43,7 @@ export function SefiraCounter({
           color: textColor,
           direction: 'rtl',
           textAlign: 'center',
-          lineHeight: 1.4,
+          lineHeight: lineHeightProp ?? 1.4,
         }}
       >
         {formattedHebrew}

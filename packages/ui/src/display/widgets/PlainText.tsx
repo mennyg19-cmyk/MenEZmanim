@@ -10,6 +10,7 @@ export interface PlainTextProps {
   textAlign: 'left' | 'center' | 'right';
   direction: 'rtl' | 'ltr';
   verticalAlign: 'top' | 'middle' | 'bottom';
+  lineHeight?: number;
 }
 
 const verticalAlignMap: Record<PlainTextProps['verticalAlign'], string> = {
@@ -25,7 +26,9 @@ export function PlainText({
   color,
   textAlign,
   direction,
+  lineHeight: lineHeightProp,
 }: PlainTextProps) {
+  const lh = lineHeightProp ?? 1.4;
   const lines = text.split('\n');
 
   return (
@@ -45,7 +48,7 @@ export function PlainText({
             color,
             textAlign,
             direction,
-            lineHeight: 1.4,
+            lineHeight: lh,
             minHeight: line === '' ? fontSize * 0.5 : undefined,
           }}
         >

@@ -241,6 +241,19 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
         </Field>
         <TextAlignField popupObj={popupObj} pContent={pContent} />
         <VerticalAlignField popupObj={popupObj} pContent={pContent} />
+        {![DisplayObjectType.ANALOG_CLOCK, DisplayObjectType.MEDIA_VIEWER].includes(popupObj.type) && (
+          <Field label={`Line Height: ${content.lineHeight ?? 1.4}`}>
+            <input
+              type="range"
+              min={0.8}
+              max={3}
+              step={0.1}
+              value={content.lineHeight ?? 1.4}
+              onChange={(e) => pContent({ lineHeight: parseFloat(e.target.value) })}
+              className="ed-range"
+            />
+          </Field>
+        )}
       </Section>
 
       <Section title="Background">
