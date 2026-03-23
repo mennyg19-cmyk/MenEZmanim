@@ -144,14 +144,6 @@ export default function AdminPage() {
           });
           break;
 
-        case 'zmanimConfigs':
-          await apiFetch(`${base}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: { zmanimConfigs: data } }),
-          });
-          break;
-
         case 'schedules':
           await apiFetch(`${base}/schedules`, {
             method: 'PUT',
@@ -319,6 +311,8 @@ export default function AdminPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(query),
           });
+        case 'org':
+          return apiFetch(`${base}`);
         default:
           return null;
       }

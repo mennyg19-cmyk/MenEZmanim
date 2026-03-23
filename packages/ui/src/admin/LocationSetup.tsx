@@ -6,6 +6,8 @@ import React, { useState, useEffect } from 'react';
 interface LocationSetupProps {
   location: any;
   onChange: (location: any) => void;
+  /** When true, omit outer card wrapper (for unified Settings page). */
+  embedded?: boolean;
 }
 
 const TIMEZONES = [
@@ -17,7 +19,7 @@ const TIMEZONES = [
 
 const DIALECTS = ['Ashkenazi', 'Sephardi', 'Yemenite'];
 
-export function LocationSetup({ location, onChange }: LocationSetupProps) {
+export function LocationSetup({ location, onChange, embedded }: LocationSetupProps) {
   const [form, setForm] = useState<any>({
     name: '',
     latitude: '',
@@ -47,9 +49,11 @@ export function LocationSetup({ location, onChange }: LocationSetupProps) {
     onChange(form);
   };
 
-  return (
-    <div className="adm-card" style={{ maxWidth: 640 }}>
-      <h2 style={{ margin: '0 0 20px', fontSize: 20, fontWeight: 600 }}>הגדרת מיקום — Location Setup</h2>
+  const inner = (
+    <>
+      {!embedded && (
+        <h2 style={{ margin: '0 0 20px', fontSize: 20, fontWeight: 600 }}>הגדרת מיקום — Location Setup</h2>
+      )}
 
       <div className="adm-fieldGroup">
         <label className="adm-label">שם / Name</label>
@@ -140,6 +144,16 @@ export function LocationSetup({ location, onChange }: LocationSetupProps) {
       <button onClick={handleSave} className="adm-btnPrimary" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600 }}>
         Save / שמור
       </button>
+    </>
+  );
+
+  if (embedded) {
+    return <div style={{ maxWidth: '100%' }}>{inner}</div>;
+  }
+
+  return (
+    <div className="adm-card" style={{ maxWidth: 640 }}>
+      {inner}
     </div>
   );
 }

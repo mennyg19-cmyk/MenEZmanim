@@ -461,7 +461,7 @@ function ResolutionWarnings({ schedules, styles }: { schedules: ScreenStyleSched
   return (
     <div style={{
       padding: '8px 12px', borderRadius: 6, fontSize: 13,
-      background: '#422006', border: '1px solid #92400e', color: '#fbbf24',
+      background: 'var(--adm-warning-bg)', border: '1px solid var(--adm-warning-border)', color: 'var(--adm-warning-text)',
       marginBottom: 12,
     }}>
       <strong style={{ display: 'block', marginBottom: 2 }}>Resolution mismatch</strong>
@@ -556,12 +556,12 @@ function StyleListPanel({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--adm-border)' }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Styles</h3>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <div className="adm-pageHeader" style={{ padding: '12px 16px', marginBottom: 0, borderBottom: '1px solid var(--adm-border)', flexShrink: 0 }}>
+        <h2 className="adm-pageTitle" style={{ fontSize: 17, margin: 0 }}>Styles</h2>
         {onStyleCreate && (
-          <button className="adm-btnPrimary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setCreating(true)}>
-            + New
+          <button className="adm-btnPrimary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={() => setCreating(true)}>
+            + New Style
           </button>
         )}
       </div>
@@ -582,18 +582,19 @@ function StyleListPanel({
         </div>
       )}
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 12, minHeight: 0 }}>
         {sorted.length === 0 && (
           <div style={{ padding: 20, textAlign: 'center', color: 'var(--adm-text-muted)', fontSize: 13 }}>
             No styles yet. Create one to get started.
           </div>
         )}
 
+        <div className="adm-cardGrid">
         {sorted.map((style) => {
           const isExpanded = expandedId === style.id;
           return (
             <div key={style.id} style={{
-              border: '1px solid var(--adm-border)', borderRadius: 8, marginBottom: 6,
+              border: '1px solid var(--adm-border)', borderRadius: 8,
               overflow: 'hidden', background: 'var(--adm-bg)',
             }}>
               {/* Style preview + name */}
@@ -705,6 +706,7 @@ function StyleListPanel({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );
@@ -782,17 +784,34 @@ export function ScreenManager({
   const hasStyleCallbacks = !!(onStyleCreate || onStyleDelete || onStyleDuplicate || onStyleRename);
 
   return (
-    <div style={{ display: 'flex', gap: 0, minHeight: 0, height: '100%' }}>
+    <div
+      className={hasStyleCallbacks ? 'adm-panelSplit' : undefined}
+      style={{
+        display: 'flex',
+        gap: 0,
+        flex: 1,
+        minHeight: 0,
+        height: '100%',
+        ...(hasStyleCallbacks
+          ? {}
+          : {
+              border: '1px solid var(--adm-border)',
+              borderRadius: 'var(--radius-xl)',
+              overflow: 'hidden',
+              background: 'var(--adm-bg)',
+              boxShadow: 'var(--shadow-card)',
+            }),
+      }}
+    >
       {/* ── Left: Styles panel ── */}
       {hasStyleCallbacks && (
-        <div style={{
-          width: 280, minWidth: 240, maxWidth: 320, flexShrink: 0,
-          borderRight: '1px solid var(--adm-border)',
-          background: 'var(--adm-bg-hover)',
-          borderRadius: '8px 0 0 8px',
-          display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-        }}>
+        <div
+          className="adm-panelSplitHalf"
+          style={{
+            background: 'var(--adm-bg-hover)',
+            minWidth: 0,
+          }}
+        >
           <StyleListPanel
             styles={styles}
             onStyleCreate={onStyleCreate}
@@ -806,17 +825,18 @@ export function ScreenManager({
       )}
 
       {/* ── Right: Screens panel ── */}
-      <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
-        <div className="adm-card" style={{ borderRadius: hasStyleCallbacks ? '0 8px 8px 0' : undefined, border: hasStyleCallbacks ? 'none' : undefined, height: '100%' }}>
-          <div className="adm-pageHeader">
-            <h2 className="adm-pageTitle">Screens</h2>
-            <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
+      <div className="adm-panelSplitHalf" style={{ overflow: 'auto', minWidth: 0, background: 'var(--adm-bg)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+          <div className="adm-pageHeader" style={{ padding: '12px 16px', flexShrink: 0, borderBottom: '1px solid var(--adm-border)' }}>
+            <h2 className="adm-pageTitle" style={{ fontSize: 17, margin: 0 }}>Screens</h2>
+            <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '6px 14px', fontSize: 13 }}>
               + Add Screen
             </button>
           </div>
 
           {/* ── Screen edit form ── */}
           {editing && (
+            <div style={{ padding: '0 12px' }}>
             <div className="adm-formPanel" style={{ marginBottom: 20 }}>
               <h3 className="adm-sectionTitle" style={{ margin: '0 0 16px' }}>
                 {screens.find((s) => s.id === editing.id) ? 'Edit Screen' : 'New Screen'}
@@ -915,17 +935,19 @@ export function ScreenManager({
                 </button>
               </div>
             </div>
+            </div>
           )}
 
           {/* ── Screen list ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ padding: 12, flex: 1 }}>
+          <div className="adm-cardGrid">
             {screens.map((s) => {
               const eff = effectiveSchedules(s, styles);
               const bps: DisplayBreakpoint[] = ['full', 'tablet', 'mobile'];
               return (
                 <div key={s.id} style={{
                   border: '1px solid var(--adm-border)', borderRadius: 8,
-                  padding: 14, background: 'var(--adm-bg)',
+                  padding: 14, background: 'var(--adm-bg-muted)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -941,12 +963,12 @@ export function ScreenManager({
                     </div>
                     <div className="adm-inlineGroup" style={{ gap: 6 }}>
                       <button
+                        type="button"
                         onClick={() => {
-                          const idx = screens.indexOf(s);
-                          window.open(`/${orgSlug}/${idx + 1}`, '_blank');
+                          window.open(`/show/${encodeURIComponent(orgSlug)}/${encodeURIComponent(s.id)}`, '_blank');
                         }}
                         className="adm-btn"
-                        style={{ backgroundColor: '#8b5cf6', color: '#fff', padding: '5px 12px', fontSize: 13 }}
+                        style={{ backgroundColor: 'var(--adm-preview-btn)', color: '#fff', padding: '5px 12px', fontSize: 13 }}
                       >
                         Preview
                       </button>
@@ -990,10 +1012,11 @@ export function ScreenManager({
             })}
 
             {screens.length === 0 && (
-              <div className="adm-empty" style={{ padding: 32, textAlign: 'center' }}>
+              <div className="adm-empty" style={{ padding: 32, textAlign: 'center', gridColumn: '1 / -1' }}>
                 No screens configured. Click &quot;+ Add Screen&quot; to create one.
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

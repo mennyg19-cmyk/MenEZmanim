@@ -58,13 +58,13 @@ export { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './e
 // Admin components
 export { AdminApp } from './admin/AdminApp';
 export { LocationSetup } from './admin/LocationSetup';
-export { ZmanimConfig } from './admin/ZmanimConfig';
+export { SettingsPage } from './admin/SettingsPage';
+export { MemberManager } from './admin/MemberManager';
 export { ScheduleEditor } from './admin/ScheduleEditor';
 export { AnnouncementEditor } from './admin/AnnouncementEditor';
 export { MemorialEditor } from './admin/MemorialEditor';
 export { SponsorManager } from './admin/SponsorManager';
 export { FlyerUploader } from './admin/FlyerUploader';
-export { DisplaySettings } from './admin/DisplaySettings';
 export { DisplayNamesEditor } from './admin/DisplayNamesEditor';
 export { ImportWizard } from './admin/ImportWizard';
 export { ExportPanel } from './admin/ExportPanel';

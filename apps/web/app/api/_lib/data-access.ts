@@ -1009,6 +1009,34 @@ export async function getOrgInvites(orgId: string) {
   });
 }
 
+export async function getOrgMembers(orgId: string) {
+  await ensureSeeded();
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) return [];
+  return db.orgMembership.findMany({
+    where: { orgId: resolved },
+    include: {
+      user: { select: { id: true, email: true, name: true } },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
+export async function removeOrgMember(orgId: string, membershipId: string) {
+  await ensureSeeded();
+  const db = getDbClient();
+  const resolved = await resolveOrgId(orgId);
+  if (!resolved) throw new Error('Organization not found');
+  const m = await db.orgMembership.findUnique({ where: { id: membershipId } });
+  if (!m || m.orgId !== resolved) throw new Error('Membership not found');
+  const owners = await db.orgMembership.count({ where: { orgId: resolved, role: 'owner' } });
+  if (m.role === 'owner' && owners <= 1) {
+    throw new Error('Cannot remove the only owner');
+  }
+  await db.orgMembership.delete({ where: { id: membershipId } });
+}
+
 export async function acceptInvite(token: string, clerkUserId: string) {
   const db = getDbClient();
   const invite = await db.orgInvite.findUnique({ where: { token } });

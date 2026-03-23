@@ -3,18 +3,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useBreakpoint } from '../shared/useBreakpoint';
 import type { DisplayStyle } from '@zmanim-app/core';
-import { LocationSetup } from './LocationSetup';
-import { ZmanimConfig } from './ZmanimConfig';
 import { ScheduleEditor } from './ScheduleEditor';
 import { AnnouncementEditor } from './AnnouncementEditor';
 import { MemorialEditor } from './MemorialEditor';
 import { SponsorManager } from './SponsorManager';
 import { FlyerUploader } from './FlyerUploader';
-import { DisplaySettings } from './DisplaySettings';
+import { SettingsPage } from './SettingsPage';
+import { MemberManager } from './MemberManager';
 import { ImportWizard } from './ImportWizard';
 import { ExportPanel } from './ExportPanel';
 import { ScreenManager } from './ScreenManager';
-import { DisplayNamesEditor } from './DisplayNamesEditor';
 import { QuickActionsPanel, ScreenPreviewWidget } from './DashboardWidgets';
 import { WysiwygCanvas } from '../editor/WysiwygCanvas';
 import type { ColorTheme } from '../editor/ThemePicker';
@@ -32,15 +30,13 @@ type Section =
   | 'dashboard'
   | 'editor'
   | 'screens'
-  | 'location'
-  | 'zmanim'
-  | 'displayNames'
+  | 'settings'
+  | 'members'
   | 'schedules'
   | 'announcements'
   | 'yahrzeit'
   | 'sponsors'
   | 'media'
-  | 'display'
   | 'import'
   | 'export';
 
@@ -53,10 +49,8 @@ const navItems: { key: Section; icon: string; labelHe: string; labelEn: string; 
   { key: 'yahrzeit', icon: '🕯️', labelHe: 'יארצייט', labelEn: 'Yahrzeit', group: 'content' },
   { key: 'sponsors', icon: '💰', labelHe: 'תורמים', labelEn: 'Sponsors', group: 'content' },
   { key: 'media', icon: '🖼️', labelHe: 'מדיה', labelEn: 'Media & Flyers', group: 'content' },
-  { key: 'location', icon: '📍', labelHe: 'מיקום', labelEn: 'Location', group: 'settings' },
-  { key: 'zmanim', icon: '⏰', labelHe: 'הגדרות זמנים', labelEn: 'Zmanim Config', group: 'settings' },
-  { key: 'displayNames', icon: '🏷️', labelHe: 'שמות תצוגה', labelEn: 'Display Names', group: 'settings' },
-  { key: 'display', icon: '⚙️', labelHe: 'הגדרות תצוגה', labelEn: 'Display Settings', group: 'settings' },
+  { key: 'settings', icon: '⚙️', labelHe: 'הגדרות', labelEn: 'Settings', group: 'settings' },
+  { key: 'members', icon: '👥', labelHe: 'משתמשים', labelEn: 'Members', group: 'settings' },
   { key: 'import', icon: '📥', labelHe: 'ייבוא', labelEn: 'Import', group: 'tools' },
   { key: 'export', icon: '📤', labelHe: 'ייצוא', labelEn: 'Export', group: 'tools' },
 ];
@@ -75,14 +69,18 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [location, setLocation] = useState<any>({});
-  const [zmanimConfigs, setZmanimConfigs] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [memorials, setMemorials] = useState<any[]>([]);
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [media, setMedia] = useState<any[]>([]);
-  const [displaySettingsData, setDisplaySettingsData] = useState<any>({});
+  const [displaySettingsData, setDisplaySettingsData] = useState<any>({
+    defaultLanguage: 'Hebrew',
+    kioskMode: false,
+    kioskHideCursor: false,
+    kioskAutoStart: false,
+  });
   const [displayNames, setDisplayNames] = useState<DisplayNameOverrides>({});
   const [importResult, setImportResult] = useState<any>(null);
   const [screens, setScreens] = useState<any[]>([]);
@@ -128,6 +126,13 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
           setPreviewZmanim(d.zmanim.map((z: any) => ({ ...z, time: z.time ? new Date(z.time) : null })));
         }
       }),
+      load('org').then((org: any) => {
+        if (org?.location) setLocation(org.location);
+        const disp = org?.settings?.display;
+        if (disp && typeof disp === 'object') {
+          setDisplaySettingsData((prev: any) => ({ ...prev, ...disp }));
+        }
+      }),
       Promise.all([load('screens'), load('styles')]).then(([loadedScreens, loadedStyles]: any[]) => {
         if (loadedStyles) {
           setStyles(loadedStyles);
@@ -141,6 +146,30 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const THEME_KEY = 'zmanim-admin-theme';
+
+  const applyTheme = useCallback((mode: 'light' | 'dark') => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-theme', mode);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem(THEME_KEY) as 'light' | 'dark' | null;
+    if (stored === 'light' || stored === 'dark') {
+      applyTheme(stored);
+      return;
+    }
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }, [applyTheme]);
+
+  const toggleTheme = useCallback(() => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  }, [applyTheme]);
+
   useEffect(() => {
     if (bp === 'tablet') setSidebarCollapsed(true);
   }, [bp]);
@@ -153,7 +182,6 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
   // ── Save handlers ───────────────────────────────────────
   const handleLocationChange = async (loc: any) => { setLocation(loc); await onSave('location', loc); };
-  const handleZmanimChange = async (configs: any[]) => { setZmanimConfigs(configs); await onSave('zmanimConfigs', configs); };
   const handleSchedulesChange = async (s: any[]) => { setSchedules(s); setPreviewSchedules(s); await onSave('schedules', s); };
   const handleGroupsChange = async (g: any[]) => { setGroups(g); await onSave('groups', g); };
   const handleAnnouncementsChange = async (a: any[]) => { setAnnouncements(a); await onSave('announcements', a); };
@@ -180,7 +208,10 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
     if (updated) setMedia(updated);
   };
   const handleMediaChange = async (m: any[]) => { setMedia(m); await onSave('media', m); };
-  const handleDisplaySettingsChange = async (s: any) => { setDisplaySettingsData(s); await onSave('displaySettings', s); };
+  const handleDisplaySettingsChange = async (s: any) => {
+    setDisplaySettingsData(s);
+    await onSave('displaySettings', s);
+  };
   const handleDisplayNamesChange = async (names: DisplayNameOverrides) => { setDisplayNames(names); await onSave('displayNames', names); };
   const handleImport = async (sourcePath: string) => { const r = await onLoad('import', { sourcePath }); setImportResult(r); return r; };
   const handleExport = async (type: string, options: any) => { await onSave('export', { type, options }); };
@@ -255,9 +286,9 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
               {([
                 { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', section: 'schedules' as Section },
                 { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', section: 'announcements' as Section },
-                { label: 'Yahrzeit Entries', value: memorials.length, color: '#f59e0b', section: 'yahrzeit' as Section },
-                { label: 'Display Styles', value: styles.length, color: '#8b5cf6', section: 'editor' as Section },
-                { label: 'Screens', value: screens.length, color: '#ec4899', section: 'screens' as Section },
+                { label: 'Yahrzeit Entries', value: memorials.length, color: 'var(--adm-stat-amber)', section: 'yahrzeit' as Section },
+                { label: 'Display Styles', value: styles.length, color: 'var(--adm-stat-purple)', section: 'editor' as Section },
+                { label: 'Screens', value: screens.length, color: 'var(--adm-stat-pink)', section: 'screens' as Section },
               ] as const)
                 .filter((card) => bp !== 'mobile' || card.section !== 'editor')
                 .map((card) => (
@@ -365,13 +396,13 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                       }
                     },
                     bgUploading,
-                    previewUrl: `/show/${orgId}/${screens.length > 0 ? 1 : 1}`,
+                    previewUrl: `/show/${encodeURIComponent(orgId)}/${encodeURIComponent(screens[0]?.id ?? '1')}`,
                   }}
                   snapToGrid
                   gridSize={10}
                 />
             ) : (
-              <div className="adm-empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 18, backgroundColor: '#0f172a' }}>
+              <div className="adm-empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 18, backgroundColor: 'var(--ed-bg-deep, #0f172a)', color: 'var(--ed-text-muted, #94a3b8)' }}>
                 Select or create a style to start editing
               </div>
             )}
@@ -380,26 +411,37 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
       case 'screens':
         return (
-          <ScreenManager
-            screens={screens}
-            styles={styles}
-            orgSlug={orgId}
-            onChange={handleScreensChange}
-            onStyleCreate={handleStyleCreate}
-            onStyleRename={handleStyleRename}
-            onStyleDuplicate={handleStyleDuplicate}
-            onStyleDelete={handleStyleDelete}
-            onStyleChange={handleStyleChange}
-            onEditStyle={(styleId) => {
-              setEditorStyleId(styleId);
-              setActiveSection('editor');
-            }}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <ScreenManager
+              screens={screens}
+              styles={styles}
+              orgSlug={orgId}
+              onChange={handleScreensChange}
+              onStyleCreate={handleStyleCreate}
+              onStyleRename={handleStyleRename}
+              onStyleDuplicate={handleStyleDuplicate}
+              onStyleDelete={handleStyleDelete}
+              onStyleChange={handleStyleChange}
+              onEditStyle={(styleId) => {
+                setEditorStyleId(styleId);
+                setActiveSection('editor');
+              }}
+            />
+          </div>
+        );
+      case 'settings':
+        return (
+          <SettingsPage
+            location={location}
+            onLocationChange={handleLocationChange}
+            displayNames={displayNames}
+            onDisplayNamesChange={handleDisplayNamesChange}
+            displayPrefs={displaySettingsData}
+            onDisplayPrefsChange={handleDisplaySettingsChange}
           />
         );
-      case 'location':
-        return <LocationSetup location={location} onChange={handleLocationChange} />;
-      case 'zmanim':
-        return <ZmanimConfig configs={zmanimConfigs} onChange={handleZmanimChange} />;
+      case 'members':
+        return <MemberManager orgId={orgId} />;
       case 'schedules':
         return <ScheduleEditor schedules={schedules} onChange={handleSchedulesChange} groups={groups} onGroupsChange={handleGroupsChange} />;
       case 'announcements':
@@ -410,10 +452,6 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
         return <SponsorManager sponsors={sponsors} onChange={handleSponsorsChange} />;
       case 'media':
         return <FlyerUploader media={media} onUpload={handleMediaUpload} onDelete={handleMediaDelete} onChange={handleMediaChange} />;
-      case 'displayNames':
-        return <DisplayNamesEditor overrides={displayNames} onChange={handleDisplayNamesChange} />;
-      case 'display':
-        return <DisplaySettings settings={displaySettingsData} onChange={handleDisplaySettingsChange} />;
       case 'import':
         return <ImportWizard onImport={handleImport} importResult={importResult} />;
       case 'export':
@@ -523,9 +561,30 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
           ))}
         </nav>
 
-        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--adm-sidebar-border)' }}>
+        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--adm-sidebar-border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title="Toggle light / dark mode"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--adm-sidebar-border)',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--adm-sidebar-text)',
+              cursor: 'pointer',
+              fontSize: 13,
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+            }}
+          >
+            <span aria-hidden>🌓</span>
+            {!sidebarCollapsed && <span>Theme</span>}
+          </button>
           <a
-            href="/show/demo/1"
+            href={`/show/${encodeURIComponent(orgId)}/${encodeURIComponent(screens[0]?.id ?? '1')}`}
             target="_blank"
             rel="noopener"
             className="adm-btnPrimary"
@@ -565,13 +624,27 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
             </span>
           </h1>
           {activeSection === 'editor' && (
-            <a href="/show/demo/1" target="_blank" rel="noopener" className="adm-link" style={{ fontSize: 13 }}>
+            <a
+              href={`/show/${encodeURIComponent(orgId)}/${encodeURIComponent(screens[0]?.id ?? '1')}`}
+              target="_blank"
+              rel="noopener"
+              className="adm-link"
+              style={{ fontSize: 13 }}
+            >
               Preview in new tab →
             </a>
           )}
         </header>
-        <main style={{ flex: 1, overflow: activeSection === 'editor' ? 'hidden' : 'auto', backgroundColor: 'var(--adm-bg-hover)' }}>
-          <div style={{ padding: activeSection === 'editor' ? 0 : 24, height: activeSection === 'editor' ? '100%' : undefined }}>
+        <main style={{ flex: 1, overflow: activeSection === 'editor' || activeSection === 'screens' ? 'hidden' : 'auto', backgroundColor: 'var(--adm-bg-hover)' }}>
+          <div
+            style={{
+              padding: activeSection === 'editor' ? 0 : 24,
+              height: activeSection === 'editor' || activeSection === 'screens' ? '100%' : undefined,
+              minHeight: activeSection === 'screens' ? 0 : undefined,
+              display: activeSection === 'screens' ? 'flex' : undefined,
+              flexDirection: activeSection === 'screens' ? 'column' : undefined,
+            }}
+          >
             {renderContent()}
           </div>
         </main>

@@ -314,39 +314,47 @@ export function QuickActionsPanel({
 
   return (
     <div className="adm-card">
-      <h3 className="adm-sectionTitle" style={{ margin: '0 0 12px' }}>Quick Actions</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <h3 className="adm-sectionTitle" style={{ margin: '0 0 14px' }}>Quick Actions</h3>
+      <div className="adm-quickCardGrid">
         {showEditorLink && (
-          <button type="button" onClick={() => onNavigate('editor')} className="adm-quickBtn">
-            Open Display Editor
-          </button>
-        )}
-        {actions.map((a) => (
-          <div key={a.key} style={{ display: 'flex', gap: 4 }}>
-            <button
-              type="button"
-              onClick={() => setModal(a.key)}
-              className="adm-quickBtn"
-              style={{ flex: 1, textAlign: 'left' }}
-            >
-              <span style={{ marginRight: 6 }}>{a.icon}</span>
-              {a.label}
+          <div className="adm-quickActionCard">
+            <button type="button" className="adm-quickActionCardMain" onClick={() => onNavigate('editor')}>
+              <span className="adm-quickActionCardIcon">🎨</span>
+              <span>Display Editor</span>
             </button>
             <button
               type="button"
+              className="adm-quickActionCardViewAll"
+              onClick={() => onNavigate('screens')}
+            >
+              Screens &amp; styles
+            </button>
+          </div>
+        )}
+        {actions.map((a) => (
+          <div key={a.key} className="adm-quickActionCard">
+            <button type="button" className="adm-quickActionCardMain" onClick={() => setModal(a.key)}>
+              <span className="adm-quickActionCardIcon">{a.icon}</span>
+              <span>{a.label}</span>
+            </button>
+            <button
+              type="button"
+              className="adm-quickActionCardViewAll"
               onClick={() => onNavigate(a.navigateTo)}
-              className="adm-btn"
-              style={{ padding: '6px 10px', fontSize: 11, flexShrink: 0, color: 'var(--adm-text-muted)' }}
-              title={`Go to ${a.label.replace('Add ', '')} page`}
             >
               View all
             </button>
           </div>
         ))}
-        <button type="button" onClick={() => onNavigate('media')} className="adm-quickBtn" style={{ marginTop: 2 }}>
-          <span style={{ marginRight: 6 }}>🖼️</span>
-          Upload Media
-        </button>
+        <div className="adm-quickActionCard">
+          <button type="button" className="adm-quickActionCardMain" onClick={() => onNavigate('media')}>
+            <span className="adm-quickActionCardIcon">🖼️</span>
+            <span>Upload Media</span>
+          </button>
+          <button type="button" className="adm-quickActionCardViewAll" onClick={() => onNavigate('media')}>
+            Open library
+          </button>
+        </div>
       </div>
 
       <Modal open={modal === 'event'} onClose={() => setModal(null)} title="Quick Add — Davening Time">

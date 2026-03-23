@@ -11,6 +11,8 @@ const TEFILAH_KEYS = Object.keys(TEFILAH_LABELS_ENGLISH);
 interface DisplayNamesEditorProps {
   overrides: DisplayNameOverrides;
   onChange: (overrides: DisplayNameOverrides) => void;
+  /** When true, omit outer card and page title (for unified Settings page). */
+  embedded?: boolean;
 }
 
 const cellStyle: React.CSSProperties = {
@@ -26,10 +28,10 @@ const headerCellStyle: React.CSSProperties = {
   fontSize: 12,
   textTransform: 'uppercase',
   letterSpacing: '0.03em',
-  color: 'var(--adm-text-muted, #94a3b8)',
+  color: 'var(--adm-text-muted)',
   position: 'sticky',
   top: 0,
-  background: 'var(--adm-bg-card, #1e293b)',
+  background: 'var(--adm-bg)',
   zIndex: 1,
 };
 
@@ -37,10 +39,10 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '5px 8px',
   fontSize: 13,
-  border: '1px solid var(--adm-border, #334155)',
+  border: '1px solid var(--adm-border-input)',
   borderRadius: 4,
-  background: 'var(--adm-bg, #0f172a)',
-  color: 'var(--adm-text, #e2e8f0)',
+  background: 'var(--adm-bg-muted)',
+  color: 'var(--adm-text)',
   outline: 'none',
   boxSizing: 'border-box',
 };
@@ -83,7 +85,7 @@ function NameRow({
   );
 }
 
-export function DisplayNamesEditor({ overrides: initial, onChange }: DisplayNamesEditorProps) {
+export function DisplayNamesEditor({ overrides: initial, onChange, embedded }: DisplayNamesEditorProps) {
   const [data, setData] = useState<DisplayNameOverrides>(initial || {});
   const [dirty, setDirty] = useState(false);
 
@@ -116,12 +118,14 @@ export function DisplayNamesEditor({ overrides: initial, onChange }: DisplayName
     tableLayout: 'fixed',
   };
 
-  return (
-    <div className="adm-card" style={{ maxWidth: 900 }}>
-      <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 600 }}>
-        שמות תצוגה — Display Names
-      </h2>
-      <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--adm-text-muted, #94a3b8)' }}>
+  const body = (
+    <>
+      {!embedded && (
+        <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 600 }}>
+          שמות תצוגה — Display Names
+        </h2>
+      )}
+      <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--adm-text-muted)' }}>
         Customize how zmanim and tefilah items appear on the display. Leave fields empty to use the default name.
       </p>
 
@@ -197,6 +201,16 @@ export function DisplayNamesEditor({ overrides: initial, onChange }: DisplayName
       >
         Save / שמור
       </button>
+    </>
+  );
+
+  if (embedded) {
+    return <div style={{ maxWidth: '100%' }}>{body}</div>;
+  }
+
+  return (
+    <div className="adm-card" style={{ maxWidth: 900 }}>
+      {body}
     </div>
   );
 }

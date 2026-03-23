@@ -72,4 +72,48 @@
   --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
 
   --font-system: system-ui, -apple-system, sans-serif;
+
+  /* Dashboard stat accents (work in light + dark) */
+  --adm-stat-amber: #f59e0b;
+  --adm-stat-purple: #8b5cf6;
+  --adm-stat-pink: #ec4899;
+  --adm-preview-btn: #8b5cf6;
+  --adm-warning-bg: #fef3c7;
+  --adm-warning-text: #b45309;
+  --adm-warning-border: #fbbf24;
+}
+
+/* Admin dark theme (applied to <html> or root with data-theme="dark") */
+[data-theme='dark'] {
+  --adm-bg: #0f172a;
+  --adm-bg-muted: #1e293b;
+  --adm-bg-hover: #334155;
+  --adm-bg-active: #1e293b;
+  --adm-border: #334155;
+  --adm-border-input: #475569;
+  --adm-text: #e2e8f0;
+  --adm-text-dark: #f8fafc;
+  --adm-text-muted: #94a3b8;
+  --adm-text-dim: #64748b;
+  --adm-accent: #60a5fa;
+  --adm-accent-dark: #3b82f6;
+  --adm-accent-hover: #93c5fd;
+  --adm-danger: #f87171;
+  --adm-danger-hover: #ef4444;
+  --adm-success: #34d399;
+  --adm-warning: #fbbf24;
+  --adm-sidebar-bg: #020617;
+  --adm-sidebar-active: #1e293b;
+  --adm-sidebar-text: #e2e8f0;
+  --adm-sidebar-border: #334155;
+
+  --adm-stat-amber: #fbbf24;
+  --adm-stat-purple: #a78bfa;
+  --adm-stat-pink: #f472b6;
+  --adm-preview-btn: #a78bfa;
+  --adm-warning-bg: rgba(251, 191, 36, 0.12);
+  --adm-warning-text: #fcd34d;
+  --adm-warning-border: rgba(251, 191, 36, 0.35);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
