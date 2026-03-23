@@ -36,7 +36,10 @@ export default function SuperAdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<'orgs' | 'users'>('orgs');
+  const [tab, setTab] = useState<'orgs' | 'users' | 'tools'>('orgs');
+  const [cloneSource, setCloneSource] = useState('');
+  const [cloneTarget, setCloneTarget] = useState('');
+  const [toolMsg, setToolMsg] = useState('');
 
   const loadData = useCallback(async () => {
     try {
@@ -114,6 +117,12 @@ export default function SuperAdminPage() {
           style={{ ...styles.tab, ...(tab === 'users' ? styles.tabActive : {}) }}
         >
           Users ({users.length})
+        </button>
+        <button
+          onClick={() => setTab('tools')}
+          style={{ ...styles.tab, ...(tab === 'tools' ? styles.tabActive : {}) }}
+        >
+          Tools
         </button>
       </div>
 
@@ -228,6 +237,100 @@ export default function SuperAdminPage() {
                 </div>
               </div>
             ))}
+          </section>
+        </div>
+      )}
+
+      {tab === 'tools' && (
+        <div>
+          {toolMsg && (
+            <div style={{ padding: '10px 16px', borderRadius: 8, marginBottom: 16, background: toolMsg.startsWith('Error') ? '#fee2e2' : '#dcfce7', color: toolMsg.startsWith('Error') ? '#991b1b' : '#166534', fontSize: 13 }}>
+              {toolMsg}
+            </div>
+          )}
+
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Re-seed Demo Organization</h2>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+              Resets the demo org layout, schedules, announcements, and memorials to the latest defaults.
+            </p>
+            <button
+              onClick={async () => {
+                setToolMsg('');
+                try {
+                  await apiFetch('/api/admin/reseed-demo', { method: 'POST' });
+                  setToolMsg('Demo organization re-seeded successfully!');
+                } catch (err: any) {
+                  setToolMsg(`Error: ${err.message}`);
+                }
+              }}
+              style={{ ...styles.btn, background: '#8b5cf6' }}
+            >
+              Re-seed Demo
+            </button>
+          </section>
+
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Clone Data Between Organizations</h2>
+            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+              Copies schedules, groups, announcements, memorials, styles, and display objects from one org to another.
+            </p>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Source Org</label>
+                <select
+                  value={cloneSource}
+                  onChange={(e) => setCloneSource(e.target.value)}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+                >
+                  <option value="">Select source...</option>
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>{o.name} ({o.slug})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Target Org</label>
+                <select
+                  value={cloneTarget}
+                  onChange={(e) => setCloneTarget(e.target.value)}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+                >
+                  <option value="">Select target...</option>
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>{o.name} ({o.slug})</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!cloneSource || !cloneTarget) {
+                    setToolMsg('Error: Select both source and target organizations');
+                    return;
+                  }
+                  if (cloneSource === cloneTarget) {
+                    setToolMsg('Error: Source and target must be different');
+                    return;
+                  }
+                  setToolMsg('');
+                  try {
+                    const result = await apiFetch('/api/admin/clone', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ sourceOrgId: cloneSource, targetOrgId: cloneTarget }),
+                    });
+                    const c = result.cloned;
+                    setToolMsg(`Cloned: ${c.groups} groups, ${c.schedules} schedules, ${c.announcements} announcements, ${c.memorials} memorials, ${c.styles} styles`);
+                  } catch (err: any) {
+                    setToolMsg(`Error: ${err.message}`);
+                  }
+                }}
+                disabled={!cloneSource || !cloneTarget}
+                style={{ ...styles.btn, background: cloneSource && cloneTarget ? '#3b82f6' : '#94a3b8' }}
+              >
+                Clone Data
+              </button>
+            </div>
           </section>
         </div>
       )}
