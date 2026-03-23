@@ -149,6 +149,8 @@ function scheduleToPrisma(s: MinyanSchedule, orgId: string) {
     placeholderLabel: s.placeholderLabel,
     groupId: s.groupId,
     daysActive: s.daysActive,
+    refreshMode: s.refreshMode,
+    refreshAnchorDay: s.refreshAnchorDay,
   };
   const hasDetails = Object.values(detailsObj).some((v) => v !== undefined && v !== null);
   return {
@@ -197,6 +199,8 @@ function scheduleFromPrisma(row: PrismaSchedule): MinyanSchedule {
     sortOrder: row.sortOrder,
     isPlaceholder: d.isPlaceholder as boolean | undefined,
     placeholderLabel: d.placeholderLabel as string | undefined,
+    refreshMode: d.refreshMode as MinyanSchedule['refreshMode'],
+    refreshAnchorDay: d.refreshAnchorDay as number | undefined,
   };
 }
 

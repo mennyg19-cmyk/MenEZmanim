@@ -1,7 +1,7 @@
 'use client';
 
 import { AdminApp } from '@zmanim-app/ui';
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../_lib/api-fetch';
 
@@ -331,6 +331,19 @@ export default function AdminPage() {
     [orgId],
   );
 
+  const weekExportFetcher = useMemo(() => ({
+    fetchZmanim: async (date: Date) => {
+      const res = await apiFetch<{ zmanim: any[] }>(`/api/zmanim?date=${date.toISOString()}`);
+      return (res.zmanim ?? []).map((z: any) => ({
+        ...z,
+        time: z.time ? new Date(z.time) : null,
+      }));
+    },
+    fetchCalendar: async (date: Date) => {
+      return apiFetch(`/api/calendar?date=${date.toISOString()}`);
+    },
+  }), []);
+
   if (loading) {
     return <main className="web-mainCenter">Loading admin panel...</main>;
   }
@@ -390,6 +403,7 @@ export default function AdminPage() {
         onSave={onSave}
         onLoad={onLoad}
         onDelete={onDelete}
+        weekExportFetcher={weekExportFetcher}
       />
     </div>
   );

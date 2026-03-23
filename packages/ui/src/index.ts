@@ -71,7 +71,7 @@ export { AdminApp } from './admin/AdminApp';
 export { LocationSetup } from './admin/LocationSetup';
 export { SettingsPage } from './admin/SettingsPage';
 export { MemberManager } from './admin/MemberManager';
-export { ScheduleEditor } from './admin/ScheduleEditor';
+export { ScheduleEditor, type WeekExportFetcher } from './admin/ScheduleEditor';
 export { AnnouncementEditor } from './admin/AnnouncementEditor';
 export { MemorialEditor } from './admin/MemorialEditor';
 export { SponsorManager } from './admin/SponsorManager';

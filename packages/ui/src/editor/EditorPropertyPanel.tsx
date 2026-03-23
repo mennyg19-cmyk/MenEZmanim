@@ -12,6 +12,12 @@ import { bestTextColorFromPalette, sampleBackgroundAtObject } from '../shared/co
 import { useColorContext } from './ColorContext';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
 import { ColorPicker } from '../shared/ColorPicker';
+import {
+  type EventBoxScheduleEntry,
+  type EventBoxDateOverride,
+  createEmptyScheduleEntry,
+  createEmptyOverride,
+} from '../shared/eventBoxSchedule';
 
 
 interface DaveningGroupInfo {
@@ -433,8 +439,11 @@ function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage, 
               <Toggle checked={content.showRoom ?? false} onChange={(v) => pContent({ showRoom: v })} />
             </Field>
           </Section>
-          <Section title="Davening Groups">
+          <Section title="Davening Groups (static)">
             <DaveningGroupsSection popupObj={popupObj} pContent={pContent} daveningGroups={daveningGroups} />
+          </Section>
+          <Section title="Event Box Schedules (calendar-driven)" defaultOpen={false}>
+            <EventBoxScheduleSection popupObj={popupObj} pContent={pContent} daveningGroups={daveningGroups} />
           </Section>
           <Section title="Event Emphasis" defaultOpen={false}>
             <EmphasisSection popupObj={popupObj} pContent={pContent} />
@@ -985,6 +994,118 @@ function DaveningGroupsSection({ popupObj, pContent, daveningGroups }: {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+function EventBoxScheduleSection({
+  popupObj,
+  pContent,
+  daveningGroups,
+}: {
+  popupObj: DisplayObject;
+  pContent: (patch: Record<string, any>) => void;
+  daveningGroups: DaveningGroupInfo[];
+}) {
+  const content = popupObj.content || {};
+  const schedules: EventBoxScheduleEntry[] = content.eventBoxSchedules ?? [];
+
+  const updateSchedules = (next: EventBoxScheduleEntry[]) => pContent({ eventBoxSchedules: next });
+
+  const addSchedule = () => updateSchedules([...schedules, createEmptyScheduleEntry()]);
+
+  const removeSchedule = (id: string) => updateSchedules(schedules.filter((s) => s.id !== id));
+
+  const updateEntry = (id: string, patch: Partial<EventBoxScheduleEntry>) => {
+    updateSchedules(schedules.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  };
+
+  const addOverride = (schedId: string) => {
+    updateSchedules(schedules.map((s) =>
+      s.id === schedId ? { ...s, overrides: [...s.overrides, createEmptyOverride()] } : s
+    ));
+  };
+
+  const removeOverride = (schedId: string, ovId: string) => {
+    updateSchedules(schedules.map((s) =>
+      s.id === schedId ? { ...s, overrides: s.overrides.filter((o) => o.id !== ovId) } : s
+    ));
+  };
+
+  const updateOverride = (schedId: string, ovId: string, patch: Partial<EventBoxDateOverride>) => {
+    updateSchedules(schedules.map((s) =>
+      s.id === schedId
+        ? { ...s, overrides: s.overrides.map((o) => (o.id === ovId ? { ...o, ...patch } : o)) }
+        : s
+    ));
+  };
+
+  const toggleGroupInList = (list: string[], gId: string): string[] => {
+    return list.includes(gId) ? list.filter((id) => id !== gId) : [...list, gId];
+  };
+
+  const GroupCheckboxes = ({ selected, onChange }: { selected: string[]; onChange: (next: string[]) => void }) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      {daveningGroups.map((g) => (
+        <label key={g.id} className="ed-checkRow" style={{ fontSize: 11 }}>
+          <input type="checkbox" checked={selected.includes(g.id)} onChange={() => onChange(toggleGroupInList(selected, g.id))} />
+          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: g.color, display: 'inline-block' }} />
+          {g.nameHebrew}
+        </label>
+      ))}
+    </div>
+  );
+
+  return (
+    <>
+      <div className="ed-hintSm" style={{ marginBottom: 8 }}>
+        Add schedules to dynamically switch which groups appear based on date ranges.
+        When schedules are defined, they override the static group selection above.
+      </div>
+      {schedules.length === 0 && (
+        <div className="ed-hintSm" style={{ color: 'var(--ed-text-faint)', marginBottom: 8 }}>
+          No schedules defined. The static group selection is used.
+        </div>
+      )}
+      {schedules.map((sched, sIdx) => (
+        <div key={sched.id} style={{ border: '1px solid var(--ed-border)', borderRadius: 6, padding: 8, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <input
+              value={sched.name}
+              onChange={(e) => updateEntry(sched.id, { name: e.target.value })}
+              className="ed-input"
+              style={{ flex: 1, fontSize: 12, fontWeight: 600 }}
+              placeholder="Schedule name"
+            />
+            <button onClick={() => removeSchedule(sched.id)} className="ed-btnSmall" style={{ color: 'var(--ed-danger)', fontSize: 11 }}>Remove</button>
+          </div>
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ed-text-dim)', marginBottom: 4 }}>Default Groups</div>
+          <GroupCheckboxes selected={sched.defaultGroupIds} onChange={(next) => updateEntry(sched.id, { defaultGroupIds: next })} />
+
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ed-text-dim)', marginTop: 8, marginBottom: 4 }}>
+            Date Overrides ({sched.overrides.length})
+          </div>
+          {sched.overrides.map((ov) => (
+            <div key={ov.id} style={{ border: '1px dashed var(--ed-border)', borderRadius: 4, padding: 6, marginBottom: 4 }}>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4 }}>
+                <input type="date" value={ov.startDate} onChange={(e) => updateOverride(sched.id, ov.id, { startDate: e.target.value })} className="ed-input" style={{ fontSize: 11, flex: 1 }} />
+                <span style={{ fontSize: 10, color: 'var(--ed-text-faint)' }}>to</span>
+                <input type="date" value={ov.endDate} onChange={(e) => updateOverride(sched.id, ov.id, { endDate: e.target.value })} className="ed-input" style={{ fontSize: 11, flex: 1 }} />
+                <button onClick={() => removeOverride(sched.id, ov.id)} style={{ border: 'none', background: 'none', color: 'var(--ed-danger)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>×</button>
+              </div>
+              <input value={ov.label ?? ''} onChange={(e) => updateOverride(sched.id, ov.id, { label: e.target.value })} className="ed-input" style={{ fontSize: 11, marginBottom: 4, width: '100%' }} placeholder="Label (optional)" />
+              <GroupCheckboxes selected={ov.groupIds} onChange={(next) => updateOverride(sched.id, ov.id, { groupIds: next })} />
+            </div>
+          ))}
+          <button onClick={() => addOverride(sched.id)} className="ed-btnSmall" style={{ fontSize: 11, color: 'var(--ed-accent)', marginTop: 4 }}>
+            + Add Date Override
+          </button>
+        </div>
+      ))}
+      <button onClick={addSchedule} className="ed-btnSmall" style={{ color: 'var(--ed-accent)', width: '100%', marginTop: 4 }}>
+        + Add Schedule
+      </button>
     </>
   );
 }

@@ -10,6 +10,10 @@ import {
   downloadCsv, readFileAsText,
   type CsvGroup, type CsvSchedule,
 } from '../shared/csvImportExport';
+import {
+  type WeeklyExportConfig, type WeekData,
+  buildWeeklyExportCsv, getNextDayOfWeek, formatDateDisplay, formatDateYMD,
+} from '../shared/weeklyExport';
 
 interface Schedule {
   id: string;
@@ -25,6 +29,8 @@ interface Schedule {
   roundMode?: 'nearest' | 'before' | 'after';
   limitBefore?: string;
   limitAfter?: string;
+  refreshMode?: 'daily' | 'weekly' | 'monthly';
+  refreshAnchorDay?: number;
   durationMinutes?: number;
   daysActive?: boolean[];
   visibilityRules?: VisibilityRule[];
@@ -43,11 +49,20 @@ interface DaveningGroup {
   active: boolean;
 }
 
+export interface WeekExportFetcher {
+  /** Fetch zmanim for a date, return array with { type, time } */
+  fetchZmanim: (date: Date) => Promise<Array<{ type: string; time: Date | null; label: string; hebrewLabel: string }>>;
+  /** Fetch calendar info for a date, return { parsha: { upcoming, upcomingHebrew } } */
+  fetchCalendar: (date: Date) => Promise<{ parsha?: { upcoming?: string; upcomingHebrew?: string; parsha?: string; parshaHebrew?: string } }>;
+}
+
 interface ScheduleEditorProps {
   schedules: Schedule[];
   onChange: (schedules: Schedule[]) => void;
   groups: DaveningGroup[];
   onGroupsChange?: (groups: DaveningGroup[]) => void;
+  /** Optional: enables multi-week export when provided */
+  weekExportFetcher?: WeekExportFetcher;
 }
 
 const TYPES = ['Shacharit', 'Mincha', 'Maariv', 'Other'];
@@ -75,7 +90,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 type FilterMode = 'all' | 'ungrouped' | string;
 
-export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: ScheduleEditorProps) {
+export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, weekExportFetcher }: ScheduleEditorProps) {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -694,6 +709,27 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                   <input type="number" value={selectedEvent.durationMinutes ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { durationMinutes: parseInt(e.target.value) || undefined })} placeholder="e.g. 30" className="adm-input" />
                 </FormRow>
 
+                {(selectedEvent.timeMode ?? 'fixed') === 'dynamic' && (
+                  <>
+                    <SectionHeader title="Refresh Frequency" />
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>How often the dynamic time recalculates. Weekly/monthly uses the latest zman in the period.</div>
+                    <FormRow label="Refresh">
+                      <select value={selectedEvent.refreshMode ?? 'daily'} onChange={(e) => updateEvent(selectedEvent.id, { refreshMode: e.target.value as any })} className="adm-select">
+                        <option value="daily">Daily (recalculate every day)</option>
+                        <option value="weekly">Weekly (same time all week)</option>
+                        <option value="monthly">Monthly (same time all month)</option>
+                      </select>
+                    </FormRow>
+                    {selectedEvent.refreshMode === 'weekly' && (
+                      <FormRow label="Week starts">
+                        <select value={selectedEvent.refreshAnchorDay ?? 0} onChange={(e) => updateEvent(selectedEvent.id, { refreshAnchorDay: parseInt(e.target.value) })} className="adm-select">
+                          {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                        </select>
+                      </FormRow>
+                    )}
+                  </>
+                )}
+
                 <SectionHeader title="Active Days" />
                 <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
                   {DAYS.map((d, i) => {
@@ -785,6 +821,7 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
           groups={groups}
           onChange={onChange}
           onGroupsChange={onGroupsChange}
+          weekExportFetcher={weekExportFetcher}
         />
       )}
     </div>
@@ -798,11 +835,13 @@ function ImportExportPanel({
   groups,
   onChange,
   onGroupsChange,
+  weekExportFetcher,
 }: {
   schedules: Schedule[];
   groups: DaveningGroup[];
   onChange: (s: Schedule[]) => void;
   onGroupsChange?: (g: DaveningGroup[]) => void;
+  weekExportFetcher?: WeekExportFetcher;
 }) {
   const [importMode, setImportMode] = useState<'replace' | 'append'>('append');
   const [groupsPreview, setGroupsPreview] = useState<CsvGroup[] | null>(null);
@@ -1071,6 +1110,230 @@ function ImportExportPanel({
           </button>
         </div>
       </div>
+
+      {/* ── Multi-week schedule export ── */}
+      {weekExportFetcher && (
+        <MultiWeekExportSection
+          schedules={schedules}
+          groups={groups}
+          fetcher={weekExportFetcher}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Multi-week export ─── */
+
+function computeTimeForExport(
+  schedule: Schedule,
+  zmanim: Array<{ type: string; time: Date | null }>,
+): string {
+  if (schedule.isPlaceholder) return '';
+  const mode = schedule.timeMode ?? (schedule.baseZman ? 'dynamic' : 'fixed');
+  if (mode === 'fixed') return schedule.fixedTime ?? '';
+
+  if (!schedule.baseZman) return '';
+  const targetKey = String(schedule.baseZman).toLowerCase().replace(/[^a-z]/g, '');
+  const z = zmanim.find((zr) => {
+    const normType = (zr.type || '').toLowerCase().replace(/[^a-z]/g, '');
+    return normType.includes(targetKey);
+  });
+  if (!z?.time) return '';
+  let t = new Date(z.time);
+  t = new Date(t.getTime() + (schedule.offset ?? 0) * 60_000);
+
+  const roundTo = schedule.roundTo ?? 1;
+  const roundMode = schedule.roundMode ?? 'nearest';
+  if (roundTo > 1) {
+    const mins = t.getHours() * 60 + t.getMinutes();
+    const q = mins / roundTo;
+    let rounded: number;
+    if (roundMode === 'before') rounded = Math.floor(q) * roundTo;
+    else if (roundMode === 'after') rounded = Math.ceil(q) * roundTo;
+    else rounded = Math.round(q) * roundTo;
+    t.setHours(Math.floor(rounded / 60), rounded % 60, 0, 0);
+  }
+
+  if (schedule.limitBefore) {
+    const [hh, mm] = schedule.limitBefore.split(':').map(Number);
+    if (!isNaN(hh) && !isNaN(mm)) { const m = new Date(t); m.setHours(hh, mm, 0, 0); if (t < m) t = m; }
+  }
+  if (schedule.limitAfter) {
+    const [hh, mm] = schedule.limitAfter.split(':').map(Number);
+    if (!isNaN(hh) && !isNaN(mm)) { const m = new Date(t); m.setHours(hh, mm, 0, 0); if (t > m) t = m; }
+  }
+
+  const h = t.getHours();
+  const m = t.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function MultiWeekExportSection({
+  schedules,
+  groups,
+  fetcher,
+}: {
+  schedules: Schedule[];
+  groups: DaveningGroup[];
+  fetcher: WeekExportFetcher;
+}) {
+  const [weeks, setWeeks] = useState(20);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [parshaAxis, setParshaAxis] = useState<'columns' | 'rows'>('columns');
+  const [eventNamesPos, setEventNamesPos] = useState<'left' | 'right'>('left');
+  const [showDate, setShowDate] = useState(true);
+  const [dateDay, setDateDay] = useState<'sunday' | 'shabbos'>('shabbos');
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState('');
+
+  const filteredEvents = useMemo(() => {
+    const evts = schedules.filter((s) => !s.isPlaceholder);
+    if (selectedGroupIds.length === 0) return evts;
+    return evts.filter((s) => selectedGroupIds.includes(s.groupId ?? ''));
+  }, [schedules, selectedGroupIds]);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setGenError('');
+    try {
+      const startDate = getNextDayOfWeek(new Date(), 0); // next Sunday
+      const weekDataList: WeekData[] = [];
+      const eventNames = filteredEvents.map((e) => e.name);
+
+      for (let w = 0; w < weeks; w++) {
+        const weekStart = new Date(startDate);
+        weekStart.setDate(weekStart.getDate() + w * 7);
+
+        const shabbos = new Date(weekStart);
+        shabbos.setDate(shabbos.getDate() + 6);
+
+        const dateForDisplay = dateDay === 'sunday' ? weekStart : shabbos;
+        const zmanimDate = dateDay === 'shabbos' ? shabbos : weekStart;
+
+        const [zmanimResult, calResult] = await Promise.all([
+          fetcher.fetchZmanim(zmanimDate),
+          fetcher.fetchCalendar(shabbos),
+        ]);
+
+        const parsha = calResult?.parsha?.parshaHebrew
+          || calResult?.parsha?.parsha
+          || calResult?.parsha?.upcomingHebrew
+          || calResult?.parsha?.upcoming
+          || `Week ${w + 1}`;
+
+        const eventTimes: Record<string, string> = {};
+        for (const ev of filteredEvents) {
+          eventTimes[ev.name] = computeTimeForExport(ev, zmanimResult);
+        }
+
+        weekDataList.push({
+          parsha,
+          date: formatDateDisplay(dateForDisplay),
+          eventTimes,
+        });
+      }
+
+      const config: WeeklyExportConfig = {
+        weeks,
+        groupIds: selectedGroupIds,
+        parshaAxis,
+        eventNamesPosition: eventNamesPos,
+        showDate,
+        dateDay,
+      };
+
+      const csv = buildWeeklyExportCsv(config, weekDataList, eventNames);
+      downloadCsv(csv, `schedule-${weeks}wk-${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch (err: any) {
+      setGenError(err.message || 'Export failed');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div style={{ borderTop: '1px solid var(--adm-border)', paddingTop: 16, marginTop: 4 }}>
+      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
+        Multi-week schedule export
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 12 }}>
+        Export a table of event times across multiple weeks with parsha headers. Great for printing seasonal schedules.
+      </div>
+
+      {genError && (
+        <div style={{ padding: 8, backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#dc2626', fontSize: 12, marginBottom: 10 }}>
+          {genError}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        <div>
+          <label className="adm-labelSm">Number of weeks</label>
+          <input type="number" className="adm-input" value={weeks} onChange={(e) => setWeeks(Math.max(1, parseInt(e.target.value) || 1))} min={1} max={52} />
+        </div>
+        <div>
+          <label className="adm-labelSm">Parsha / weeks on</label>
+          <select className="adm-select" value={parshaAxis} onChange={(e) => setParshaAxis(e.target.value as any)}>
+            <option value="columns">Columns (X axis)</option>
+            <option value="rows">Rows (Y axis)</option>
+          </select>
+        </div>
+        <div>
+          <label className="adm-labelSm">Event names position</label>
+          <select className="adm-select" value={eventNamesPos} onChange={(e) => setEventNamesPos(e.target.value as any)}>
+            <option value="left">Left / Top</option>
+            <option value="right">Right / Bottom</option>
+          </select>
+        </div>
+        <div>
+          <label className="adm-labelSm">Date display day</label>
+          <select className="adm-select" value={dateDay} onChange={(e) => setDateDay(e.target.value as any)}>
+            <option value="shabbos">Shabbos</option>
+            <option value="sunday">Sunday</option>
+          </select>
+        </div>
+      </div>
+
+      <label className="adm-labelSm" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+        <input type="checkbox" checked={showDate} onChange={(e) => setShowDate(e.target.checked)} />
+        Show Gregorian date
+      </label>
+
+      <div style={{ marginBottom: 12 }}>
+        <label className="adm-labelSm">Filter by groups (empty = all events)</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+          {groups.map((g) => (
+            <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selectedGroupIds.includes(g.id)}
+                onChange={(e) => {
+                  if (e.target.checked) setSelectedGroupIds((p) => [...p, g.id]);
+                  else setSelectedGroupIds((p) => p.filter((id) => id !== g.id));
+                }}
+              />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: g.color, display: 'inline-block' }} />
+              {g.nameHebrew}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 8 }}>
+        Will export <strong>{filteredEvents.length}</strong> event(s) across <strong>{weeks}</strong> week(s).
+      </div>
+
+      <button
+        onClick={handleGenerate}
+        disabled={generating || filteredEvents.length === 0}
+        className="adm-btnPrimary"
+        style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, opacity: generating || filteredEvents.length === 0 ? 0.6 : 1 }}
+      >
+        {generating ? 'Generating...' : 'Generate & Download'}
+      </button>
     </div>
   );
 }

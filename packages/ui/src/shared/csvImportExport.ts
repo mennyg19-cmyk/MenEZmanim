@@ -31,6 +31,8 @@ export interface CsvSchedule {
   roundMode?: 'nearest' | 'before' | 'after';
   limitBefore?: string;
   limitAfter?: string;
+  refreshMode?: 'daily' | 'weekly' | 'monthly';
+  refreshAnchorDay?: number;
   durationMinutes?: number;
   daysActive?: boolean[];
   visibilityRules?: VisibilityRule[];
@@ -192,6 +194,7 @@ const EVENT_HEADERS = [
   'id', 'name', 'type', 'groupId',
   'timeMode', 'fixedTime', 'baseZman', 'offset',
   'roundTo', 'roundMode', 'limitBefore', 'limitAfter',
+  'refreshMode', 'refreshAnchorDay',
   'durationMinutes', 'days', 'visibilityRules',
   'room', 'sortOrder', 'isPlaceholder', 'placeholderLabel',
 ];
@@ -219,7 +222,8 @@ const SAMPLE_EVENTS: CsvSchedule[] = [
   },
   {
     id: 'ev-mincha', name: 'Mincha', type: 'Mincha', groupId: 'group-main',
-    timeMode: 'dynamic', baseZman: 'shkia', offset: -15, roundTo: 5, roundMode: 'before',
+    timeMode: 'dynamic', baseZman: 'minchaGedola', offset: 0, roundTo: 5, roundMode: 'after',
+    refreshMode: 'weekly', refreshAnchorDay: 0,
     daysActive: [true, true, true, true, true, false, false],
     visibilityRules: [{ condition: 'weekday', show: true }],
     room: 'Main Sanctuary', sortOrder: 3, durationMinutes: 15,
@@ -274,6 +278,8 @@ function eventToRow(ev: CsvSchedule): string[] {
     ev.roundMode ?? '',
     ev.limitBefore ?? '',
     ev.limitAfter ?? '',
+    ev.refreshMode ?? '',
+    ev.refreshAnchorDay != null ? String(ev.refreshAnchorDay) : '',
     ev.durationMinutes != null ? String(ev.durationMinutes) : '',
     daysToString(ev.daysActive),
     rulesToString(ev.visibilityRules),
@@ -299,6 +305,8 @@ export function generateEventsSampleCsv(): string {
     '# roundMode: nearest | before | after',
     '# limitBefore: earliest allowed time HH:MM (e.g. 05:00)',
     '# limitAfter: latest allowed time HH:MM (e.g. 20:00)',
+    '# refreshMode: how often dynamic time recalculates: daily | weekly | monthly (default: daily)',
+    '# refreshAnchorDay: for weekly refresh — which day starts the week: 0=Sun 1=Mon ... 6=Sat',
     '# durationMinutes: how long the event lasts (optional)',
     '# days: semicolon-separated active days: Sun;Mon;Tue;Wed;Thu;Fri;Shabbos (or "all")',
     '# visibilityRules: semicolon-separated rules like show:weekday;hide:fast_day',
@@ -333,6 +341,8 @@ export function parseEventsCsv(text: string): CsvSchedule[] {
       roundMode: (r.roundMode as 'nearest' | 'before' | 'after') || undefined,
       limitBefore: r.limitBefore || undefined,
       limitAfter: r.limitAfter || undefined,
+      refreshMode: (r.refreshMode as 'daily' | 'weekly' | 'monthly') || undefined,
+      refreshAnchorDay: r.refreshAnchorDay ? parseInt(r.refreshAnchorDay) : undefined,
       durationMinutes: r.durationMinutes ? parseInt(r.durationMinutes) : undefined,
       daysActive: parseDays(r.days ?? ''),
       visibilityRules: parseRules(r.visibilityRules ?? ''),

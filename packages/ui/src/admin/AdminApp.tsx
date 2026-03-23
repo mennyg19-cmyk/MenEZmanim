@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useBreakpoint } from '../shared/useBreakpoint';
 import type { DisplayStyle } from '@zmanim-app/core';
-import { ScheduleEditor } from './ScheduleEditor';
+import { ScheduleEditor, type WeekExportFetcher } from './ScheduleEditor';
 import { AnnouncementEditor } from './AnnouncementEditor';
 import { MemorialEditor } from './MemorialEditor';
 import { SponsorManager } from './SponsorManager';
@@ -24,6 +24,7 @@ interface AdminAppProps {
   onSave: (entity: string, data: any) => Promise<void>;
   onLoad: (entity: string, query?: any) => Promise<any>;
   onDelete: (entity: string, id: string) => Promise<void>;
+  weekExportFetcher?: WeekExportFetcher;
 }
 
 type Section =
@@ -62,7 +63,7 @@ const groupLabels: Record<string, string> = {
   tools: 'Tools',
 };
 
-export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
+export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: weekExportFetcherProp }: AdminAppProps) {
   const bp = useBreakpoint();
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -216,6 +217,8 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   const handleImport = async (sourcePath: string) => { const r = await onLoad('import', { sourcePath }); setImportResult(r); return r; };
   const handleExport = async (type: string, options: any) => { await onSave('export', { type, options }); };
   const handleScreensChange = async (s: any[]) => { setScreens(s); await onSave('screens', s); };
+
+  const weekExportFetcher = weekExportFetcherProp;
 
   // ── WYSIWYG editor handlers ─────────────────────────────
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -441,7 +444,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
       case 'members':
         return <MemberManager orgId={orgId} />;
       case 'schedules':
-        return <ScheduleEditor schedules={schedules} onChange={handleSchedulesChange} groups={groups} onGroupsChange={handleGroupsChange} />;
+        return <ScheduleEditor schedules={schedules} onChange={handleSchedulesChange} groups={groups} onGroupsChange={handleGroupsChange} weekExportFetcher={weekExportFetcher} />;
       case 'announcements':
         return <AnnouncementEditor announcements={announcements} onChange={handleAnnouncementsChange} />;
       case 'yahrzeit':

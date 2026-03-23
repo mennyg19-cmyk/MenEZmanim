@@ -16,6 +16,18 @@ function computeMinyanTime(schedule: any, zmanim: ZmanResult[]): string {
   if (schedule.isPlaceholder) return '';
   if (typeof schedule.time === 'string' && schedule.time) return schedule.time;
 
+  // Server-resolved time for weekly/monthly refresh modes
+  if (schedule.resolvedFixedTime) {
+    const [hStr, mStr] = schedule.resolvedFixedTime.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (!isNaN(h) && !isNaN(m)) {
+      const base = new Date();
+      base.setHours(h, m, 0, 0);
+      return formatTime12h(base);
+    }
+  }
+
   const mode: 'fixed' | 'dynamic' =
     schedule.timeMode ?? (schedule.baseZman ? 'dynamic' : 'fixed');
   if (mode === 'fixed' && typeof schedule.fixedTime === 'string' && schedule.fixedTime) {

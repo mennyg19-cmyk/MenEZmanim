@@ -82,6 +82,16 @@ export interface MinyanSchedule {
   limitBefore?: string;
   limitAfter?: string;
 
+  /**
+   * How often a dynamic time recalculates.
+   * - `daily` (default): uses today's zman
+   * - `weekly`: uses the latest zman in the current week (anchor day = refreshAnchorDay)
+   * - `monthly`: uses the latest zman in the current month
+   */
+  refreshMode?: 'daily' | 'weekly' | 'monthly';
+  /** Day of week (0=Sun..6=Sat) that starts the "week" for weekly refresh. Default 0 (Sunday). */
+  refreshAnchorDay?: number;
+
   durationMinutes?: number;
 
   daysActive?: boolean[];

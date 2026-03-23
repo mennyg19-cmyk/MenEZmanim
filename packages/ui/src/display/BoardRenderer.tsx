@@ -5,6 +5,7 @@ import type { DisplayObject, DisplayObjectType, DisplayNameOverrides } from '@zm
 import type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaData, ZmanResult } from '../shared/types';
 import { formatZmanTime, formatEventTime } from '../shared/timeUtils';
 import { resolveObjBackground, type CanvasBgExtras } from '../shared/backgroundUtils';
+import { resolveEventBoxGroups, type EventBoxScheduleEntry } from '../shared/eventBoxSchedule';
 import { FrameRenderer } from './FrameRenderer';
 import { ScrollWrapper, type ScrollConfig } from './ScrollWrapper';
 import { ZmanimTable } from './widgets/ZmanimTable';
@@ -211,9 +212,11 @@ export function renderWidget(
     }
 
     case 'EVENTS_TABLE': {
-      const selectedGroupIds = content.groupIds as string[] | undefined;
-      const filteredMinyans = selectedGroupIds && selectedGroupIds.length > 0
-        ? (minyans || []).filter((m) => selectedGroupIds.includes(m.groupId ?? ''))
+      const ebSchedules = content.eventBoxSchedules as EventBoxScheduleEntry[] | undefined;
+      const staticGroupIds = content.groupIds as string[] | undefined;
+      const resolvedGroupIds = resolveEventBoxGroups(ebSchedules, staticGroupIds, new Date());
+      const filteredMinyans = resolvedGroupIds.length > 0
+        ? (minyans || []).filter((m) => resolvedGroupIds.includes(m.groupId ?? ''))
         : (minyans || []);
       const events = filteredMinyans.map((m) => ({
         name: m.name,
