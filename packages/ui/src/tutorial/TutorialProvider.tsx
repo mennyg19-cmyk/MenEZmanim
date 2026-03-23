@@ -140,7 +140,7 @@ export function TutorialProvider({
 
   const onEvent = useCallback(
     (data: EventData) => {
-      const { type, status, action } = data;
+      const { type, status } = data;
 
       if (type === EVENTS.TARGET_NOT_FOUND) {
         console.warn('Tutorial: target not found', data);
