@@ -1,8 +1,15 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { VISIBILITY_CONDITIONS, type VisibilityCondition, type VisibilityRule } from '@zmanim-app/core';
 import { ColorPicker } from '../shared/ColorPicker';
+import {
+  generateGroupsSampleCsv, generateEventsSampleCsv,
+  parseGroupsCsv, parseEventsCsv,
+  exportGroupsCsv, exportEventsCsv,
+  downloadCsv, readFileAsText,
+  type CsvGroup, type CsvSchedule,
+} from '../shared/csvImportExport';
 
 interface Schedule {
   id: string;
@@ -72,7 +79,7 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [tab, setTab] = useState<'events' | 'table' | 'groups'>('events');
+  const [tab, setTab] = useState<'events' | 'table' | 'groups' | 'import'>('events');
   const [editingGroup, setEditingGroup] = useState<DaveningGroup | null>(null);
   const [bulkAction, setBulkAction] = useState<'copy' | 'move' | null>(null);
   const [bulkTargetGroup, setBulkTargetGroup] = useState('');
@@ -282,6 +289,9 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
         </button>
         <button onClick={() => setTab('groups')} className={tab === 'groups' ? "adm-tabActive" : "adm-tab"}>
           Groups ({groups.length})
+        </button>
+        <button onClick={() => setTab('import')} className={tab === 'import' ? "adm-tabActive" : "adm-tab"}>
+          Import / Export
         </button>
       </div>
 
@@ -767,6 +777,300 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
           </div>
         </div>
       )}
+
+      {/* ─── IMPORT / EXPORT TAB ─── */}
+      {tab === 'import' && (
+        <ImportExportPanel
+          schedules={schedules}
+          groups={groups}
+          onChange={onChange}
+          onGroupsChange={onGroupsChange}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Import / Export panel ─── */
+
+function ImportExportPanel({
+  schedules,
+  groups,
+  onChange,
+  onGroupsChange,
+}: {
+  schedules: Schedule[];
+  groups: DaveningGroup[];
+  onChange: (s: Schedule[]) => void;
+  onGroupsChange?: (g: DaveningGroup[]) => void;
+}) {
+  const [importMode, setImportMode] = useState<'replace' | 'append'>('append');
+  const [groupsPreview, setGroupsPreview] = useState<CsvGroup[] | null>(null);
+  const [eventsPreview, setEventsPreview] = useState<CsvSchedule[] | null>(null);
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
+  const groupsFileRef = useRef<HTMLInputElement>(null);
+  const eventsFileRef = useRef<HTMLInputElement>(null);
+
+  const handleGroupsFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError('');
+    setImportSuccess('');
+    setGroupsPreview(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await readFileAsText(file);
+      const parsed = parseGroupsCsv(text);
+      if (parsed.length === 0) { setImportError('No groups found in the file. Make sure the CSV has headers and data rows.'); return; }
+      setGroupsPreview(parsed);
+    } catch (err: any) {
+      setImportError(`Failed to parse groups file: ${err.message}`);
+    }
+  };
+
+  const handleEventsFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError('');
+    setImportSuccess('');
+    setEventsPreview(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await readFileAsText(file);
+      const parsed = parseEventsCsv(text);
+      if (parsed.length === 0) { setImportError('No events found in the file. Make sure the CSV has headers and data rows.'); return; }
+      setEventsPreview(parsed);
+    } catch (err: any) {
+      setImportError(`Failed to parse events file: ${err.message}`);
+    }
+  };
+
+  const confirmGroupsImport = () => {
+    if (!groupsPreview || !onGroupsChange) return;
+    if (importMode === 'replace') {
+      onGroupsChange(groupsPreview);
+    } else {
+      onGroupsChange([...groups, ...groupsPreview]);
+    }
+    setGroupsPreview(null);
+    setImportSuccess(`Imported ${groupsPreview.length} group(s) successfully.`);
+    if (groupsFileRef.current) groupsFileRef.current.value = '';
+  };
+
+  const confirmEventsImport = () => {
+    if (!eventsPreview) return;
+    if (importMode === 'replace') {
+      onChange(eventsPreview as Schedule[]);
+    } else {
+      const maxSort = schedules.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0);
+      const withSort = eventsPreview.map((ev, i) => ({
+        ...ev,
+        orgId: 'default',
+        sortOrder: (ev.sortOrder ?? 0) + maxSort + 1 + i,
+      }));
+      onChange([...schedules, ...withSort] as Schedule[]);
+    }
+    setEventsPreview(null);
+    setImportSuccess(`Imported ${eventsPreview.length} event(s) successfully.`);
+    if (eventsFileRef.current) eventsFileRef.current.value = '';
+  };
+
+  return (
+    <div style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {importError && (
+        <div style={{ padding: 10, backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#dc2626', fontSize: 13 }}>
+          {importError}
+        </div>
+      )}
+      {importSuccess && (
+        <div style={{ padding: 10, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, color: '#16a34a', fontSize: 13 }}>
+          {importSuccess}
+        </div>
+      )}
+
+      {/* ── Download sample files ── */}
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
+          1. Download sample files
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 10 }}>
+          Download a sample CSV, edit it in Excel / Google Sheets, then upload it below. The sample includes every possible column with example data.
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => downloadCsv(generateGroupsSampleCsv(), 'groups-sample.csv')}
+            className="adm-btnSmallOutline"
+            style={{ padding: '8px 16px', color: 'var(--adm-accent)' }}
+          >
+            Download Groups Sample
+          </button>
+          <button
+            onClick={() => downloadCsv(generateEventsSampleCsv(), 'events-sample.csv')}
+            className="adm-btnSmallOutline"
+            style={{ padding: '8px 16px', color: 'var(--adm-accent)' }}
+          >
+            Download Events Sample
+          </button>
+        </div>
+      </div>
+
+      {/* ── Import mode ── */}
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
+          2. Choose import mode
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['append', 'replace'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setImportMode(m)}
+              className="adm-btnSmallOutline"
+              style={{
+                padding: '8px 16px',
+                backgroundColor: importMode === m ? 'var(--adm-bg-active)' : undefined,
+                borderColor: importMode === m ? 'var(--adm-accent)' : undefined,
+                color: importMode === m ? 'var(--adm-accent)' : undefined,
+                fontWeight: importMode === m ? 700 : 400,
+              }}
+            >
+              {m === 'append' ? 'Add to existing' : 'Replace all'}
+            </button>
+          ))}
+        </div>
+        {importMode === 'replace' && (
+          <div style={{ fontSize: 11, color: '#dc2626', marginTop: 6 }}>
+            Warning: Replace mode will delete all existing data of that type before importing.
+          </div>
+        )}
+      </div>
+
+      {/* ── Upload groups ── */}
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
+          3. Upload Groups CSV
+        </div>
+        <input ref={groupsFileRef} type="file" accept=".csv,.txt" onChange={handleGroupsFile} style={{ fontSize: 13 }} />
+        {groupsPreview && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              Preview: {groupsPreview.length} group(s) found
+            </div>
+            <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--adm-border)', borderRadius: 6 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                    <th style={thStyle}>Name</th>
+                    <th style={thStyle}>Hebrew</th>
+                    <th style={thStyle}>Color</th>
+                    <th style={thStyle}>Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupsPreview.map((g, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={tdStyle}>{g.name}</td>
+                      <td style={tdStyle}>{g.nameHebrew}</td>
+                      <td style={tdStyle}><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', backgroundColor: g.color, verticalAlign: 'middle' }} /> {g.color}</td>
+                      <td style={tdStyle}>{g.active ? 'Yes' : 'No'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button onClick={confirmGroupsImport} className="adm-btnSave" style={{ padding: '8px 16px' }}>
+                Import {groupsPreview.length} Group(s)
+              </button>
+              <button onClick={() => { setGroupsPreview(null); if (groupsFileRef.current) groupsFileRef.current.value = ''; }} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Upload events ── */}
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
+          4. Upload Events CSV
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 6 }}>
+          Make sure to import groups first if your events reference group IDs.
+        </div>
+        <input ref={eventsFileRef} type="file" accept=".csv,.txt" onChange={handleEventsFile} style={{ fontSize: 13 }} />
+        {eventsPreview && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              Preview: {eventsPreview.length} event(s) found
+            </div>
+            <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--adm-border)', borderRadius: 6 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                    <th style={thStyle}>Name</th>
+                    <th style={thStyle}>Type</th>
+                    <th style={thStyle}>Group</th>
+                    <th style={thStyle}>Time</th>
+                    <th style={thStyle}>Days</th>
+                    <th style={thStyle}>Rules</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eventsPreview.map((ev, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={tdStyle}>{ev.isPlaceholder ? `[spacer] ${ev.placeholderLabel ?? ''}` : ev.name}</td>
+                      <td style={tdStyle}>{ev.type}</td>
+                      <td style={tdStyle}>{ev.groupId ?? '—'}</td>
+                      <td style={tdStyle}>
+                        {ev.timeMode === 'dynamic'
+                          ? `${ev.baseZman ?? '?'} ${(ev.offset ?? 0) > 0 ? '+' : ''}${ev.offset ?? 0}m`
+                          : ev.fixedTime ?? ''}
+                      </td>
+                      <td style={tdStyle}>{ev.daysActive?.filter(Boolean).length === 7 ? 'All' : `${ev.daysActive?.filter(Boolean).length ?? 0}/7`}</td>
+                      <td style={tdStyle}>{(ev.visibilityRules ?? []).length > 0 ? `${ev.visibilityRules!.length} rule(s)` : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button onClick={confirmEventsImport} className="adm-btnSave" style={{ padding: '8px 16px' }}>
+                Import {eventsPreview.length} Event(s)
+              </button>
+              <button onClick={() => { setEventsPreview(null); if (eventsFileRef.current) eventsFileRef.current.value = ''; }} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Export current data ── */}
+      <div style={{ borderTop: '1px solid var(--adm-border)', paddingTop: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
+          Export current data
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 10 }}>
+          Download your current groups and events as CSV files.
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => downloadCsv(exportGroupsCsv(groups as CsvGroup[]), `groups-export-${new Date().toISOString().slice(0, 10)}.csv`)}
+            className="adm-btnSmallOutline"
+            style={{ padding: '8px 16px' }}
+            disabled={groups.length === 0}
+          >
+            Export Groups ({groups.length})
+          </button>
+          <button
+            onClick={() => downloadCsv(exportEventsCsv(schedules as CsvSchedule[]), `events-export-${new Date().toISOString().slice(0, 10)}.csv`)}
+            className="adm-btnSmallOutline"
+            style={{ padding: '8px 16px' }}
+            disabled={schedules.length === 0}
+          >
+            Export Events ({schedules.length})
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
