@@ -320,6 +320,17 @@ export function WysiwygCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasWidth, canvasHeight]);
 
+  useEffect(() => {
+    const onTab = (e: Event) => {
+      const detail = (e as CustomEvent<'general' | 'appearance' | 'content'>).detail;
+      if (detail !== 'general' && detail !== 'appearance' && detail !== 'content') return;
+      setPopupTab(detail);
+      setRightPanelOpen(true);
+    };
+    window.addEventListener('zmanim-tutorial-editor-tab', onTab);
+    return () => window.removeEventListener('zmanim-tutorial-editor-tab', onTab);
+  }, []);
+
   /* ── Theme application ──────────────────────────────── */
   const applyTheme = useCallback((theme: ColorTheme) => {
     setActiveThemeId(theme.id);
@@ -715,11 +726,12 @@ export function WysiwygCanvas({
   /* ── Render ─────────────────────────────────────────── */
   return (
     <ColorProvider themeColors={activeThemeColors}>
-    <div style={{ display: 'flex', width: '100%', height: '100%', direction: 'ltr' }}>
+    <div data-tutorial="editor-shell" style={{ display: 'flex', width: '100%', height: '100%', direction: 'ltr' }}>
 
     {/* Left Panel */}
     <div
       className="ed-panel"
+      data-tutorial="editor-left-panel"
       style={{
         width: rightPanelOpen ? PANEL_WIDTH : 36,
         minWidth: rightPanelOpen ? PANEL_WIDTH : 36,
@@ -820,6 +832,7 @@ export function WysiwygCanvas({
       <FrameRenderer frameId={style.backgroundFrameId} thickness={style.backgroundFrameThickness ?? 1}>
       <div
         ref={canvasRef}
+        data-tutorial="editor-canvas"
         style={{
           position: 'absolute', left: offsetX, top: offsetY,
           width: canvasWidth, height: canvasHeight,
@@ -1014,7 +1027,7 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
   const [frameOpen, setFrameOpen] = React.useState(false);
   return (
     <>
-      <div>
+      <div data-tutorial="editor-canvas-bg">
         <div className="ed-subLabel">Canvas background</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
           {([
@@ -1158,8 +1171,13 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
   const isPreset = RESOLUTION_PRESETS.some((p) => `${p.w}x${p.h}` === currentRes);
 
   return (
-    <div className="ed-section">
-      <button onClick={() => setSettingsOpen(!settingsOpen)} className="ed-settingsToggle">
+    <div className="ed-section" data-tutorial="editor-settings">
+      <button
+        type="button"
+        data-tutorial="editor-settings-toggle"
+        onClick={() => setSettingsOpen(!settingsOpen)}
+        className="ed-settingsToggle"
+      >
         Settings
         <span style={{ fontSize: 10 }}>{settingsOpen ? '\u25BE' : '\u25B8'}</span>
       </button>
@@ -1223,7 +1241,13 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
           <CanvasBackgroundSection style={style} onStyleChange={onStyleChange} editorSettings={editorSettings} />
           <div>
             <div className="ed-subLabel">Theme</div>
-            <button onClick={() => setThemePanelOpen(!themePanelOpen)} className="ed-btnSmall" style={{ width: '100%', justifyContent: 'center', backgroundColor: themePanelOpen ? '#6366f1' : undefined, color: themePanelOpen ? '#fff' : undefined }}>
+            <button
+              type="button"
+              data-tutorial="editor-theme-btn"
+              onClick={() => setThemePanelOpen(!themePanelOpen)}
+              className="ed-btnSmall"
+              style={{ width: '100%', justifyContent: 'center', backgroundColor: themePanelOpen ? '#6366f1' : undefined, color: themePanelOpen ? '#fff' : undefined }}
+            >
               {themePanelOpen ? 'Close Themes' : 'Open Themes'}
             </button>
           </div>
@@ -1265,12 +1289,12 @@ function ObjectsList({ objects, selectedId, popupId, allSelected, setSelectedId,
     <div style={{ padding: '6px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 12px 6px' }}>
         <span className="ed-sectionLabelSm">Objects</span>
-        <button onClick={() => setAddMenuOpen(true)} className="ed-addBtn">+ Add</button>
+        <button type="button" data-tutorial="editor-add-widget" onClick={() => setAddMenuOpen(true)} className="ed-addBtn">+ Add</button>
       </div>
       {objects.length === 0 ? (
         <div className="ed-smEmpty">No objects yet.</div>
       ) : (
-        objects.map((obj) => {
+        objects.map((obj, idx) => {
           const isSel = obj.id === selectedId || allSelected.has(obj.id);
           return (
             <div
@@ -1292,6 +1316,8 @@ function ObjectsList({ objects, selectedId, popupId, allSelected, setSelectedId,
               {!obj.visible && <span style={{ fontSize: 10, color: 'var(--ed-text-faint)', flexShrink: 0 }}>hidden</span>}
               <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                 <button
+                  type="button"
+                  data-tutorial={idx === 0 ? 'editor-object-edit' : undefined}
                   title="Edit"
                   onClick={() => { setSelectedId(obj.id); setSelectedIds(new Set()); setPopupId(obj.id); setPopupTab('general'); }}
                   style={{ ...OBJ_ACTION_STYLE, color: '#93c5fd' }}

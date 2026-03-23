@@ -1384,3 +1384,242 @@
   font-size: 26px;
   line-height: 1;
 }
+
+/* ── Interactive tutorial (react-joyride + chapter picker) ── */
+
+.tut-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 23000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--adm-border);
+  background: linear-gradient(135deg, var(--adm-accent), #6366f1);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.tut-fab:hover {
+  filter: brightness(1.08);
+}
+
+.tut-fabIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.tut-fabLabel {
+  white-space: nowrap;
+}
+
+.tut-helpLink {
+  border: 1px solid var(--adm-border);
+  background: var(--adm-bg-muted);
+  color: var(--adm-text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tut-helpLink:hover {
+  background: var(--adm-bg-hover);
+}
+
+.tut-pickerBody {
+  padding: 0 20px 20px;
+}
+
+.tut-pickerIntro {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--adm-text-muted);
+  line-height: 1.5;
+}
+
+.tut-chapterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.tut-chapterCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-bg-muted);
+  color: var(--adm-text);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.tut-chapterCard:hover {
+  border-color: var(--adm-accent);
+  transform: translateY(-1px);
+}
+
+.tut-chapterIcon {
+  font-size: 22px;
+}
+
+.tut-chapterTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tut-chapterDesc {
+  font-size: 12px;
+  color: var(--adm-text-muted);
+  line-height: 1.4;
+}
+
+.tut-chapterDone {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--adm-success);
+}
+
+.tut-tooltipCard {
+  position: relative;
+  max-width: 420px;
+  padding: 16px 18px 14px;
+  border-radius: 12px;
+  background: var(--adm-bg, #fff);
+  color: var(--adm-text, #0f172a);
+  border: 1px solid var(--adm-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.tut-tooltipMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--adm-text-muted);
+}
+
+.tut-tooltipChapterIcon {
+  font-size: 16px;
+}
+
+.tut-tooltipTitle {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.tut-tooltipBody {
+  margin-bottom: 10px;
+}
+
+.tut-tooltipText {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--adm-text);
+}
+
+.tut-tooltipText strong {
+  color: var(--adm-accent);
+}
+
+.tut-tooltipProgress {
+  font-size: 12px;
+  color: var(--adm-text-muted);
+  margin-bottom: 12px;
+}
+
+.tut-tooltipFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tut-tooltipFooterMid {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.tut-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.tut-btnPrimary {
+  background: var(--adm-accent);
+  color: #fff;
+}
+
+.tut-btnGhost {
+  background: transparent;
+  color: var(--adm-text-muted);
+  border-color: var(--adm-border);
+}
+
+.tut-btnSkip {
+  background: transparent;
+  color: var(--adm-text-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  border: none;
+  padding: 6px 8px;
+}
+
+.tut-btnHidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.tut-tooltipClose {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--adm-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tut-tooltipClose:hover {
+  background: var(--adm-bg-hover);
+  color: var(--adm-text);
+}

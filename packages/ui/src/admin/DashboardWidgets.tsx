@@ -263,7 +263,7 @@ export function QuickActionsPanel({
   ];
 
   return (
-    <div className="adm-card">
+    <div className="adm-card" data-tutorial="dash-quick-actions">
       <h3 className="adm-sectionTitle adm-sectionTitleTight">Quick Actions</h3>
       <div className="adm-quickCardGrid">
         {showEditorLink && (
@@ -468,7 +468,7 @@ export function ScreenPreviewWidget({
   const previewUrl = `/show/${orgSlug}/${screenIndex >= 0 ? screenIndex + 1 : 1}`;
 
   return (
-    <div className="adm-card adm-cardStretch">
+    <div className="adm-card adm-cardStretch" data-tutorial="dash-live-preview">
       <h3 className="adm-sectionTitle adm-sectionTitleLoose">Live Preview</h3>
 
       {/* Selectors */}

@@ -56,6 +56,8 @@ export interface WeekExportFetcher {
   fetchCalendar: (date: Date) => Promise<{ parsha?: { upcoming?: string; upcomingHebrew?: string; parsha?: string; parshaHebrew?: string } }>;
 }
 
+export type ScheduleEditorTab = 'events' | 'table' | 'groups' | 'import';
+
 interface ScheduleEditorProps {
   schedules: Schedule[];
   onChange: (schedules: Schedule[]) => void;
@@ -63,6 +65,9 @@ interface ScheduleEditorProps {
   onGroupsChange?: (groups: DaveningGroup[]) => void;
   /** Optional: enables multi-week export when provided */
   weekExportFetcher?: WeekExportFetcher;
+  /** Controlled tab (e.g. tutorial navigation). When omitted, tab is internal. */
+  activeTab?: ScheduleEditorTab;
+  onActiveTabChange?: (tab: ScheduleEditorTab) => void;
 }
 
 const TYPES = ['Shacharit', 'Mincha', 'Maariv', 'Other'];
@@ -90,11 +95,27 @@ const TYPE_COLORS: Record<string, string> = {
 
 type FilterMode = 'all' | 'ungrouped' | string;
 
-export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, weekExportFetcher }: ScheduleEditorProps) {
+export function ScheduleEditor({
+  schedules,
+  onChange,
+  groups,
+  onGroupsChange,
+  weekExportFetcher,
+  activeTab: activeTabProp,
+  onActiveTabChange,
+}: ScheduleEditorProps) {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [tab, setTab] = useState<'events' | 'table' | 'groups' | 'import'>('events');
+  const [internalTab, setInternalTab] = useState<ScheduleEditorTab>('events');
+  const tab = activeTabProp ?? internalTab;
+  const setTab = useCallback(
+    (t: ScheduleEditorTab) => {
+      onActiveTabChange?.(t);
+      if (activeTabProp === undefined) setInternalTab(t);
+    },
+    [activeTabProp, onActiveTabChange],
+  );
   const [editingGroup, setEditingGroup] = useState<DaveningGroup | null>(null);
   const [bulkAction, setBulkAction] = useState<'copy' | 'move' | null>(null);
   const [bulkTargetGroup, setBulkTargetGroup] = useState('');
@@ -295,17 +316,27 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, we
   return (
     <div className="adm-schedRoot">
       {/* Tab bar */}
-      <div className="adm-tabBar">
-        <button onClick={() => setTab('events')} className={tab === 'events' ? "adm-tabActive" : "adm-tab"}>
+      <div className="adm-tabBar" data-tutorial="sched-tab-bar">
+        <button
+          type="button"
+          data-tutorial="sched-tab-events"
+          onClick={() => setTab('events')}
+          className={tab === 'events' ? "adm-tabActive" : "adm-tab"}
+        >
           Davening Times
         </button>
-        <button onClick={() => setTab('table')} className={tab === 'table' ? "adm-tabActive" : "adm-tab"}>
+        <button type="button" onClick={() => setTab('table')} className={tab === 'table' ? "adm-tabActive" : "adm-tab"}>
           All Events ({schedules.length})
         </button>
-        <button onClick={() => setTab('groups')} className={tab === 'groups' ? "adm-tabActive" : "adm-tab"}>
+        <button
+          type="button"
+          data-tutorial="sched-tab-groups"
+          onClick={() => setTab('groups')}
+          className={tab === 'groups' ? "adm-tabActive" : "adm-tab"}
+        >
           Groups ({groups.length})
         </button>
-        <button onClick={() => setTab('import')} className={tab === 'import' ? "adm-tabActive" : "adm-tab"}>
+        <button type="button" onClick={() => setTab('import')} className={tab === 'import' ? "adm-tabActive" : "adm-tab"}>
           Import / Export
         </button>
       </div>
@@ -389,7 +420,15 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, we
               )}
             </div>
           ))}
-          <button onClick={addGroup} className="adm-btnSmallOutline" style={{ width: '100%', marginTop: 8, color: 'var(--adm-accent)' }}>+ Add Group</button>
+          <button
+            type="button"
+            data-tutorial="sched-add-group"
+            onClick={addGroup}
+            className="adm-btnSmallOutline"
+            style={{ width: '100%', marginTop: 8, color: 'var(--adm-accent)' }}
+          >
+            + Add Group
+          </button>
         </div>
       )}
 
@@ -555,6 +594,8 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, we
               {filteredEvents.map((ev, idx) => {
                 const isSel = ev.id === selectedEventId;
                 const isChecked = selectedIds.has(ev.id);
+                const firstRealIdx = filteredEvents.findIndex((e) => !e.isPlaceholder);
+                const isFirstReal = idx === firstRealIdx && !ev.isPlaceholder;
                 if (ev.isPlaceholder) {
                   return (
                     <div
@@ -574,6 +615,7 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, we
                 return (
                   <div
                     key={ev.id}
+                    data-tutorial={isFirstReal ? 'sched-first-event-row' : undefined}
                     onClick={() => setSelectedEventId(ev.id)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', marginBottom: 2,
@@ -611,14 +653,24 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange, we
             </div>
 
             {/* Add buttons */}
-            <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
-              <button onClick={() => addEvent(false)} className="adm-btnSmallOutline" style={{ flex: 1, color: 'var(--adm-accent)' }}>+ Event</button>
-              <button onClick={() => addEvent(true)} className="adm-btnSmallOutline" style={{ flex: 1 }}>+ Spacer</button>
+            <div style={{ display: 'flex', gap: 4, marginTop: 8 }} data-tutorial="sched-add-event-wrap">
+              <button
+                type="button"
+                data-tutorial="sched-add-event"
+                onClick={() => addEvent(false)}
+                className="adm-btnSmallOutline"
+                style={{ flex: 1, color: 'var(--adm-accent)' }}
+              >
+                + Event
+              </button>
+              <button type="button" onClick={() => addEvent(true)} className="adm-btnSmallOutline" style={{ flex: 1 }}>
+                + Spacer
+              </button>
             </div>
           </div>
 
           {/* Right: Detail panel */}
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
+          <div data-tutorial="sched-event-detail" style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
             {!selectedEvent ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', fontSize: 14 }}>
                 Select an event to edit

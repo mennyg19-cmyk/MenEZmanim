@@ -67,7 +67,7 @@ export function EditorPropertyPanel({
   previewAnnouncements,
 }: EditorPropertyPanelProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+    <div data-tutorial="prop-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Header */}
       <div className="ed-panelHeaderBg">
         <div style={{ minWidth: 0 }}>
@@ -82,6 +82,10 @@ export function EditorPropertyPanel({
         {(['general', 'appearance', 'content'] as const).map((tab) => (
           <button
             key={tab}
+            type="button"
+            data-tutorial={
+              tab === 'general' ? 'prop-tab-general' : tab === 'appearance' ? 'prop-tab-appearance' : 'prop-tab-content'
+            }
             onClick={() => setPopupTab(tab)}
             className={popupTab === tab ? "ed-tabActive" : "ed-tab"}
           >

@@ -281,14 +281,18 @@ function ScheduleEntryEditor({
     : entry.rules.map(ruleSummary).join(' + ');
 
   return (
-    <div style={{
-      border: '1px solid var(--adm-border)',
-      borderRadius: 8,
-      overflow: 'hidden',
-      background: isDefault ? 'var(--adm-bg)' : 'var(--adm-bg-hover)',
-    }}>
+    <div
+      data-tutorial={isFirst ? 'screen-schedule-row' : undefined}
+      style={{
+        border: '1px solid var(--adm-border)',
+        borderRadius: 8,
+        overflow: 'hidden',
+        background: isDefault ? 'var(--adm-bg)' : 'var(--adm-bg-hover)',
+      }}
+    >
       {/* Collapsed header */}
       <div
+        data-tutorial={isFirst ? 'screen-schedule-toggle' : undefined}
         onClick={() => setExpanded(!expanded)}
         style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
@@ -332,7 +336,7 @@ function ScheduleEntryEditor({
                 ))}
               </select>
             </div>
-            <div>
+            <div data-tutorial={isFirst ? 'screen-breakpoint' : undefined}>
               <label className="adm-labelSm">Applies to</label>
               <select className="adm-select" value={entry.breakpoint}
                 onChange={(e) => onChange({ ...entry, breakpoint: e.target.value as ScreenStyleSchedule['breakpoint'] })}>
@@ -559,11 +563,17 @@ function StyleListPanel({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div data-tutorial="styles-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div className="adm-pageHeader" style={{ padding: '12px 16px', marginBottom: 0, borderBottom: '1px solid var(--adm-border)', flexShrink: 0 }}>
         <h2 className="adm-pageTitle" style={{ fontSize: 17, margin: 0 }}>Styles</h2>
         {onStyleCreate && (
-          <button className="adm-btnPrimary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={() => setCreating(true)}>
+          <button
+            type="button"
+            data-tutorial="styles-new"
+            className="adm-btnPrimary"
+            style={{ padding: '6px 14px', fontSize: 13 }}
+            onClick={() => setCreating(true)}
+          >
             + New Style
           </button>
         )}
@@ -592,7 +602,7 @@ function StyleListPanel({
           </div>
         )}
 
-        <div className="adm-cardGrid">
+        <div className="adm-cardGrid" data-tutorial="styles-grid">
         {sorted.map((style) => {
           const isExpanded = expandedId === style.id;
           const cw = style.canvasWidth || 1920;
@@ -854,11 +864,11 @@ export function ScreenManager({
       )}
 
       {/* ── Right: Screens panel ── */}
-      <div className="adm-panelSplitHalf" style={{ overflow: 'auto', minWidth: 0, background: 'var(--adm-bg)' }}>
+      <div data-tutorial="screens-panel" className="adm-panelSplitHalf" style={{ overflow: 'auto', minWidth: 0, background: 'var(--adm-bg)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
           <div className="adm-pageHeader" style={{ padding: '12px 16px', flexShrink: 0, borderBottom: '1px solid var(--adm-border)' }}>
             <h2 className="adm-pageTitle" style={{ fontSize: 17, margin: 0 }}>Screens</h2>
-            <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '6px 14px', fontSize: 13 }}>
+            <button type="button" data-tutorial="screens-add" onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '6px 14px', fontSize: 13 }}>
               + Add Screen
             </button>
           </div>
@@ -895,7 +905,7 @@ export function ScreenManager({
               </div>
 
               {/* Schedule section */}
-              <div style={{ marginBottom: 16 }}>
+              <div data-tutorial="screen-schedule" style={{ marginBottom: 16 }}>
                 <h4 className="adm-sectionTitle" style={{ margin: '0 0 4px' }}>Style schedule</h4>
                 <p style={{ fontSize: 13, color: 'var(--adm-text-muted)', margin: '0 0 12px' }}>
                   Entries are checked top to bottom. The first entry whose conditions match today is used.
@@ -931,6 +941,7 @@ export function ScreenManager({
 
                 <button
                   type="button"
+                  data-tutorial="screen-add-schedule"
                   className="adm-btnPrimary"
                   style={{ marginTop: 10, padding: '6px 14px', fontSize: 13 }}
                   onClick={() => {

@@ -85,6 +85,20 @@ export { ScreenManager } from './admin/ScreenManager';
 export { t, getDirection, getLocale } from './i18n/i18n';
 export type { Language } from './i18n/i18n';
 
+// Interactive tutorial (admin)
+export {
+  TutorialProvider,
+  useTutorial,
+  useTutorialOptional,
+  TutorialLauncher,
+  TutorialHelpLink,
+  type TutorialContextValue,
+  type AdminSection,
+  type ChapterId,
+  type EditorPropertyTab,
+  type ScheduleEditorTab,
+} from './tutorial';
+
 // Mobile components
 export { MobileApp } from './mobile/MobileApp';
 export { MobileDatePicker } from './mobile/MobileDatePicker';

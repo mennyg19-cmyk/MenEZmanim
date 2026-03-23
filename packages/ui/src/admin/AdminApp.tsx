@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useBreakpoint } from '../shared/useBreakpoint';
 import type { DisplayStyle } from '@zmanim-app/core';
-import { ScheduleEditor, type WeekExportFetcher } from './ScheduleEditor';
+import { ScheduleEditor, type WeekExportFetcher, type ScheduleEditorTab } from './ScheduleEditor';
+import { TutorialProvider, TutorialLauncher, TutorialHelpLink } from '../tutorial';
 import { AnnouncementEditor } from './AnnouncementEditor';
 import { MemorialEditor } from './MemorialEditor';
 import { SponsorManager } from './SponsorManager';
@@ -86,6 +87,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   const [importResult, setImportResult] = useState<any>(null);
   const [screens, setScreens] = useState<any[]>([]);
   const [styles, setStyles] = useState<DisplayStyle[]>([]);
+  const [scheduleTab, setScheduleTab] = useState<ScheduleEditorTab>('events');
   const [previewCalendar, setPreviewCalendar] = useState<any>(null);
   const [previewZmanim, setPreviewZmanim] = useState<any[]>([]);
   const [previewSchedules, setPreviewSchedules] = useState<any[]>([]);
@@ -282,8 +284,11 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
       case 'dashboard':
         return (
           <div>
-            <h2 className="adm-dashTitle">Dashboard</h2>
-            <div className="adm-dashGrid adm-dashGridMb">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+              <h2 className="adm-dashTitle" style={{ margin: 0 }}>Dashboard</h2>
+              <TutorialHelpLink />
+            </div>
+            <div className="adm-dashGrid adm-dashGridMb" data-tutorial="dash-stats">
               {([
                 { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', section: 'schedules' as Section },
                 { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', section: 'announcements' as Section },
@@ -444,7 +449,17 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
       case 'members':
         return <MemberManager orgId={orgId} />;
       case 'schedules':
-        return <ScheduleEditor schedules={schedules} onChange={handleSchedulesChange} groups={groups} onGroupsChange={handleGroupsChange} weekExportFetcher={weekExportFetcher} />;
+        return (
+          <ScheduleEditor
+            schedules={schedules}
+            onChange={handleSchedulesChange}
+            groups={groups}
+            onGroupsChange={handleGroupsChange}
+            weekExportFetcher={weekExportFetcher}
+            activeTab={scheduleTab}
+            onActiveTabChange={setScheduleTab}
+          />
+        );
       case 'announcements':
         return <AnnouncementEditor announcements={announcements} onChange={handleAnnouncementsChange} />;
       case 'yahrzeit':
@@ -474,7 +489,12 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   const isMobile = bp === 'mobile';
 
   return (
-    <div className="adm-page adm-appRoot">
+    <TutorialProvider
+      setActiveSection={(s) => setActiveSection(s as Section)}
+      scheduleTab={scheduleTab}
+      setScheduleTab={setScheduleTab}
+    >
+    <div className="adm-page adm-appRoot" data-tutorial="adm-root">
       {isMobile && mobileMenuOpen && (
         <button
           type="button"
@@ -506,7 +526,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
           </button>
         </div>
 
-        <nav className="adm-sidebarNav">
+        <nav className="adm-sidebarNav" data-tutorial="sidebar-nav">
           {(grouped['_top'] ?? []).map((item) => (
             <NavButton
               key={item.key}
@@ -540,7 +560,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
           ))}
         </nav>
 
-        <div className="adm-sidebarFooter">
+        <div className="adm-sidebarFooter" data-tutorial="sidebar-footer">
           <button
             type="button"
             onClick={toggleTheme}
@@ -607,7 +627,9 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
           </div>
         </main>
       </div>
+      <TutorialLauncher />
     </div>
+    </TutorialProvider>
   );
 }
 

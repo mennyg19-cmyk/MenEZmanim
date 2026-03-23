@@ -59,10 +59,10 @@ export function StyleManager({
   };
 
   return (
-    <div className="ed-smContainer">
+    <div className="ed-smContainer" data-tutorial="editor-style-manager">
       <div className="ed-panelHeader">
         <span style={{ fontSize: 13, fontWeight: 600 }}>Styles</span>
-        <button onClick={() => setIsCreating(true)} className="ed-btnPrimary">+ New</button>
+        <button type="button" data-tutorial="editor-style-new" onClick={() => setIsCreating(true)} className="ed-btnPrimary">+ New</button>
       </div>
 
       {isCreating && (

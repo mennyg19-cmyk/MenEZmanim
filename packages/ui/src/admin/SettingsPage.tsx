@@ -62,7 +62,7 @@ export function SettingsPage({
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
         {/* Location — 25% */}
-        <div className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
+        <div data-tutorial="settings-location" className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
           <div className="adm-sectionHeader">
             <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Location</h3>
           </div>
@@ -70,7 +70,7 @@ export function SettingsPage({
         </div>
 
         {/* Language & Kiosk — 25% */}
-        <div className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
+        <div data-tutorial="settings-display-prefs" className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
           <div className="adm-sectionHeader">
             <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Language &amp; Kiosk</h3>
           </div>
@@ -147,7 +147,7 @@ export function SettingsPage({
         </div>
 
         {/* Display Names — 50% */}
-        <div className="adm-card" style={{ flex: '1 1 50%', minWidth: 0, overflow: 'hidden' }}>
+        <div data-tutorial="settings-display-names" className="adm-card" style={{ flex: '1 1 50%', minWidth: 0, overflow: 'hidden' }}>
           <div className="adm-sectionHeader">
             <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Display Names</h3>
           </div>
