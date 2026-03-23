@@ -45,23 +45,14 @@ interface PreviewScheduleItem {
   placeholderLabel?: string;
 }
 
-interface ScreenInfo {
-  id: string;
-  name?: string;
-  styleId?: string;
-}
-
 interface StyleInfo {
   id: string;
   name: string;
 }
 
 interface EditorSettingsProps {
-  screens: ScreenInfo[];
   styles: StyleInfo[];
-  activeScreenId: string | null;
   activeStyleId: string | null;
-  onScreenChange: (id: string | null) => void;
   onStyleSelect: (id: string | null) => void;
   onStyleCreate: (name: string) => void;
   onStyleDelete: (id: string) => void;
@@ -86,8 +77,6 @@ interface WysiwygCanvasProps {
   zmanim?: any[];
   minyans?: any[];
   editorSettings?: EditorSettingsProps;
-  canvasWidth?: number;
-  canvasHeight?: number;
   snapToGrid?: boolean;
   gridSize?: number;
 }
@@ -240,11 +229,11 @@ export function WysiwygCanvas({
   zmanim,
   minyans,
   editorSettings,
-  canvasWidth = 1920,
-  canvasHeight = 1080,
   snapToGrid = true,
   gridSize = 10,
 }: WysiwygCanvasProps) {
+  const canvasWidth = style.canvasWidth ?? 1920;
+  const canvasHeight = style.canvasHeight ?? 1080;
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
@@ -1133,6 +1122,13 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
   );
 }
 
+const RESOLUTION_PRESETS = [
+  { label: 'FHD (1920×1080)', w: 1920, h: 1080 },
+  { label: '4K (3840×2160)', w: 3840, h: 2160 },
+  { label: 'HD (1280×720)', w: 1280, h: 720 },
+  { label: 'Portrait (1080×1920)', w: 1080, h: 1920 },
+];
+
 function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, setSettingsOpen, themePanelOpen, setThemePanelOpen }: {
   editorSettings: EditorSettingsProps;
   style: DisplayStyle;
@@ -1142,6 +1138,9 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
   themePanelOpen: boolean;
   setThemePanelOpen: (v: boolean) => void;
 }) {
+  const currentRes = `${style.canvasWidth ?? 1920}x${style.canvasHeight ?? 1080}`;
+  const isPreset = RESOLUTION_PRESETS.some((p) => `${p.w}x${p.h}` === currentRes);
+
   return (
     <div className="ed-section">
       <button onClick={() => setSettingsOpen(!settingsOpen)} className="ed-settingsToggle">
@@ -1150,13 +1149,6 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
       </button>
       {settingsOpen && (
         <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div>
-            <div className="ed-subLabel">Screen</div>
-            <select value={editorSettings.activeScreenId ?? ''} onChange={(e) => editorSettings.onScreenChange(e.target.value || null)} className="ed-select">
-              {editorSettings.screens.length === 0 && <option value="">No screens</option>}
-              {editorSettings.screens.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Screen ${i + 1}`}</option>)}
-            </select>
-          </div>
           <div>
             <div className="ed-subLabel">Style</div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -1167,6 +1159,45 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
               {editorSettings.styles.length > 1 && (
                 <button onClick={() => editorSettings.onStyleDelete(editorSettings.activeStyleId!)} className="ed-btnDanger" title="Delete Style">&times;</button>
               )}
+            </div>
+          </div>
+          <div>
+            <div className="ed-subLabel">Canvas Resolution</div>
+            <select
+              className="ed-select"
+              value={isPreset ? currentRes : '_custom'}
+              onChange={(e) => {
+                const preset = RESOLUTION_PRESETS.find((p) => `${p.w}x${p.h}` === e.target.value);
+                if (preset) onStyleChange({ ...style, canvasWidth: preset.w, canvasHeight: preset.h });
+              }}
+            >
+              {RESOLUTION_PRESETS.map((p) => (
+                <option key={`${p.w}x${p.h}`} value={`${p.w}x${p.h}`}>{p.label}</option>
+              ))}
+              {!isPreset && (
+                <option value="_custom">{style.canvasWidth}×{style.canvasHeight} (custom)</option>
+              )}
+            </select>
+            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+              <input
+                className="ed-input"
+                type="number"
+                min={320}
+                max={7680}
+                style={{ flex: 1, fontSize: 11, padding: '3px 6px' }}
+                value={style.canvasWidth ?? 1920}
+                onChange={(e) => onStyleChange({ ...style, canvasWidth: Math.max(320, +e.target.value || 1920) })}
+              />
+              <span style={{ fontSize: 11, color: 'var(--ed-text-dim)', alignSelf: 'center' }}>×</span>
+              <input
+                className="ed-input"
+                type="number"
+                min={240}
+                max={4320}
+                style={{ flex: 1, fontSize: 11, padding: '3px 6px' }}
+                value={style.canvasHeight ?? 1080}
+                onChange={(e) => onStyleChange({ ...style, canvasHeight: Math.max(240, +e.target.value || 1080) })}
+              />
             </div>
           </div>
           <CanvasBackgroundSection style={style} onStyleChange={onStyleChange} editorSettings={editorSettings} />

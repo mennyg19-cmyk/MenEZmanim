@@ -92,12 +92,10 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   const [previewSchedules, setPreviewSchedules] = useState<any[]>([]);
 
   // WYSIWYG editor state
-  const [editorScreenId, setEditorScreenId] = useState<string | null>(null);
   const [editorStyleId, setEditorStyleId] = useState<string | null>(null);
   const [customThemes, setCustomThemes] = useState<ColorTheme[]>([]);
   const [bgUploading, setBgUploading] = useState(false);
 
-  const activeEditorScreen = screens.find((s) => s.id === editorScreenId) ?? null;
   const activeEditorStyle = styles.find((s) => s.id === editorStyleId) ?? null;
 
   const handleSaveCustomTheme = useCallback((theme: ColorTheme) => {
@@ -137,13 +135,6 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
         }
         if (loadedScreens) {
           setScreens(loadedScreens);
-          if (loadedScreens.length > 0) {
-            setEditorScreenId(loadedScreens[0].id);
-            const firstScreenStyleId = loadedScreens[0].styleId;
-            if (firstScreenStyleId && loadedStyles?.find((s: any) => s.id === firstScreenStyleId)) {
-              setEditorStyleId(firstScreenStyleId);
-            }
-          }
         }
       }),
     ]).catch(console.error);
@@ -318,9 +309,8 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                 schedules={previewSchedules}
                 media={media}
                 displayNames={displayNames}
-                onEditStyle={(styleId, screenId) => {
+                onEditStyle={(styleId) => {
                   setEditorStyleId(styleId);
-                  setEditorScreenId(screenId);
                   setActiveSection('editor');
                 }}
               />
@@ -347,28 +337,9 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                   memorials={memorials}
                   media={media}
                   editorSettings={{
-                    screens,
                     styles,
-                    activeScreenId: editorScreenId,
                     activeStyleId: editorStyleId,
-                    onScreenChange: (screenId) => {
-                      setEditorScreenId(screenId);
-                      const screen = screens.find((s) => s.id === screenId);
-                      if (screen?.styleId) {
-                        const matchingStyle = styles.find((s) => s.id === screen.styleId);
-                        if (matchingStyle) setEditorStyleId(matchingStyle.id);
-                      }
-                    },
-                    onStyleSelect: (styleId) => {
-                      setEditorStyleId(styleId);
-                      if (activeEditorScreen && styleId) {
-                        const updatedScreens = screens.map((s) =>
-                          s.id === activeEditorScreen.id ? { ...s, styleId } : s
-                        );
-                        setScreens(updatedScreens);
-                        handleScreensChange(updatedScreens);
-                      }
-                    },
+                    onStyleSelect: (styleId) => setEditorStyleId(styleId),
                     onStyleCreate: handleStyleCreate,
                     onStyleDelete: handleStyleDelete,
                     onBgUpload: async (file: File) => {
@@ -394,7 +365,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                       }
                     },
                     bgUploading,
-                    previewUrl: `/show/${orgId}/${activeEditorScreen ? screens.indexOf(activeEditorScreen) + 1 : 1}`,
+                    previewUrl: `/show/${orgId}/${screens.length > 0 ? 1 : 1}`,
                   }}
                   snapToGrid
                   gridSize={10}

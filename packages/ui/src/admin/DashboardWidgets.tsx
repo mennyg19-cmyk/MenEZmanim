@@ -430,7 +430,7 @@ export interface ScreenPreviewProps {
   schedules: any[];
   media: MediaData[];
   displayNames: DisplayNameOverrides;
-  onEditStyle: (styleId: string, screenId: string) => void;
+  onEditStyle: (styleId: string) => void;
 }
 
 const BP_OPTIONS: { value: DisplayBreakpoint; label: string }[] = [
@@ -598,7 +598,7 @@ export function ScreenPreviewWidget({
             style={{ flex: 1, padding: '8px 14px', fontSize: 13 }}
             onClick={() => {
               if (selectedScreen && activeStyle) {
-                onEditStyle(activeStyle.id, selectedScreen.id);
+                onEditStyle(activeStyle.id);
               }
             }}
           >
