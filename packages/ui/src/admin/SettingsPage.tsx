@@ -60,29 +60,26 @@ export function SettingsPage({
         Location, display labels, and default preferences for this organization.
       </p>
 
-      <div className="adm-settingsGrid">
-        <div className="adm-card">
+      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+        {/* Location — 25% */}
+        <div className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
           <div className="adm-sectionHeader">
-            <h3 className="adm-sectionTitle">Location &amp; zmanim</h3>
+            <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Location</h3>
           </div>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--adm-text-muted)' }}>
-            מיקום — Used for zmanim calculations (coordinates, timezone, Israel flag, candle lighting).
-          </p>
-          <LocationSetup embedded location={location} onChange={onLocationChange} />
+          <LocationSetup embedded compact location={location} onChange={onLocationChange} />
         </div>
 
-        <div className="adm-card">
+        {/* Language & Kiosk — 25% */}
+        <div className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
           <div className="adm-sectionHeader">
-            <h3 className="adm-sectionTitle">Language &amp; kiosk</h3>
+            <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Language &amp; Kiosk</h3>
           </div>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--adm-text-muted)' }}>
-            Default language for the admin app context; kiosk options for future dedicated display hardware.
-          </p>
 
           <div className="adm-fieldGroup">
-            <label className="adm-label">Default Language / שפה</label>
+            <label className="adm-label" style={{ fontSize: 12 }}>Default Language / שפה</label>
             <select
               className="adm-inputLg"
+              style={{ fontSize: 13 }}
               value={form.defaultLanguage ?? 'Hebrew'}
               onChange={(e) => updatePref('defaultLanguage', e.target.value)}
             >
@@ -94,12 +91,12 @@ export function SettingsPage({
             </select>
           </div>
 
-          <div className="adm-formPanel" style={{ marginBottom: 16 }}>
-            <label className="adm-label" style={{ marginBottom: 8 }}>
-              Kiosk mode options
+          <div className="adm-formPanel" style={{ marginBottom: 12 }}>
+            <label className="adm-label" style={{ marginBottom: 6, fontSize: 12 }}>
+              Kiosk mode
             </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <input
                   type="checkbox"
                   checked={!!form.kioskMode}
@@ -111,8 +108,8 @@ export function SettingsPage({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  fontSize: 14,
+                  gap: 6,
+                  fontSize: 13,
                   opacity: form.kioskMode ? 1 : 0.5,
                 }}
               >
@@ -128,8 +125,8 @@ export function SettingsPage({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8,
-                  fontSize: 14,
+                  gap: 6,
+                  fontSize: 13,
                   opacity: form.kioskMode ? 1 : 0.5,
                 }}
               >
@@ -144,18 +141,16 @@ export function SettingsPage({
             </div>
           </div>
 
-          <button type="button" onClick={saveDisplayPrefs} className="adm-btnPrimary" style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600 }}>
-            Save language &amp; kiosk
+          <button type="button" onClick={saveDisplayPrefs} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600 }}>
+            Save
           </button>
         </div>
 
-        <div className="adm-card" style={{ gridColumn: '1 / -1' }}>
+        {/* Display Names — 50% */}
+        <div className="adm-card" style={{ flex: '1 1 50%', minWidth: 0, overflow: 'hidden' }}>
           <div className="adm-sectionHeader">
-            <h3 className="adm-sectionTitle">Display names</h3>
+            <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Display Names</h3>
           </div>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--adm-text-muted)' }}>
-            Override English and Hebrew labels for zmanim and tefilah on the public display.
-          </p>
           <DisplayNamesEditor embedded overrides={displayNames} onChange={onDisplayNamesChange} />
         </div>
       </div>
