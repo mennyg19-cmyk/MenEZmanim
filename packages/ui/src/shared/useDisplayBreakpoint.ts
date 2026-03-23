@@ -15,17 +15,18 @@ export function useDisplayBreakpoint(): DisplayBreakpoint {
 
   useEffect(() => {
     const compute = () => {
-      const w = typeof window !== 'undefined' ? window.innerWidth : 1920;
-      const landscape =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(orientation: landscape)').matches;
+      if (typeof window === 'undefined') { setBp('full'); return; }
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const landscape = w > h;
 
       if (w >= 1024) {
         setBp('full');
         return;
       }
-      // Narrow viewports in landscape: treat as full (e.g. phone sideways).
-      if (landscape && w < 1024) {
+      // Narrow viewport in landscape (e.g. phone turned sideways): treat as full.
+      if (landscape && w < 1024 && w > MOBILE_MAX) {
         setBp('full');
         return;
       }
@@ -42,11 +43,8 @@ export function useDisplayBreakpoint(): DisplayBreakpoint {
 
     compute();
     window.addEventListener('resize', compute);
-    const mq = window.matchMedia('(orientation: landscape)');
-    mq.addEventListener('change', compute);
     return () => {
       window.removeEventListener('resize', compute);
-      mq.removeEventListener('change', compute);
     };
   }, []);
 
