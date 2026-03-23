@@ -504,10 +504,14 @@ function TodayPreview({ schedules, styles }: { schedules: ScreenStyleSchedule[];
 /* ── Style list panel (left side) ─────────────────────────── */
 
 const RESOLUTION_PRESETS = [
-  { label: '1920x1080 (FHD)', w: 1920, h: 1080 },
-  { label: '3840x2160 (4K)', w: 3840, h: 2160 },
-  { label: '1280x720 (HD)', w: 1280, h: 720 },
-  { label: '1080x1920 (Portrait)', w: 1080, h: 1920 },
+  { label: 'Full / Desktop — 1920×1080 (FHD)', w: 1920, h: 1080, group: 'Breakpoints' },
+  { label: 'Tablet — 1024×768', w: 1024, h: 768, group: 'Breakpoints' },
+  { label: 'Mobile — 390×844', w: 390, h: 844, group: 'Breakpoints' },
+  { label: 'Mobile Small — 360×640', w: 360, h: 640, group: 'Breakpoints' },
+  { label: 'Tablet Landscape — 1180×820', w: 1180, h: 820, group: 'Breakpoints' },
+  { label: '4K — 3840×2160', w: 3840, h: 2160, group: 'Other' },
+  { label: 'HD — 1280×720', w: 1280, h: 720, group: 'Other' },
+  { label: 'Portrait — 1080×1920', w: 1080, h: 1920, group: 'Other' },
 ];
 
 function StyleListPanel({
@@ -656,8 +660,12 @@ function StyleListPanel({
                           }
                         }}
                       >
-                        {RESOLUTION_PRESETS.map((p) => (
-                          <option key={`${p.w}x${p.h}`} value={`${p.w}x${p.h}`}>{p.label}</option>
+                        {(['Breakpoints', 'Other'] as const).map((g) => (
+                          <optgroup key={g} label={g}>
+                            {RESOLUTION_PRESETS.filter((p) => p.group === g).map((p) => (
+                              <option key={`${p.w}x${p.h}`} value={`${p.w}x${p.h}`}>{p.label}</option>
+                            ))}
+                          </optgroup>
                         ))}
                         {!RESOLUTION_PRESETS.some((p) => p.w === style.canvasWidth && p.h === style.canvasHeight) && (
                           <option value={`${style.canvasWidth}x${style.canvasHeight}`}>

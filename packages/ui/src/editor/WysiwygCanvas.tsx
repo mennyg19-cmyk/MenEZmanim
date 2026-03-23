@@ -1123,10 +1123,14 @@ function CanvasBackgroundSection({ style, onStyleChange, editorSettings }: {
 }
 
 const RESOLUTION_PRESETS = [
-  { label: 'FHD (1920×1080)', w: 1920, h: 1080 },
-  { label: '4K (3840×2160)', w: 3840, h: 2160 },
-  { label: 'HD (1280×720)', w: 1280, h: 720 },
-  { label: 'Portrait (1080×1920)', w: 1080, h: 1920 },
+  { label: 'Full / Desktop — 1920×1080', w: 1920, h: 1080, group: 'Breakpoints' },
+  { label: 'Tablet — 1024×768', w: 1024, h: 768, group: 'Breakpoints' },
+  { label: 'Mobile — 390×844', w: 390, h: 844, group: 'Breakpoints' },
+  { label: 'Mobile Small — 360×640', w: 360, h: 640, group: 'Breakpoints' },
+  { label: 'Tablet Landscape — 1180×820', w: 1180, h: 820, group: 'Breakpoints' },
+  { label: '4K — 3840×2160', w: 3840, h: 2160, group: 'Other' },
+  { label: 'HD — 1280×720', w: 1280, h: 720, group: 'Other' },
+  { label: 'Portrait — 1080×1920', w: 1080, h: 1920, group: 'Other' },
 ];
 
 function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, setSettingsOpen, themePanelOpen, setThemePanelOpen }: {
@@ -1171,8 +1175,12 @@ function SettingsSection({ editorSettings, style, onStyleChange, settingsOpen, s
                 if (preset) onStyleChange({ ...style, canvasWidth: preset.w, canvasHeight: preset.h });
               }}
             >
-              {RESOLUTION_PRESETS.map((p) => (
-                <option key={`${p.w}x${p.h}`} value={`${p.w}x${p.h}`}>{p.label}</option>
+              {(['Breakpoints', 'Other'] as const).map((g) => (
+                <optgroup key={g} label={g}>
+                  {RESOLUTION_PRESETS.filter((p) => p.group === g).map((p) => (
+                    <option key={`${p.w}x${p.h}`} value={`${p.w}x${p.h}`}>{p.label}</option>
+                  ))}
+                </optgroup>
               ))}
               {!isPreset && (
                 <option value="_custom">{style.canvasWidth}×{style.canvasHeight} (custom)</option>
