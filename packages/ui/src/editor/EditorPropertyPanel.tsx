@@ -11,6 +11,7 @@ import { hexToRgba, extractHex } from '../shared/colorUtils';
 import { bestTextColorFromPalette, sampleBackgroundAtObject } from '../shared/colorExtract';
 import { useColorContext } from './ColorContext';
 import { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './FormPrimitives';
+import { ColorPicker } from '../shared/ColorPicker';
 
 
 interface DaveningGroupInfo {
@@ -648,7 +649,12 @@ function RowStylingSection({ popupObj, pContent }: { popupObj: DisplayObject; pC
     <Section title="Row Styling" defaultOpen={false}>
       <Field label="Row Color 1 (even rows)">
         <div className="ed-rowColorRow">
-          <input type="color" value={extractHex(content.rowColor1) || '#000000'} onChange={(e) => { const op = content.rowColor1Opacity ?? 0; pContent({ rowColor1: hexToRgba(e.target.value, op) }); }} className="ed-rowColorSwatch" />
+          <ColorPicker
+            variant="swatch-only"
+            value={content.rowColor1 ?? '#000000'}
+            onChange={(hex) => { const op = content.rowColor1Opacity ?? 0; pContent({ rowColor1: hexToRgba(hex, op) }); }}
+            swatchClassName="ed-rowColorSwatch"
+          />
           <input type="range" min={0} max={100} step={1} value={Math.round((content.rowColor1Opacity ?? 0) * 100)} onChange={(e) => { const op = parseInt(e.target.value) / 100; const hex = extractHex(content.rowColor1) || '#000000'; pContent({ rowColor1: hexToRgba(hex, op), rowColor1Opacity: op }); }} className="ed-range" style={{ flex: 1 }} title="Opacity" />
           <span className="ed-rowColorOpacity">{Math.round((content.rowColor1Opacity ?? 0) * 100)}%</span>
           {content.rowColor1 && (
@@ -658,7 +664,12 @@ function RowStylingSection({ popupObj, pContent }: { popupObj: DisplayObject; pC
       </Field>
       <Field label="Row Color 2 (odd rows)">
         <div className="ed-rowColorRow">
-          <input type="color" value={extractHex(content.rowColor2 || content.rowAltBg) || '#000000'} onChange={(e) => { const op = content.rowColor2Opacity ?? 0.03; pContent({ rowColor2: hexToRgba(e.target.value, op), rowAltBg: undefined }); }} className="ed-rowColorSwatch" />
+          <ColorPicker
+            variant="swatch-only"
+            value={content.rowColor2 || content.rowAltBg || '#000000'}
+            onChange={(hex) => { const op = content.rowColor2Opacity ?? 0.03; pContent({ rowColor2: hexToRgba(hex, op), rowAltBg: undefined }); }}
+            swatchClassName="ed-rowColorSwatch"
+          />
           <input type="range" min={0} max={100} step={1} value={Math.round((content.rowColor2Opacity ?? 0.03) * 100)} onChange={(e) => { const op = parseInt(e.target.value) / 100; const hex = extractHex(content.rowColor2 || content.rowAltBg) || '#000000'; pContent({ rowColor2: hexToRgba(hex, op), rowColor2Opacity: op, rowAltBg: undefined }); }} className="ed-range" style={{ flex: 1 }} title="Opacity" />
           <span className="ed-rowColorOpacity">{Math.round((content.rowColor2Opacity ?? 0.03) * 100)}%</span>
           {(content.rowColor2 || content.rowAltBg) && (

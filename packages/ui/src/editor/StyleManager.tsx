@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { DisplayStyle } from '@zmanim-app/core';
+import { ConfirmDialog } from '../shared/Modal';
 
 
 interface StyleManagerProps {
@@ -27,6 +28,7 @@ export function StyleManager({
   const [newName, setNewName] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [deleteDraft, setDeleteDraft] = useState<{ id: string; name: string } | null>(null);
 
   const sorted = [...styleList].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -147,7 +149,7 @@ export function StyleManager({
               <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => { setRenamingId(style.id); setRenameValue(style.name); }} className="ed-btnSmall" title="Rename">Rename</button>
                 <button onClick={() => onStyleDuplicate(style.id)} className="ed-btnSmall" title="Duplicate">Dup</button>
-                <button onClick={() => { if (window.confirm(`Delete style "${style.name}"?`)) onStyleDelete(style.id); }} className="ed-btnDanger" title="Delete">Del</button>
+                <button type="button" onClick={() => setDeleteDraft({ id: style.id, name: style.name })} className="ed-btnDanger" title="Delete">Del</button>
                 <div style={{ flex: 1 }} />
                 <button onClick={() => handleMoveUp(index)} disabled={index === 0} className="ed-btnSmall" style={{ opacity: index === 0 ? 0.3 : 1 }} title="Move up">▲</button>
                 <button onClick={() => handleMoveDown(index)} disabled={index === sorted.length - 1} className="ed-btnSmall" style={{ opacity: index === sorted.length - 1 ? 0.3 : 1 }} title="Move down">▼</button>
@@ -156,6 +158,18 @@ export function StyleManager({
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={deleteDraft !== null}
+        title="Delete style?"
+        message={deleteDraft ? `Delete style "${deleteDraft.name}"?` : ''}
+        danger
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleteDraft) onStyleDelete(deleteDraft.id);
+        }}
+        onClose={() => setDeleteDraft(null)}
+      />
     </div>
   );
 }

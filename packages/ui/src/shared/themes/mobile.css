@@ -15,7 +15,7 @@
 .mob-header {
   padding: 16px 20px 8px;
   background: var(--mob-header-gradient);
-  color: #fff;
+  color: var(--mob-on-accent);
   text-align: center;
   position: sticky;
   top: 0;
@@ -41,20 +41,7 @@
   flex-shrink: 0;
 }
 
-.mob-tab {
-  flex: 1;
-  padding: 10px 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--mob-text-muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color 0.15s;
-}
-
+.mob-tab,
 .mob-tabActive {
   flex: 1;
   padding: 10px 0;
@@ -62,11 +49,19 @@
   background: transparent;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--mob-header-bg);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color 0.15s;
+}
+
+.mob-tab {
+  font-weight: 500;
+  color: var(--mob-text-muted);
+}
+
+.mob-tabActive {
+  font-weight: 600;
+  color: var(--mob-header-bg);
   border-bottom-color: var(--mob-header-bg);
 }
 
@@ -123,7 +118,8 @@
 }
 
 /* Rows (shared for zmanim, schedule) */
-.mob-row {
+.mob-row,
+.mob-rowHighlight {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -132,11 +128,6 @@
 }
 
 .mob-rowHighlight {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--mob-border-light);
   background-color: var(--mob-accent-bg);
   border-radius: var(--radius-md);
 }
@@ -159,7 +150,8 @@
 }
 
 /* Schedule-specific */
-.mob-schedRow {
+.mob-schedRow,
+.mob-schedRowHighlight {
   display: flex;
   align-items: center;
   padding: 10px 4px;
@@ -168,11 +160,6 @@
 }
 
 .mob-schedRowHighlight {
-  display: flex;
-  align-items: center;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--mob-border-light);
-  gap: 10px;
   background-color: var(--mob-accent-bg);
   border-radius: var(--radius-md);
 }
@@ -209,7 +196,7 @@
   margin-inline-start: 6px;
   font-size: 9px;
   font-weight: 700;
-  color: #fff;
+  color: var(--mob-on-accent);
   background-color: var(--mob-accent);
   border-radius: var(--radius-pill);
   padding: 1px 6px;
@@ -241,6 +228,36 @@
   padding: 2px 8px;
 }
 
+.mob-annoBadge--success {
+  color: var(--mob-badge-success-fg);
+  background-color: var(--mob-badge-success-bg);
+}
+
+.mob-annoBadge--warning {
+  color: var(--mob-badge-warning-fg);
+  background-color: var(--mob-badge-warning-bg);
+}
+
+.mob-annoBadge--danger {
+  color: var(--mob-badge-danger-fg);
+  background-color: var(--mob-badge-danger-bg);
+}
+
+.mob-annoBadge--muted {
+  color: var(--mob-badge-muted-fg);
+  background-color: var(--mob-badge-muted-bg);
+}
+
+.mob-annoBadge--accent {
+  color: var(--mob-badge-accent-fg);
+  background-color: var(--mob-badge-accent-bg);
+}
+
+.mob-annoBadge--super {
+  color: var(--mob-badge-super-fg);
+  background-color: var(--mob-badge-super-bg);
+}
+
 .mob-annoTitle {
   flex: 1;
   font-size: 15px;
@@ -261,6 +278,40 @@
   font-size: 14px;
   color: var(--mob-text-muted);
   line-height: 1.5;
+}
+
+.mob-annoList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mob-annoTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mob-annoStack {
+  flex: 1;
+  min-width: 0;
+}
+
+.mob-annoInlineBody {
+  padding: 0;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--mob-text-muted);
+  line-height: 1.5;
+}
+
+.mob-annoInlineBody--expanded {
+  white-space: pre-wrap;
+}
+
+.mob-annoExpand--open {
+  transform: rotate(180deg);
 }
 
 /* Section header */
@@ -371,58 +422,9 @@
   padding: 4px 0;
 }
 
-.mob-calDay {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--mob-text);
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 2px auto;
-}
-
-.mob-calDay:hover {
-  background-color: var(--mob-accent-bg);
-}
-
-.mob-calDayToday {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--mob-header-bg);
-  background-color: var(--mob-accent-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 2px auto;
-}
-
-.mob-calDaySelected {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  background-color: var(--mob-header-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 2px auto;
-}
-
+.mob-calDay,
+.mob-calDayToday,
+.mob-calDaySelected,
 .mob-calDayOther {
   width: 36px;
   height: 36px;
@@ -431,10 +433,33 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: var(--mob-text-dim);
-  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 2px auto;
+}
+
+.mob-calDay {
+  color: var(--mob-text);
+  background: transparent;
+}
+
+.mob-calDay:hover {
+  background-color: var(--mob-accent-bg);
+}
+
+.mob-calDayToday {
+  color: var(--mob-header-bg);
+  background-color: var(--mob-accent-bg);
+}
+
+.mob-calDaySelected {
+  font-weight: 700;
+  color: var(--mob-on-accent);
+  background-color: var(--mob-header-bg);
+}
+
+.mob-calDayOther {
+  color: var(--mob-text-dim);
+  background: transparent;
 }

@@ -2,17 +2,9 @@
 
 import { MobileApp } from '@zmanim-app/ui';
 import { useCallback } from 'react';
+import { apiFetch } from '../_lib/api-fetch';
 
 const DEFAULT_ORG_ID = 'default';
-
-async function apiFetch<T = any>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json();
-}
 
 export default function MobilePage() {
   const orgId = DEFAULT_ORG_ID;

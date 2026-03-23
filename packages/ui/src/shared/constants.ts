@@ -1,5 +1,10 @@
 import { DisplayObjectType } from '@zmanim-app/core';
 
+/** Max width (px) for mobile layout — matches admin + display breakpoints. */
+export const BREAKPOINT_MOBILE_MAX = 767;
+/** Max width (px) for tablet layout. */
+export const BREAKPOINT_TABLET_MAX = 1023;
+
 export const DEFAULT_FONT_FAMILY = 'system-ui, -apple-system, sans-serif';
 export const DEFAULT_FONT_SIZE = 24;
 

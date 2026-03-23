@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '../../_lib/api-fetch';
 
 interface OrgRow {
   id: string;
@@ -19,15 +20,6 @@ interface UserRow {
   name: string;
   isSuperAdmin: boolean;
   memberships: { orgId: string; role: string; organization: { name: string; slug: string } }[];
-}
-
-async function apiFetch(path: string, options?: RequestInit) {
-  const res = await fetch(path, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json();
 }
 
 export default function SuperAdminPage() {
@@ -79,17 +71,21 @@ export default function SuperAdminPage() {
 
   if (loading) {
     return (
-      <main style={styles.container}>
-        <p style={{ color: '#6b7280' }}>Loading super admin dashboard...</p>
+      <main className="web-superMain">
+        <p className="web-onboardMuted">Loading super admin dashboard...</p>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main style={styles.container}>
-        <div style={{ color: '#dc2626', marginBottom: 16 }}>{error}</div>
-        <button onClick={() => window.location.reload()} style={styles.btn}>Retry</button>
+      <main className="web-superMain">
+        <div className="web-errorTitle" style={{ marginBottom: 16 }}>
+          {error}
+        </div>
+        <button type="button" onClick={() => window.location.reload()} className="web-superBtn web-superBtn--primary">
+          Retry
+        </button>
       </main>
     );
   }
@@ -99,28 +95,33 @@ export default function SuperAdminPage() {
   const suspendedOrgs = orgs.filter((o) => o.status === 'suspended');
 
   return (
-    <main style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Super Admin Dashboard</h1>
-        <a href="/admin" style={styles.backLink}>Back to Admin</a>
+    <main className="web-superMain">
+      <div className="web-superHeader">
+        <h1 className="web-superTitle">Super Admin Dashboard</h1>
+        <a href="/admin" className="web-superBack">
+          Back to Admin
+        </a>
       </div>
 
-      <div style={styles.tabs}>
+      <div className="web-superTabs">
         <button
+          type="button"
           onClick={() => setTab('orgs')}
-          style={{ ...styles.tab, ...(tab === 'orgs' ? styles.tabActive : {}) }}
+          className={tab === 'orgs' ? 'web-superTabActive' : 'web-superTab'}
         >
           Organizations ({orgs.length})
         </button>
         <button
+          type="button"
           onClick={() => setTab('users')}
-          style={{ ...styles.tab, ...(tab === 'users' ? styles.tabActive : {}) }}
+          className={tab === 'users' ? 'web-superTabActive' : 'web-superTab'}
         >
           Users ({users.length})
         </button>
         <button
+          type="button"
           onClick={() => setTab('tools')}
-          style={{ ...styles.tab, ...(tab === 'tools' ? styles.tabActive : {}) }}
+          className={tab === 'tools' ? 'web-superTabActive' : 'web-superTab'}
         >
           Tools
         </button>
@@ -129,29 +130,30 @@ export default function SuperAdminPage() {
       {tab === 'orgs' && (
         <div>
           {pendingOrgs.length > 0 && (
-            <section style={styles.section}>
-              <h2 style={styles.sectionTitle}>
-                Pending Approval ({pendingOrgs.length})
-              </h2>
+            <section className="web-superSection">
+              <h2 className="web-superSectionTitle">Pending Approval ({pendingOrgs.length})</h2>
               {pendingOrgs.map((org) => (
-                <div key={org.id} style={styles.card}>
-                  <div style={styles.cardHeader}>
+                <div key={org.id} className="web-superCard">
+                  <div className="web-superCardHeader">
                     <strong>{org.name}</strong>
-                    <span style={styles.badge('pending')}>Pending</span>
+                    <span className="web-badge web-badge--pending">Pending</span>
                   </div>
-                  <div style={styles.cardMeta}>
-                    Slug: {org.slug} | TZ: {org.timezone} | Created: {new Date(org.createdAt).toLocaleDateString()}
+                  <div className="web-superCardMeta">
+                    Slug: {org.slug} | TZ: {org.timezone} | Created:{' '}
+                    {new Date(org.createdAt).toLocaleDateString()}
                   </div>
-                  <div style={styles.cardActions}>
+                  <div className="web-superCardActions">
                     <button
+                      type="button"
                       onClick={() => updateOrgStatus(org.id, 'active')}
-                      style={{ ...styles.btn, background: '#22c55e' }}
+                      className="web-superBtn web-superBtn--success"
                     >
                       Approve
                     </button>
                     <button
+                      type="button"
                       onClick={() => updateOrgStatus(org.id, 'suspended')}
-                      style={{ ...styles.btn, background: '#ef4444' }}
+                      className="web-superBtn web-superBtn--danger"
                     >
                       Reject
                     </button>
@@ -161,21 +163,22 @@ export default function SuperAdminPage() {
             </section>
           )}
 
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Active Organizations ({activeOrgs.length})</h2>
+          <section className="web-superSection">
+            <h2 className="web-superSectionTitle">Active Organizations ({activeOrgs.length})</h2>
             {activeOrgs.map((org) => (
-              <div key={org.id} style={styles.card}>
-                <div style={styles.cardHeader}>
+              <div key={org.id} className="web-superCard">
+                <div className="web-superCardHeader">
                   <strong>{org.name}</strong>
-                  <span style={styles.badge('active')}>Active</span>
+                  <span className="web-badge web-badge--active">Active</span>
                 </div>
-                <div style={styles.cardMeta}>
+                <div className="web-superCardMeta">
                   Slug: {org.slug} | TZ: {org.timezone}
                 </div>
-                <div style={styles.cardActions}>
+                <div className="web-superCardActions">
                   <button
+                    type="button"
                     onClick={() => updateOrgStatus(org.id, 'suspended')}
-                    style={{ ...styles.btn, background: '#f59e0b' }}
+                    className="web-superBtn web-superBtn--warn"
                   >
                     Suspend
                   </button>
@@ -183,7 +186,7 @@ export default function SuperAdminPage() {
                     href={`/show/${org.slug}/1`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ ...styles.btn, background: '#3b82f6', textDecoration: 'none' }}
+                    className="web-superBtn web-superBtn--link"
                   >
                     View Display
                   </a>
@@ -193,19 +196,20 @@ export default function SuperAdminPage() {
           </section>
 
           {suspendedOrgs.length > 0 && (
-            <section style={styles.section}>
-              <h2 style={styles.sectionTitle}>Suspended ({suspendedOrgs.length})</h2>
+            <section className="web-superSection">
+              <h2 className="web-superSectionTitle">Suspended ({suspendedOrgs.length})</h2>
               {suspendedOrgs.map((org) => (
-                <div key={org.id} style={styles.card}>
-                  <div style={styles.cardHeader}>
+                <div key={org.id} className="web-superCard">
+                  <div className="web-superCardHeader">
                     <strong>{org.name}</strong>
-                    <span style={styles.badge('suspended')}>Suspended</span>
+                    <span className="web-badge web-badge--suspended">Suspended</span>
                   </div>
-                  <div style={styles.cardMeta}>Slug: {org.slug}</div>
-                  <div style={styles.cardActions}>
+                  <div className="web-superCardMeta">Slug: {org.slug}</div>
+                  <div className="web-superCardActions">
                     <button
+                      type="button"
                       onClick={() => updateOrgStatus(org.id, 'active')}
-                      style={{ ...styles.btn, background: '#22c55e' }}
+                      className="web-superBtn web-superBtn--success"
                     >
                       Reactivate
                     </button>
@@ -219,18 +223,16 @@ export default function SuperAdminPage() {
 
       {tab === 'users' && (
         <div>
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>All Users</h2>
+          <section className="web-superSection">
+            <h2 className="web-superSectionTitle">All Users</h2>
             {users.map((user) => (
-              <div key={user.id} style={styles.card}>
-                <div style={styles.cardHeader}>
+              <div key={user.id} className="web-superCard">
+                <div className="web-superCardHeader">
                   <strong>{user.name}</strong>
-                  {user.isSuperAdmin && <span style={styles.badge('super')}>Super Admin</span>}
+                  {user.isSuperAdmin && <span className="web-badge web-badge--super">Super Admin</span>}
                 </div>
-                <div style={styles.cardMeta}>
-                  {user.email}
-                </div>
-                <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+                <div className="web-superCardMeta">{user.email}</div>
+                <div className="web-superUserMeta">
                   {user.memberships.length > 0
                     ? user.memberships.map((m) => `${m.organization.name} (${m.role})`).join(', ')
                     : 'No org memberships'}
@@ -244,17 +246,20 @@ export default function SuperAdminPage() {
       {tab === 'tools' && (
         <div>
           {toolMsg && (
-            <div style={{ padding: '10px 16px', borderRadius: 8, marginBottom: 16, background: toolMsg.startsWith('Error') ? '#fee2e2' : '#dcfce7', color: toolMsg.startsWith('Error') ? '#991b1b' : '#166534', fontSize: 13 }}>
+            <div
+              className={`web-toolMsg ${toolMsg.startsWith('Error') ? 'web-toolMsg--err' : 'web-toolMsg--ok'}`}
+            >
               {toolMsg}
             </div>
           )}
 
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Re-seed Demo Organization</h2>
-            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+          <section className="web-superSection">
+            <h2 className="web-superSectionTitle">Re-seed Demo Organization</h2>
+            <p className="web-superHint">
               Resets the demo org layout, schedules, announcements, and memorials to the latest defaults.
             </p>
             <button
+              type="button"
               onClick={async () => {
                 setToolMsg('');
                 try {
@@ -264,45 +269,57 @@ export default function SuperAdminPage() {
                   setToolMsg(`Error: ${err.message}`);
                 }
               }}
-              style={{ ...styles.btn, background: '#8b5cf6' }}
+              className="web-superBtn web-superBtn--purple"
             >
               Re-seed Demo
             </button>
           </section>
 
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Clone Data Between Organizations</h2>
-            <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
-              Copies schedules, groups, announcements, memorials, styles, and display objects from one org to another.
+          <section className="web-superSection">
+            <h2 className="web-superSectionTitle">Clone Data Between Organizations</h2>
+            <p className="web-superHint">
+              Copies schedules, groups, announcements, memorials, styles, and display objects from one org to
+              another.
             </p>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="web-superToolRow">
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Source Org</label>
+                <label className="web-superLabel" htmlFor="clone-source">
+                  Source Org
+                </label>
                 <select
+                  id="clone-source"
                   value={cloneSource}
                   onChange={(e) => setCloneSource(e.target.value)}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+                  className="web-superSelect"
                 >
                   <option value="">Select source...</option>
                   {orgs.map((o) => (
-                    <option key={o.id} value={o.id}>{o.name} ({o.slug})</option>
+                    <option key={o.id} value={o.id}>
+                      {o.name} ({o.slug})
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Target Org</label>
+                <label className="web-superLabel" htmlFor="clone-target">
+                  Target Org
+                </label>
                 <select
+                  id="clone-target"
                   value={cloneTarget}
                   onChange={(e) => setCloneTarget(e.target.value)}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}
+                  className="web-superSelect"
                 >
                   <option value="">Select target...</option>
                   {orgs.map((o) => (
-                    <option key={o.id} value={o.id}>{o.name} ({o.slug})</option>
+                    <option key={o.id} value={o.id}>
+                      {o.name} ({o.slug})
+                    </option>
                   ))}
                 </select>
               </div>
               <button
+                type="button"
                 onClick={async () => {
                   if (!cloneSource || !cloneTarget) {
                     setToolMsg('Error: Select both source and target organizations');
@@ -314,19 +331,21 @@ export default function SuperAdminPage() {
                   }
                   setToolMsg('');
                   try {
-                    const result = await apiFetch('/api/admin/clone', {
+                    const result: { cloned: Record<string, number> } = await apiFetch('/api/admin/clone', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ sourceOrgId: cloneSource, targetOrgId: cloneTarget }),
                     });
                     const c = result.cloned;
-                    setToolMsg(`Cloned: ${c.groups} groups, ${c.schedules} schedules, ${c.announcements} announcements, ${c.memorials} memorials, ${c.styles} styles`);
+                    setToolMsg(
+                      `Cloned: ${c.groups} groups, ${c.schedules} schedules, ${c.announcements} announcements, ${c.memorials} memorials, ${c.styles} styles`,
+                    );
                   } catch (err: any) {
                     setToolMsg(`Error: ${err.message}`);
                   }
                 }}
                 disabled={!cloneSource || !cloneTarget}
-                style={{ ...styles.btn, background: cloneSource && cloneTarget ? '#3b82f6' : '#94a3b8' }}
+                className={`web-superBtn ${cloneSource && cloneTarget ? 'web-superBtn--primary' : 'web-superBtn--muted'}`}
               >
                 Clone Data
               </button>
@@ -337,99 +356,3 @@ export default function SuperAdminPage() {
     </main>
   );
 }
-
-const styles: Record<string, any> = {
-  container: {
-    maxWidth: 900,
-    margin: '0 auto',
-    padding: '24px 20px',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: '#1e293b',
-  },
-  backLink: {
-    fontSize: 13,
-    color: '#3b82f6',
-    textDecoration: 'none',
-  },
-  tabs: {
-    display: 'flex',
-    gap: 4,
-    marginBottom: 24,
-    borderBottom: '2px solid #e2e8f0',
-  },
-  tab: {
-    padding: '10px 20px',
-    fontSize: 14,
-    fontWeight: 600,
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    color: '#64748b',
-    borderBottom: '2px solid transparent',
-    marginBottom: -2,
-  },
-  tabActive: {
-    color: '#3b82f6',
-    borderBottomColor: '#3b82f6',
-  },
-  section: { marginBottom: 32 },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-    color: '#334155',
-    marginBottom: 12,
-  },
-  card: {
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: 10,
-    padding: '16px 20px',
-    marginBottom: 10,
-  },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 4,
-  },
-  cardMeta: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  cardActions: {
-    display: 'flex',
-    gap: 8,
-    marginTop: 12,
-  },
-  btn: {
-    padding: '6px 14px',
-    fontSize: 12,
-    fontWeight: 600,
-    border: 'none',
-    borderRadius: 6,
-    color: '#fff',
-    cursor: 'pointer',
-    background: '#3b82f6',
-  },
-  badge: (type: string) => ({
-    display: 'inline-block',
-    padding: '2px 8px',
-    fontSize: 11,
-    fontWeight: 600,
-    borderRadius: 10,
-    ...(type === 'pending' ? { background: '#fef3c7', color: '#92400e' } : {}),
-    ...(type === 'active' ? { background: '#dcfce7', color: '#166534' } : {}),
-    ...(type === 'suspended' ? { background: '#fee2e2', color: '#991b1b' } : {}),
-    ...(type === 'super' ? { background: '#ede9fe', color: '#5b21b6' } : {}),
-  }),
-};

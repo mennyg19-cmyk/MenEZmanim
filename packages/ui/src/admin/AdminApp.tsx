@@ -279,10 +279,8 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
       case 'dashboard':
         return (
           <div>
-            <h2 className="adm-pageTitle" style={{ margin: '0 0 16px', fontSize: 24 }}>
-              Dashboard
-            </h2>
-            <div className="adm-dashGrid" style={{ marginBottom: 24 }}>
+            <h2 className="adm-dashTitle">Dashboard</h2>
+            <div className="adm-dashGrid adm-dashGridMb">
               {([
                 { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', section: 'schedules' as Section },
                 { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', section: 'announcements' as Section },
@@ -295,15 +293,17 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                 <button
                   key={card.label}
                   onClick={() => setActiveSection(card.section)}
-                  className="adm-dashCard"
-                  style={{ borderTop: `4px solid ${card.color}`, textAlign: 'left' }}
+                  className="adm-dashCard adm-dashCardAccent"
+                  style={{ borderTop: `4px solid ${card.color}` }}
                 >
-                  <div style={{ fontSize: 32, fontWeight: 700, color: card.color }}>{card.value}</div>
+                  <div className="adm-dashStat" style={{ color: card.color }}>
+                    {card.value}
+                  </div>
                   <div className="adm-dashCardDesc">{card.label}</div>
                 </button>
               ))}
             </div>
-            <div className="adm-dashQuickGrid" style={{ alignItems: 'stretch' }}>
+            <div className="adm-dashQuickGrid adm-dashQuickStretch">
               <QuickActionsPanel
                 showEditorLink={bp !== 'mobile'}
                 onNavigate={(s) => setActiveSection(s as Section)}
@@ -351,7 +351,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
       case 'editor':
         return (
-          <div style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+          <div className="adm-editorShell">
             {activeEditorStyle ? (
               <WysiwygCanvas
                   style={activeEditorStyle}
@@ -402,16 +402,14 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                   gridSize={10}
                 />
             ) : (
-              <div className="adm-empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 18, backgroundColor: 'var(--ed-bg-deep, #0f172a)', color: 'var(--ed-text-muted, #94a3b8)' }}>
-                Select or create a style to start editing
-              </div>
+              <div className="adm-empty adm-editorEmpty">Select or create a style to start editing</div>
             )}
           </div>
         );
 
       case 'screens':
         return (
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="adm-screensShell">
             <ScreenManager
               screens={screens}
               styles={styles}
@@ -473,7 +471,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
   const isMobile = bp === 'mobile';
 
   return (
-    <div className="adm-page" style={{ height: '100vh', overflow: 'hidden' }}>
+    <div className="adm-page adm-appRoot">
       {isMobile && mobileMenuOpen && (
         <button
           type="button"
@@ -484,46 +482,28 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
       )}
       {/* Left sidebar */}
       <aside
-        className={`adm-sidebar${isMobile ? ' adm-sidebar--mobile' : ''}${isMobile && mobileMenuOpen ? ' adm-sidebar--open' : ''}`}
+        className={`adm-sidebar adm-sidebarDyn${isMobile ? ' adm-sidebar--mobile' : ''}${isMobile && mobileMenuOpen ? ' adm-sidebar--open' : ''}`}
         style={
           isMobile
-            ? {
-                width: 260,
-                minWidth: 260,
-                overflow: 'hidden',
-                padding: 0,
-              }
-            : {
-                width: sidebarWidth,
-                minWidth: sidebarWidth,
-                transition: 'width 0.2s ease, min-width 0.2s ease',
-                overflow: 'hidden',
-                padding: 0,
-              }
+            ? { width: 260, minWidth: 260 }
+            : { width: sidebarWidth, minWidth: sidebarWidth }
         }
       >
         <div
-          className="adm-sidebarBrand"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: sidebarCollapsed ? 'center' : 'space-between',
-            padding: '16px 12px',
-            margin: 0,
-          }}
+          className={`adm-sidebarBrand ${sidebarCollapsed ? 'adm-sidebarBrand--collapsed' : 'adm-sidebarBrand--expanded'}`}
         >
-          {!sidebarCollapsed && (
-            <span style={{ fontSize: 16, fontWeight: 700, whiteSpace: 'nowrap' }}>Zmanim Admin</span>
-          )}
+          {!sidebarCollapsed && <span className="adm-sidebarBrandTitle">Zmanim Admin</span>}
           <button
+            type="button"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            style={{ background: 'none', border: 'none', color: 'var(--adm-sidebar-text)', cursor: 'pointer', fontSize: 18, padding: 4 }}
+            className="adm-sidebarCollapseBtn"
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {sidebarCollapsed ? '▶' : '◀'}
           </button>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', padding: '8px 6px', flex: 1, overflowY: 'auto' }}>
+        <nav className="adm-sidebarNav">
           {(grouped['_top'] ?? []).map((item) => (
             <NavButton
               key={item.key}
@@ -539,12 +519,8 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
 
           {Object.entries(groupLabels).map(([groupKey, groupLabel]) => (
             <React.Fragment key={groupKey}>
-              {!sidebarCollapsed && (
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--adm-text-muted)', padding: '16px 12px 4px', letterSpacing: 1 }}>
-                  {groupLabel}
-                </div>
-              )}
-              {sidebarCollapsed && <div style={{ height: 8 }} />}
+              {!sidebarCollapsed && <div className="adm-navGroupLabel">{groupLabel}</div>}
+              {sidebarCollapsed && <div className="adm-navGroupSpacer" />}
               {(grouped[groupKey] ?? []).map((item) => (
                 <NavButton
                   key={item.key}
@@ -561,24 +537,12 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
           ))}
         </nav>
 
-        <div style={{ padding: '12px 8px', borderTop: '1px solid var(--adm-sidebar-border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="adm-sidebarFooter">
           <button
             type="button"
             onClick={toggleTheme}
             title="Toggle light / dark mode"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 12px',
-              borderRadius: 6,
-              border: '1px solid var(--adm-sidebar-border)',
-              background: 'rgba(255,255,255,0.06)',
-              color: 'var(--adm-sidebar-text)',
-              cursor: 'pointer',
-              fontSize: 13,
-              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-            }}
+            className={`adm-themeToggle ${sidebarCollapsed ? 'adm-themeToggle--collapsed' : ''}`}
           >
             <span aria-hidden>🌓</span>
             {!sidebarCollapsed && <span>Theme</span>}
@@ -587,15 +551,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
             href={`/show/${encodeURIComponent(orgId)}/${encodeURIComponent(screens[0]?.id ?? '1')}`}
             target="_blank"
             rel="noopener"
-            className="adm-btnPrimary"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 12px',
-              textDecoration: 'none',
-              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-            }}
+            className={`adm-btnPrimary adm-sidebarLiveLink ${sidebarCollapsed ? 'adm-sidebarLiveLink--collapsed' : ''}`}
           >
             <span>📺</span>
             {!sidebarCollapsed && <span>Live Display</span>}
@@ -604,8 +560,8 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
       </aside>
 
       {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header className="adm-pageHeader" style={{ padding: '12px 24px', backgroundColor: 'var(--adm-bg)', borderBottom: '1px solid var(--adm-border)', flexShrink: 0, gap: 12 }}>
+      <div className="adm-mainColumn">
+        <header className="adm-topHeader">
           {isMobile && (
             <button
               type="button"
@@ -616,34 +572,33 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
               ☰
             </button>
           )}
-          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--adm-text)', flex: 1, minWidth: 0 }}>
+          <h1 className="adm-topTitle">
             {navItems.find((n) => n.key === activeSection)?.icon}{' '}
             {navItems.find((n) => n.key === activeSection)?.labelEn}
-            <span style={{ color: 'var(--adm-text-dim)', fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
-              {navItems.find((n) => n.key === activeSection)?.labelHe}
-            </span>
+            <span className="adm-topTitleHe">{navItems.find((n) => n.key === activeSection)?.labelHe}</span>
           </h1>
           {activeSection === 'editor' && (
             <a
               href={`/show/${encodeURIComponent(orgId)}/${encodeURIComponent(screens[0]?.id ?? '1')}`}
               target="_blank"
               rel="noopener"
-              className="adm-link"
-              style={{ fontSize: 13 }}
+              className="adm-link adm-previewLinkSm"
             >
               Preview in new tab →
             </a>
           )}
         </header>
-        <main style={{ flex: 1, overflow: activeSection === 'editor' || activeSection === 'screens' ? 'hidden' : 'auto', backgroundColor: 'var(--adm-bg-hover)' }}>
+        <main
+          className={`adm-mainScroll ${activeSection === 'editor' || activeSection === 'screens' ? 'adm-mainScroll--locked' : 'adm-mainScroll--default'}`}
+        >
           <div
-            style={{
-              padding: activeSection === 'editor' ? 0 : 24,
-              height: activeSection === 'editor' || activeSection === 'screens' ? '100%' : undefined,
-              minHeight: activeSection === 'screens' ? 0 : undefined,
-              display: activeSection === 'screens' ? 'flex' : undefined,
-              flexDirection: activeSection === 'screens' ? 'column' : undefined,
-            }}
+            className={[
+              activeSection === 'editor' || activeSection === 'screens' ? 'adm-contentWrap--flush' : 'adm-contentWrap',
+              activeSection === 'editor' || activeSection === 'screens' ? 'adm-contentWrap--full' : '',
+              activeSection === 'screens' ? 'adm-contentWrap--screens' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
           >
             {renderContent()}
           </div>
@@ -670,13 +625,7 @@ function NavButton({
     <button
       onClick={() => onClick(item.key)}
       title={`${item.labelEn} — ${item.labelHe}`}
-      className={isActive ? "adm-navBtnActive" : "adm-navBtn"}
-      style={{
-        padding: collapsed ? '10px 0' : '10px 12px',
-        justifyContent: collapsed ? 'center' : 'flex-start',
-        borderRadius: 8,
-        whiteSpace: 'nowrap',
-      }}
+      className={`${isActive ? 'adm-navBtnActive' : 'adm-navBtn'} adm-navBtnPad ${collapsed ? 'adm-navBtnPad--collapsed' : 'adm-navBtnPad--expanded'}`}
     >
       <span className="adm-navIcon">{item.icon}</span>
       {!collapsed && <span>{item.labelEn}</span>}

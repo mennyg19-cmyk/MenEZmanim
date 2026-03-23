@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { ConfirmDialog } from '../shared/Modal';
 
 type MemberRow = {
   id: string;
@@ -27,6 +28,7 @@ export function MemberManager({ orgId }: { orgId: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [removeDraft, setRemoveDraft] = useState<{ id: string; label: string } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -86,8 +88,7 @@ export function MemberManager({ orgId }: { orgId: string }) {
     }
   };
 
-  const handleRemove = async (membershipId: string, label: string) => {
-    if (!window.confirm(`Remove ${label} from this organization?`)) return;
+  const handleRemove = async (membershipId: string) => {
     setBusy(true);
     setError(null);
     try {
@@ -230,7 +231,7 @@ export function MemberManager({ orgId }: { orgId: string }) {
                         type="button"
                         className="adm-btnSmallDanger"
                         disabled={busy}
-                        onClick={() => handleRemove(m.id, m.user?.email ?? 'this member')}
+                        onClick={() => setRemoveDraft({ id: m.id, label: m.user?.email ?? 'this member' })}
                       >
                         Remove
                       </button>
@@ -242,6 +243,18 @@ export function MemberManager({ orgId }: { orgId: string }) {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={removeDraft !== null}
+        title="Remove member?"
+        message={removeDraft ? `Remove ${removeDraft.label} from this organization?` : ''}
+        danger
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (removeDraft) void handleRemove(removeDraft.id);
+        }}
+        onClose={() => setRemoveDraft(null)}
+      />
     </div>
   );
 }

@@ -2,9 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DisplayBreakpoint } from '@zmanim-app/core';
-
-const MOBILE_MAX = 767;
-const TABLET_MAX = 1023;
+import { BREAKPOINT_MOBILE_MAX, BREAKPOINT_TABLET_MAX } from './constants';
 
 /**
  * Breakpoint for public display boards: orientation-aware.
@@ -59,10 +57,10 @@ function computeBreakpoint(w: number, h: number): DisplayBreakpoint {
 
   const landscape = w > h;
 
-  if (landscape && w > MOBILE_MAX) return 'full';
+  if (landscape && w > BREAKPOINT_MOBILE_MAX) return 'full';
 
-  if (w <= MOBILE_MAX) return 'mobile';
-  if (w <= TABLET_MAX) return 'tablet';
+  if (w <= BREAKPOINT_MOBILE_MAX) return 'mobile';
+  if (w <= BREAKPOINT_TABLET_MAX) return 'tablet';
 
   return 'full';
 }

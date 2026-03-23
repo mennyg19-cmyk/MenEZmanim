@@ -69,7 +69,7 @@
 }
 
 .wgt-jiTefilahItem {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--wgt-on-canvas-fill);
   border-radius: var(--radius-sm);
   padding: 2px 6px;
   margin-bottom: 2px;
@@ -123,7 +123,7 @@
   justify-content: center;
   flex-shrink: 0;
   padding: 8px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--wgt-on-canvas-border);
   text-transform: uppercase;
   letter-spacing: 2px;
 }
@@ -138,7 +138,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid var(--wgt-on-canvas-border-strong);
   white-space: nowrap;
 }
 
@@ -154,7 +154,7 @@
 
 .wgt-fidsCell {
   padding: 8px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--wgt-on-canvas-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -176,7 +176,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--wgt-on-canvas-border-strong);
   margin-inline-end: 6px;
 }
 
@@ -186,7 +186,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--wgt-on-canvas-muted);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -249,4 +249,121 @@
   letter-spacing: 2px;
   direction: ltr;
   text-align: center;
+}
+
+/* DisplayApp shell (fullscreen board) */
+.dsp-fullView {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-system);
+}
+
+.dsp-loading {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  font-family: var(--font-system);
+}
+
+.dsp-fatalError {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #1a0000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ff6666;
+  font-family: var(--font-system);
+  padding: 48px;
+  text-align: center;
+}
+
+.dsp-fatalErrorTitle {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.dsp-fatalErrorMsg {
+  font-size: 18px;
+  opacity: 0.8;
+  max-width: 600px;
+}
+
+.dsp-noStyle {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 24px;
+  font-family: var(--font-system);
+}
+
+.dsp-root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+  position: relative;
+}
+
+.dsp-errorToast {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background-color: rgba(180, 0, 0, 0.85);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-family: var(--font-system);
+  max-width: 400px;
+  z-index: 9999;
+}
+
+/* ── Widget shell / FIDS tokens (inline purge) ─────────────── */
+.wgt-fullCanvas {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.wgt-fallbackState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--wgt-on-canvas-border-strong);
+  font-family: var(--font-system);
+  padding: 24px;
+  text-align: center;
+}
+
+.wgt-fidsAccent {
+  color: var(--wgt-fids-accent, var(--wgt-text));
+}
+
+.wgt-fidsStatusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-inline-end: 6px;
+  background: var(--wgt-fids-status-dot, var(--wgt-border));
 }

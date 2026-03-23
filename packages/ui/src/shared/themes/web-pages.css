@@ -1,0 +1,525 @@
+/* ── Next.js app routes (admin chrome, super admin, onboarding, auth) ── */
+
+@keyframes webSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Auth (login / register) */
+.web-authShell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  background: var(--web-auth-gradient);
+}
+
+/* Admin route: loading / error / empty */
+.web-mainCenter {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-system);
+  font-size: 18px;
+  color: var(--adm-text-muted);
+}
+
+.web-mainError {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-system);
+  gap: 12px;
+}
+
+.web-errorTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--adm-danger);
+}
+
+.web-errorText {
+  color: var(--adm-text-muted);
+}
+
+.web-btnRetry {
+  margin-top: 8px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--adm-accent-dark);
+  color: var(--adm-btn-fg);
+  cursor: pointer;
+}
+
+.web-orgBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--adm-bg-muted);
+  border-bottom: 1px solid var(--adm-border);
+  font-family: var(--font-system);
+  font-size: 13px;
+}
+
+.web-orgBarEnd {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 16px;
+  background: var(--adm-bg-muted);
+  border-bottom: 1px solid var(--adm-border);
+}
+
+.web-orgBarEnd .web-superLink {
+  margin-left: 0;
+}
+
+.web-orgLabel {
+  font-weight: 600;
+  color: var(--adm-text);
+}
+
+.web-orgSelect {
+  padding: 4px 8px;
+  border: 1px solid var(--adm-border-input);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+.web-superLink {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: var(--web-super-link-bg);
+  color: var(--adm-btn-fg);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  font-family: var(--font-system);
+}
+
+.web-lockBanner {
+  padding: 10px 16px;
+  background: var(--adm-warning-bg);
+  border-bottom: 1px solid var(--adm-warning-border);
+  font-family: var(--font-system);
+  font-size: 13px;
+  color: var(--adm-warning-text);
+  text-align: center;
+}
+
+/* Super admin dashboard */
+.web-superMain {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  font-family: var(--font-system);
+  color: var(--adm-text);
+}
+
+.web-superHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.web-superTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--adm-text-dark);
+}
+
+.web-superBack {
+  font-size: 13px;
+  color: var(--adm-accent);
+  text-decoration: none;
+}
+
+.web-superBack:hover {
+  text-decoration: underline;
+}
+
+.web-superTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--adm-border);
+}
+
+.web-superTab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--adm-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-family: inherit;
+}
+
+.web-superTab:hover {
+  color: var(--adm-text);
+}
+
+.web-superTabActive {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--adm-accent);
+  border-bottom: 2px solid var(--adm-accent);
+  margin-bottom: -2px;
+  font-family: inherit;
+}
+
+.web-superSection {
+  margin-bottom: 32px;
+}
+
+.web-superSectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--adm-text);
+  margin-bottom: 12px;
+}
+
+.web-superCard {
+  background: var(--adm-bg);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.web-superCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.web-superCardMeta {
+  font-size: 12px;
+  color: var(--adm-text-muted);
+}
+
+.web-superCardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.web-superUserMeta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--adm-text-muted);
+}
+
+.web-superToolRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.web-superHint {
+  font-size: 13px;
+  color: var(--adm-text-muted);
+  margin-bottom: 12px;
+}
+
+.web-superLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--adm-text);
+  margin-bottom: 4px;
+}
+
+.web-superSelect {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--adm-border-input);
+  font-size: 13px;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+/* Super admin buttons (solid colors on white/dark bg) */
+.web-superBtn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--adm-btn-fg);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.web-superBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.web-superBtn--primary {
+  background: var(--adm-accent-dark);
+}
+
+.web-superBtn--success {
+  background: var(--adm-success);
+}
+
+.web-superBtn--danger {
+  background: var(--adm-danger);
+}
+
+.web-superBtn--warn {
+  background: var(--adm-warning);
+  color: var(--adm-text-dark);
+}
+
+.web-superBtn--purple {
+  background: var(--adm-stat-purple);
+}
+
+.web-superBtn--link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: var(--adm-accent-dark);
+}
+
+.web-superBtn--muted {
+  background: var(--adm-text-dim);
+}
+
+.web-toolMsg {
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.web-toolMsg--ok {
+  background: var(--web-tool-msg-ok-bg);
+  color: var(--web-tool-msg-ok-fg);
+}
+
+.web-toolMsg--err {
+  background: var(--web-tool-msg-err-bg);
+  color: var(--web-tool-msg-err-fg);
+}
+
+/* Badges */
+.web-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.web-badge--pending {
+  background: var(--adm-warning-bg);
+  color: var(--adm-warning-text);
+}
+
+.web-badge--active {
+  background: color-mix(in srgb, var(--adm-success) 18%, transparent);
+  color: var(--adm-success);
+}
+
+.web-badge--suspended {
+  background: color-mix(in srgb, var(--adm-danger) 18%, transparent);
+  color: var(--adm-danger);
+}
+
+.web-badge--super {
+  background: color-mix(in srgb, var(--adm-stat-purple) 22%, transparent);
+  color: var(--adm-stat-purple);
+}
+
+/* Onboarding */
+.web-onboardShell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--web-onboarding-gradient);
+  padding: 20px;
+  font-family: var(--font-system);
+}
+
+.web-onboardCard {
+  background: var(--adm-bg);
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: var(--shadow-modal);
+  color: var(--adm-text);
+}
+
+.web-onboardTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--adm-text-dark);
+  text-align: center;
+  margin: 12px 0 4px;
+}
+
+.web-onboardSubtitle {
+  font-size: 14px;
+  color: var(--adm-text-muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.web-onboardSection {
+  margin-top: 20px;
+}
+
+.web-onboardSectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--adm-text);
+  margin-bottom: 12px;
+}
+
+.web-onboardField {
+  margin-bottom: 16px;
+}
+
+.web-onboardFieldRow {
+  display: flex;
+  gap: 12px;
+}
+
+.web-onboardFieldGrow {
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+.web-onboardLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--adm-text);
+  margin-bottom: 4px;
+}
+
+.web-onboardInput {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--adm-border-input);
+  border-radius: var(--radius-lg);
+  outline: none;
+  box-sizing: border-box;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+.web-onboardBtnPrimary {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--adm-accent-dark), var(--adm-accent-hover));
+  color: var(--adm-btn-fg);
+  cursor: pointer;
+  margin-top: 8px;
+  font-family: inherit;
+}
+
+.web-onboardBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.web-onboardBtnSecondary {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid var(--adm-border-input);
+  border-radius: 10px;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  cursor: pointer;
+  margin-top: 16px;
+  font-family: inherit;
+}
+
+.web-onboardError {
+  background: color-mix(in srgb, var(--adm-danger) 12%, transparent);
+  border: 1px solid var(--adm-danger);
+  color: var(--adm-danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.web-onboardInviteRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--adm-bg-muted);
+  border-radius: var(--radius-lg);
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.web-onboardMuted {
+  color: var(--adm-text-muted);
+}
+
+.web-onboardEmoji {
+  font-size: 48px;
+  text-align: center;
+}
+
+.web-onboardSpinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--adm-border);
+  border-top-color: var(--adm-accent);
+  border-radius: 50%;
+  animation: webSpin 0.8s linear infinite;
+  margin: 0 auto;
+}
+
+.web-onboardLoadingText {
+  color: var(--adm-text-muted);
+  margin-top: 16px;
+  text-align: center;
+}
+
+.web-onboardCenterText {
+  color: var(--adm-text-muted);
+  text-align: center;
+}

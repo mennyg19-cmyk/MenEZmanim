@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { extractPaletteFromImage, paletteToThemeColors } from '../shared/colorExtract';
+import { ColorPicker } from '../shared/ColorPicker';
 
 
 export interface ColorTheme {
@@ -160,20 +161,12 @@ export function ThemePicker({
           {(Object.keys(COLOR_LABELS) as (keyof ThemeColors)[]).map((key) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--ed-text-muted)' }}>{COLOR_LABELS[key]}</span>
-              <div className="ed-colorRow">
-                <input
-                  type="color"
-                  value={editingColors[key].startsWith('rgba') ? rgbaToHex(editingColors[key]) : editingColors[key]}
-                  onChange={(e) => setEditingColors({ ...editingColors, [key]: e.target.value })}
-                  className="ed-colorSwatch"
-                />
-                <input
-                  value={editingColors[key]}
-                  onChange={(e) => setEditingColors({ ...editingColors, [key]: e.target.value })}
-                  className="ed-input"
-                  style={{ width: 120 }}
-                />
-              </div>
+              <ColorPicker
+                variant="compact"
+                value={editingColors[key]}
+                onChange={(v) => setEditingColors({ ...editingColors, [key]: v })}
+                textInputClassName="ed-input ed-themeColorInput"
+              />
             </div>
           ))}
         </div>
@@ -247,13 +240,4 @@ function ThemeCard({ theme, isActive, onApply, onCustomize, onDelete }: {
       </div>
     </div>
   );
-}
-
-function rgbaToHex(rgba: string): string {
-  const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (!match) return '#000000';
-  const r = parseInt(match[1]).toString(16).padStart(2, '0');
-  const g = parseInt(match[2]).toString(16).padStart(2, '0');
-  const b = parseInt(match[3]).toString(16).padStart(2, '0');
-  return `#${r}${g}${b}`;
 }

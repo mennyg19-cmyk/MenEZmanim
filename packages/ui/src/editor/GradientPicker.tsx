@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { GRADIENT_PRESETS, type GradientCategory } from '../shared/gradients';
+import { ColorPicker } from '../shared/ColorPicker';
 
 interface GradientPickerProps {
   onChange: (gradientCss: string) => void;
@@ -59,9 +60,9 @@ export function GradientPicker({ onChange }: GradientPickerProps) {
             style={{ width: '100%' }}
           />
         </label>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <input type="color" value={c1} onChange={(e) => setC1(e.target.value)} className="ed-colorSwatch" style={{ width: 36, height: 28 }} />
-          <input type="color" value={c2} onChange={(e) => setC2(e.target.value)} className="ed-colorSwatch" style={{ width: 36, height: 28 }} />
+        <div className="ed-flexGap12Center">
+          <ColorPicker variant="swatch-only" value={c1} onChange={setC1} swatchClassName="ed-colorSwatch ed-colorSwatch--gradientStop" />
+          <ColorPicker variant="swatch-only" value={c2} onChange={setC2} swatchClassName="ed-colorSwatch ed-colorSwatch--gradientStop" />
         </div>
       </div>
       <div

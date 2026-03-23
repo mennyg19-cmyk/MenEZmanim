@@ -4,15 +4,7 @@ import { DisplayApp } from '@zmanim-app/ui';
 import { ScreenManager } from '@zmanim-app/core';
 import type { DisplayBreakpoint, ScreenStyleSchedule } from '@zmanim-app/core';
 import { use, useCallback } from 'react';
-
-async function apiFetch<T = any>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json();
-}
+import { apiFetch } from '../../../_lib/api-fetch';
 
 type Props = {
   params: Promise<{ orgSlug: string; screenId: string }>;

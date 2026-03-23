@@ -11,6 +11,17 @@ export { useDisplayBreakpoint } from './shared/useDisplayBreakpoint';
 export { useRecentColors } from './shared/useRecentColors';
 export { extractPaletteFromImage, paletteToThemeColors, contrastTextColor, bestTextColorFromPalette, sampleBackgroundAtObject } from './shared/colorExtract';
 export { ColorProvider, useColorContext } from './editor/ColorContext';
+export { ColorPicker, ColorDot } from './shared/ColorPicker';
+export type { ColorPickerProps, ColorPickerVariant } from './shared/ColorPicker';
+export { Modal, ConfirmDialog } from './shared/Modal';
+export type { ModalProps, ConfirmDialogProps } from './shared/Modal';
+export { Toggle } from './shared/Toggle';
+export type { ToggleProps, ToggleVariant } from './shared/Toggle';
+export { FormField, FormInput, FormSelect, FormTextarea } from './shared/FormField';
+export { Badge } from './shared/Badge';
+export type { BadgeProps, BadgeVariant, BadgeArea } from './shared/Badge';
+export { EmptyState } from './shared/EmptyState';
+export type { EmptyStateProps, EmptyStateArea } from './shared/EmptyState';
 export { TEXTURE_CATALOG, getTextureById, getTextureStyles } from './shared/textures';
 export type { TextureEntry } from './shared/textures';
 export { GRADIENT_PRESETS } from './shared/gradients';
@@ -53,7 +64,7 @@ export { ThemePicker, BUILT_IN_THEMES } from './editor/ThemePicker';
 export type { ColorTheme, ThemeColors } from './editor/ThemePicker';
 
 // Editor form primitives
-export { Field, Section, Input, NumInput, ColorInput, Select, Toggle } from './editor/FormPrimitives';
+export { Field, Section, Input, NumInput, ColorInput, Select } from './editor/FormPrimitives';
 
 // Admin components
 export { AdminApp } from './admin/AdminApp';

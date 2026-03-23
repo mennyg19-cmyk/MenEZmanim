@@ -3,6 +3,7 @@
 import { AdminApp } from '@zmanim-app/ui';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '../_lib/api-fetch';
 
 interface UserMembership {
   orgId: string;
@@ -15,15 +16,6 @@ interface UserMembership {
 interface MeData {
   user: { id: string; clerkUserId: string; email: string; name: string; isSuperAdmin: boolean };
   memberships: UserMembership[];
-}
-
-async function apiFetch(path: string, options?: RequestInit) {
-  const res = await fetch(path, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json();
 }
 
 const ORG_STORAGE_KEY = 'zmanim-selected-org';
@@ -340,54 +332,15 @@ export default function AdminPage() {
   );
 
   if (loading) {
-    return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: 18,
-          color: '#6b7280',
-        }}
-      >
-        Loading admin panel...
-      </main>
-    );
+    return <main className="web-mainCenter">Loading admin panel...</main>;
   }
 
   if (error) {
     return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'system-ui, sans-serif',
-          gap: 12,
-        }}
-      >
-        <div style={{ fontSize: 20, fontWeight: 600, color: '#dc2626' }}>
-          Failed to load admin panel
-        </div>
-        <div style={{ color: '#6b7280' }}>{error}</div>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: 8,
-            padding: '8px 20px',
-            fontSize: 14,
-            fontWeight: 600,
-            border: 'none',
-            borderRadius: 6,
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
+      <main className="web-mainError">
+        <div className="web-errorTitle">Failed to load admin panel</div>
+        <div className="web-errorText">{error}</div>
+        <button type="button" onClick={() => window.location.reload()} className="web-btnRetry">
           Retry
         </button>
       </main>
@@ -396,49 +349,16 @@ export default function AdminPage() {
 
   if (!orgId) {
     return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: 18,
-          color: '#6b7280',
-        }}
-      >
-        No organization found. Please contact the administrator.
-      </main>
+      <main className="web-mainCenter">No organization found. Please contact the administrator.</main>
     );
   }
 
   return (
     <div>
       {memberships.length > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
-            background: '#f1f5f9',
-            borderBottom: '1px solid #e2e8f0',
-            fontFamily: 'system-ui, sans-serif',
-            fontSize: 13,
-          }}
-        >
-          <span style={{ fontWeight: 600, color: '#475569' }}>Organization:</span>
-          <select
-            value={orgId}
-            onChange={(e) => switchOrg(e.target.value)}
-            style={{
-              padding: '4px 8px',
-              border: '1px solid #d1d5db',
-              borderRadius: 6,
-              fontSize: 13,
-              background: '#fff',
-            }}
-          >
+        <div className="web-orgBar">
+          <span className="web-orgLabel">Organization:</span>
+          <select value={orgId} onChange={(e) => switchOrg(e.target.value)} className="web-orgSelect">
             {memberships.map((m) => (
               <option key={m.orgId} value={m.orgId}>
                 {m.orgName} ({m.role})
@@ -446,64 +366,21 @@ export default function AdminPage() {
             ))}
           </select>
           {me?.user.isSuperAdmin && (
-            <a
-              href="/admin/super"
-              style={{
-                marginLeft: 'auto',
-                padding: '4px 12px',
-                background: '#7c3aed',
-                color: '#fff',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                textDecoration: 'none',
-              }}
-            >
+            <a href="/admin/super" className="web-superLink">
               Super Admin
             </a>
           )}
         </div>
       )}
       {me?.user.isSuperAdmin && memberships.length <= 1 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '8px 16px',
-            background: '#f1f5f9',
-            borderBottom: '1px solid #e2e8f0',
-          }}
-        >
-          <a
-            href="/admin/super"
-            style={{
-              padding: '4px 12px',
-              background: '#7c3aed',
-              color: '#fff',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 600,
-              textDecoration: 'none',
-              fontFamily: 'system-ui, sans-serif',
-            }}
-          >
+        <div className="web-orgBarEnd">
+          <a href="/admin/super" className="web-superLink">
             Super Admin
           </a>
         </div>
       )}
       {lockInfo?.locked && (
-        <div
-          style={{
-            padding: '10px 16px',
-            background: '#fef3c7',
-            borderBottom: '1px solid #fbbf24',
-            fontFamily: 'system-ui, sans-serif',
-            fontSize: 13,
-            color: '#92400e',
-            textAlign: 'center',
-          }}
-        >
+        <div className="web-lockBanner">
           This organization is currently being edited by <strong>{lockInfo.lockedBy}</strong>.
           You are in read-only mode.
         </div>

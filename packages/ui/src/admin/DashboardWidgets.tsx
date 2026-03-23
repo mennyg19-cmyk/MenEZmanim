@@ -15,57 +15,7 @@ import { resolveCanvasBackground } from '../shared/backgroundUtils';
 import type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaData, ZmanResult } from '../shared/types';
 import type { DisplayNameOverrides } from '@zmanim-app/core';
 import { formatTime12h } from '../shared/timeUtils';
-
-/* ═══════════════════════════════════════════════════════════
-   QUICK-ACTION MODAL
-   ═══════════════════════════════════════════════════════════ */
-
-function Modal({
-  open,
-  onClose,
-  title,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
-}) {
-  if (!open) return null;
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
-    >
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'default',
-        }}
-      />
-      <div style={{
-        position: 'relative', zIndex: 1,
-        background: 'var(--adm-bg)', borderRadius: 12,
-        border: '1px solid var(--adm-border)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        padding: 24, maxWidth: 560, width: '90vw', maxHeight: '80vh', overflowY: 'auto',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{title}</h3>
-          <button onClick={onClose} className="adm-btn" style={{ padding: '4px 10px', fontSize: 16, lineHeight: 1 }}>
-            &times;
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
+import { Modal } from '../shared/Modal';
 
 /* ── Quick-add forms ────────────────────────────────────── */
 
@@ -91,7 +41,7 @@ function QuickAddEvent({ onSave, onClose }: { onSave: (item: any) => void; onClo
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+      <div className="adm-grid2 adm-mb12">
         <div>
           <label className="adm-labelSm">Name</label>
           <input className="adm-input" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} placeholder="e.g. Vasikin" autoFocus />
@@ -107,11 +57,11 @@ function QuickAddEvent({ onSave, onClose }: { onSave: (item: any) => void; onClo
           <input className="adm-input" type="time" value={data.fixedTime} onChange={(e) => setData({ ...data, fixedTime: e.target.value })} />
         </div>
       </div>
-      <div style={{ marginBottom: 12 }}>
+      <div className="adm-mb12">
         <label className="adm-labelSm">Active Days</label>
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <div className="adm-dayToggles">
           {DAYS.map((d, i) => (
-            <label key={d} style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+            <label key={d} className="adm-labelDay">
               <input
                 type="checkbox"
                 checked={data.daysActive[i]}
@@ -126,11 +76,11 @@ function QuickAddEvent({ onSave, onClose }: { onSave: (item: any) => void; onClo
           ))}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="adm-btnCancel" style={{ padding: '8px 16px' }} onClick={onClose}>Cancel</button>
+      <div className="adm-modalActions">
+        <button type="button" className="adm-btnCancel adm-btnPad" onClick={onClose}>Cancel</button>
         <button
-          className="adm-btnSave"
-          style={{ padding: '8px 16px' }}
+          type="button"
+          className="adm-btnSave adm-btnPad"
           onClick={() => { if (data.name.trim()) { onSave(data); onClose(); } }}
         >
           Save Event
@@ -144,7 +94,7 @@ function QuickAddAnnouncement({ onSave, onClose }: { onSave: (item: any) => void
   const [data, setData] = useState({ id: uid(), title: '', content: '', priority: 0, active: true, scheduleRules: '' });
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+      <div className="adm-grid2 adm-mb12">
         <div>
           <label className="adm-labelSm">Title</label>
           <input className="adm-input" value={data.title} onChange={(e) => setData({ ...data, title: e.target.value })} autoFocus />
@@ -154,13 +104,13 @@ function QuickAddAnnouncement({ onSave, onClose }: { onSave: (item: any) => void
           <input className="adm-input" type="number" value={data.priority} onChange={(e) => setData({ ...data, priority: +e.target.value || 0 })} />
         </div>
       </div>
-      <div style={{ marginBottom: 12 }}>
+      <div className="adm-mb12">
         <label className="adm-labelSm">Content</label>
-        <textarea className="adm-textarea" style={{ minHeight: 100 }} value={data.content} onChange={(e) => setData({ ...data, content: e.target.value })} placeholder="Announcement text..." />
+        <textarea className="adm-textarea adm-textareaTall" value={data.content} onChange={(e) => setData({ ...data, content: e.target.value })} placeholder="Announcement text..." />
       </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="adm-btnCancel" style={{ padding: '8px 16px' }} onClick={onClose}>Cancel</button>
-        <button className="adm-btnSave" style={{ padding: '8px 16px' }} onClick={() => { if (data.title.trim()) { onSave(data); onClose(); } }}>
+      <div className="adm-modalActions">
+        <button type="button" className="adm-btnCancel adm-btnPad" onClick={onClose}>Cancel</button>
+        <button type="button" className="adm-btnSave adm-btnPad" onClick={() => { if (data.title.trim()) { onSave(data); onClose(); } }}>
           Save Announcement
         </button>
       </div>
@@ -176,7 +126,7 @@ function QuickAddYahrzeit({ onSave, onClose }: { onSave: (item: any) => void; on
   });
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+      <div className="adm-grid3 adm-mb12">
         <div>
           <label className="adm-labelSm">Hebrew First Name</label>
           <input className="adm-input" value={data.hebrewFirstName} onChange={(e) => setData({ ...data, hebrewFirstName: e.target.value })} autoFocus />
@@ -205,7 +155,7 @@ function QuickAddYahrzeit({ onSave, onClose }: { onSave: (item: any) => void; on
           <input className="adm-input" type="date" value={data.civilDate} onChange={(e) => setData({ ...data, civilDate: e.target.value })} />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+      <div className="adm-grid3 adm-mb12">
         <div>
           <label className="adm-labelSm">Hebrew Month</label>
           <select className="adm-select" value={data.hebrewMonth} onChange={(e) => setData({ ...data, hebrewMonth: e.target.value })}>
@@ -221,9 +171,9 @@ function QuickAddYahrzeit({ onSave, onClose }: { onSave: (item: any) => void; on
           <input className="adm-input" type="number" value={data.hebrewYear} onChange={(e) => setData({ ...data, hebrewYear: +e.target.value || 5780 })} />
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="adm-btnCancel" style={{ padding: '8px 16px' }} onClick={onClose}>Cancel</button>
-        <button className="adm-btnSave" style={{ padding: '8px 16px' }} onClick={() => { if (data.hebrewFirstName.trim()) { onSave(data); onClose(); } }}>
+      <div className="adm-modalActions">
+        <button type="button" className="adm-btnCancel adm-btnPad" onClick={onClose}>Cancel</button>
+        <button type="button" className="adm-btnSave adm-btnPad" onClick={() => { if (data.hebrewFirstName.trim()) { onSave(data); onClose(); } }}>
           Save Yahrzeit
         </button>
       </div>
@@ -238,7 +188,7 @@ function QuickAddSponsor({ onSave, onClose }: { onSave: (item: any) => void; onC
   });
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+      <div className="adm-grid3 adm-mb12">
         <div>
           <label className="adm-labelSm">Sponsor Name</label>
           <input className="adm-input" value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} autoFocus />
@@ -254,7 +204,7 @@ function QuickAddSponsor({ onSave, onClose }: { onSave: (item: any) => void; onC
           <input className="adm-input" type="date" value={data.date} onChange={(e) => setData({ ...data, date: e.target.value })} />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+      <div className="adm-grid2 adm-mb12">
         <div>
           <label className="adm-labelSm">Hebrew Text</label>
           <textarea className="adm-textarea" value={data.hebrewText} onChange={(e) => setData({ ...data, hebrewText: e.target.value })} />
@@ -264,15 +214,15 @@ function QuickAddSponsor({ onSave, onClose }: { onSave: (item: any) => void; onC
           <textarea className="adm-textarea" value={data.englishText} onChange={(e) => setData({ ...data, englishText: e.target.value })} />
         </div>
       </div>
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="adm-mb12">
+        <label className="adm-labelRow">
           <input type="checkbox" checked={data.recurring} onChange={(e) => setData({ ...data, recurring: e.target.checked })} />
           Recurring
         </label>
       </div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="adm-btnCancel" style={{ padding: '8px 16px' }} onClick={onClose}>Cancel</button>
-        <button className="adm-btnSave" style={{ padding: '8px 16px' }} onClick={() => { if (data.name.trim()) { onSave(data); onClose(); } }}>
+      <div className="adm-modalActions">
+        <button type="button" className="adm-btnCancel adm-btnPad" onClick={onClose}>Cancel</button>
+        <button type="button" className="adm-btnSave adm-btnPad" onClick={() => { if (data.name.trim()) { onSave(data); onClose(); } }}>
           Save Sponsor
         </button>
       </div>
@@ -314,7 +264,7 @@ export function QuickActionsPanel({
 
   return (
     <div className="adm-card">
-      <h3 className="adm-sectionTitle" style={{ margin: '0 0 14px' }}>Quick Actions</h3>
+      <h3 className="adm-sectionTitle adm-sectionTitleTight">Quick Actions</h3>
       <div className="adm-quickCardGrid">
         {showEditorLink && (
           <div className="adm-quickActionCard">
@@ -357,16 +307,16 @@ export function QuickActionsPanel({
         </div>
       </div>
 
-      <Modal open={modal === 'event'} onClose={() => setModal(null)} title="Quick Add — Davening Time">
+      <Modal open={modal === 'event'} onClose={() => setModal(null)} title="Quick Add — Davening Time" className="adm-modal--scroll">
         <QuickAddEvent onSave={onAddEvent} onClose={() => setModal(null)} />
       </Modal>
-      <Modal open={modal === 'announcement'} onClose={() => setModal(null)} title="Quick Add — Announcement">
+      <Modal open={modal === 'announcement'} onClose={() => setModal(null)} title="Quick Add — Announcement" className="adm-modal--scroll">
         <QuickAddAnnouncement onSave={onAddAnnouncement} onClose={() => setModal(null)} />
       </Modal>
-      <Modal open={modal === 'yahrzeit'} onClose={() => setModal(null)} title="Quick Add — Yahrzeit">
+      <Modal open={modal === 'yahrzeit'} onClose={() => setModal(null)} title="Quick Add — Yahrzeit" className="adm-modal--scroll">
         <QuickAddYahrzeit onSave={onAddYahrzeit} onClose={() => setModal(null)} />
       </Modal>
-      <Modal open={modal === 'sponsor'} onClose={() => setModal(null)} title="Quick Add — Sponsor">
+      <Modal open={modal === 'sponsor'} onClose={() => setModal(null)} title="Quick Add — Sponsor" className="adm-modal--scroll">
         <QuickAddSponsor onSave={onAddSponsor} onClose={() => setModal(null)} />
       </Modal>
     </div>
@@ -518,14 +468,13 @@ export function ScreenPreviewWidget({
   const previewUrl = `/show/${orgSlug}/${screenIndex >= 0 ? screenIndex + 1 : 1}`;
 
   return (
-    <div className="adm-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <h3 className="adm-sectionTitle" style={{ margin: '0 0 10px' }}>Live Preview</h3>
+    <div className="adm-card adm-cardStretch">
+      <h3 className="adm-sectionTitle adm-sectionTitleLoose">Live Preview</h3>
 
       {/* Selectors */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+      <div className="adm-flex adm-gap8 adm-mb12 adm-flexWrap">
         <select
-          className="adm-select"
-          style={{ flex: '1 1 140px', fontSize: 13 }}
+          className="adm-select adm-selectFlex"
           value={selectedScreenId}
           onChange={(e) => setSelectedScreenId(e.target.value)}
         >
@@ -535,8 +484,7 @@ export function ScreenPreviewWidget({
           ))}
         </select>
         <select
-          className="adm-select"
-          style={{ width: 130, fontSize: 13 }}
+          className="adm-select adm-selectBp"
           value={breakpoint}
           onChange={(e) => setBreakpoint(e.target.value as DisplayBreakpoint)}
         >
@@ -547,14 +495,7 @@ export function ScreenPreviewWidget({
       </div>
 
       {/* Preview area */}
-      <div
-        ref={containerRef}
-        style={{
-          flex: 1, minHeight: 180, borderRadius: 8, overflow: 'hidden',
-          position: 'relative', background: '#000',
-          border: '1px solid var(--adm-border)',
-        }}
-      >
+      <div ref={containerRef} className="adm-previewShell">
         {activeStyle ? (
           <div style={{ position: 'absolute', left: offsetX, top: offsetY, transformOrigin: 'top left', transform: `scale(${scale})`, width: canvasW, height: canvasH, pointerEvents: 'none', ...resolveCanvasBackground(activeStyle, canvasW, canvasH) }}>
             <FrameRenderer frameId={activeStyle.backgroundFrameId} thickness={activeStyle.backgroundFrameThickness ?? 1}>
@@ -581,7 +522,7 @@ export function ScreenPreviewWidget({
             </FrameRenderer>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666', fontSize: 14 }}>
+          <div className="adm-previewEmpty">
             {screens.length === 0 ? 'No screens configured' : 'No active style'}
           </div>
         )}
@@ -589,7 +530,7 @@ export function ScreenPreviewWidget({
 
       {/* Info bar */}
       {activeStyle && (
-        <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="adm-previewInfoBar">
           <span>
             Style: <strong>{activeStyle.name}</strong> ({canvasW}x{canvasH})
           </span>
@@ -598,12 +539,11 @@ export function ScreenPreviewWidget({
       )}
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+      <div className="adm-previewActions">
         {activeStyle && (
           <button
             type="button"
-            className="adm-btnPrimary"
-            style={{ flex: 1, padding: '8px 14px', fontSize: 13 }}
+            className="adm-btnPrimary adm-btnStretch"
             onClick={() => {
               if (selectedScreen && activeStyle) {
                 onEditStyle(activeStyle.id);
@@ -617,8 +557,7 @@ export function ScreenPreviewWidget({
           href={previewUrl}
           target="_blank"
           rel="noopener"
-          className="adm-btn"
-          style={{ padding: '8px 14px', fontSize: 13, textDecoration: 'none', textAlign: 'center', flexShrink: 0 }}
+          className="adm-btn adm-linkAsBtn"
         >
           Open Full Screen
         </a>

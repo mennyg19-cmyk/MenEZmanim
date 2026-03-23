@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ColorPicker } from '../shared/ColorPicker';
 
 
 interface BackgroundPickerProps {
@@ -43,14 +44,8 @@ export function BackgroundPicker({
       </div>
 
       <div className="ed-sectionLabelSm" style={{ marginBottom: 8 }}>Background Color</div>
-      <div className="ed-colorRow" style={{ gap: 10, marginBottom: 16 }}>
-        <input
-          type="color"
-          value={currentColor}
-          onChange={(e) => onColorChange(e.target.value)}
-          className="ed-colorSwatch"
-          style={{ width: 40, height: 32 }}
-        />
+      <div className="ed-colorRow ed-colorRow--gap10 ed-mb16">
+        <ColorPicker variant="swatch-only" value={currentColor} onChange={onColorChange} swatchClassName="ed-colorSwatch ed-colorSwatch--bg" />
         <input
           type="text"
           value={currentColor}
@@ -58,8 +53,7 @@ export function BackgroundPicker({
             const v = e.target.value;
             if (/^#[0-9a-fA-F]{0,6}$/.test(v)) onColorChange(v);
           }}
-          className="ed-input"
-          style={{ flex: 1, fontFamily: 'monospace' }}
+          className="ed-input ed-inputMonoStretch"
         />
       </div>
 

@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { BREAKPOINT_MOBILE_MAX, BREAKPOINT_TABLET_MAX } from './constants';
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
-
-const MOBILE_MAX = 767;
-const TABLET_MAX = 1023;
 
 export function useBreakpoint(): Breakpoint {
   const [bp, setBp] = useState<Breakpoint>('desktop');
 
   useEffect(() => {
-    const mqMobile = window.matchMedia(`(max-width: ${MOBILE_MAX}px)`);
+    const mqMobile = window.matchMedia(`(max-width: ${BREAKPOINT_MOBILE_MAX}px)`);
     const mqTablet = window.matchMedia(
-      `(min-width: ${MOBILE_MAX + 1}px) and (max-width: ${TABLET_MAX}px)`,
+      `(min-width: ${BREAKPOINT_MOBILE_MAX + 1}px) and (max-width: ${BREAKPOINT_TABLET_MAX}px)`,
     );
 
     const compute = () => {

@@ -1,13 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { VISIBILITY_CONDITIONS, type VisibilityCondition } from '@zmanim-app/core';
-
-
-interface VisibilityRule {
-  condition: VisibilityCondition;
-  show: boolean;
-}
+import { VISIBILITY_CONDITIONS, type VisibilityCondition, type VisibilityRule } from '@zmanim-app/core';
+import { ColorPicker } from '../shared/ColorPicker';
 
 interface Schedule {
   id: string;
@@ -65,10 +60,10 @@ const ZMANIM = [
 const ROUND_OPTIONS = [1, 5, 10, 15, 30, 60];
 
 const TYPE_COLORS: Record<string, string> = {
-  Shacharit: '#f59e0b',
-  Mincha: '#3b82f6',
-  Maariv: '#8b5cf6',
-  Other: '#64748b',
+  Shacharit: 'var(--adm-type-shacharit)',
+  Mincha: 'var(--adm-type-mincha)',
+  Maariv: 'var(--adm-type-maariv)',
+  Other: 'var(--adm-type-other)',
 };
 
 type FilterMode = 'all' | 'ungrouped' | string;
@@ -276,7 +271,7 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="adm-schedRoot">
       {/* Tab bar */}
       <div className="adm-tabBar">
         <button onClick={() => setTab('events')} className={tab === 'events' ? "adm-tabActive" : "adm-tab"}>
@@ -292,22 +287,16 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (tab === 'events' || tab === 'table') && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-          background: '#eff6ff', borderBottom: '1px solid #bfdbfe', fontSize: 12,
-        }}>
-          <strong style={{ color: '#1d4ed8' }}>{selectedIds.size} selected</strong>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            style={{ border: 'none', background: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}
-          >
+        <div className="adm-schedBulkBar">
+          <strong className="adm-schedBulkStrong">{selectedIds.size} selected</strong>
+          <button type="button" className="adm-linkBtn" style={{ fontSize: 12 }} onClick={() => setSelectedIds(new Set())}>
             Clear
           </button>
-          <span style={{ color: '#94a3b8' }}>|</span>
+          <span style={{ color: 'var(--adm-sched-bulk-muted)' }}>|</span>
           <select
+            className="adm-schedBulkSelect"
             value={bulkAction ?? ''}
             onChange={(e) => setBulkAction(e.target.value as 'copy' | 'move' | null)}
-            style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid #d1d5db' }}
           >
             <option value="">Action...</option>
             <option value="copy">Copy to group</option>
@@ -315,37 +304,27 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
           </select>
           {bulkAction && (
             <>
-              <select
-                value={bulkTargetGroup}
-                onChange={(e) => setBulkTargetGroup(e.target.value)}
-                style={{ padding: '3px 6px', fontSize: 12, borderRadius: 4, border: '1px solid #d1d5db' }}
-              >
+              <select className="adm-schedBulkSelect" value={bulkTargetGroup} onChange={(e) => setBulkTargetGroup(e.target.value)}>
                 <option value="">Select group...</option>
                 <option value="__none__">No group</option>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>
                 ))}
               </select>
-              <button
-                onClick={executeBulkAction}
-                disabled={!bulkTargetGroup}
-                style={{
-                  padding: '3px 10px', fontSize: 12, fontWeight: 600, borderRadius: 4,
-                  border: 'none', background: bulkTargetGroup ? '#3b82f6' : '#d1d5db',
-                  color: '#fff', cursor: bulkTargetGroup ? 'pointer' : 'default',
-                }}
-              >
+              <button type="button" className="adm-schedBulkApply" onClick={executeBulkAction} disabled={!bulkTargetGroup}>
                 Apply
               </button>
             </>
           )}
           <button
+            type="button"
+            className="adm-dangerLink adm-mlAuto"
+            style={{ fontSize: 12, fontWeight: 600 }}
             onClick={() => {
               onChange(schedules.filter((s) => !selectedIds.has(s.id)));
               setSelectedIds(new Set());
               setSelectedEventId(null);
             }}
-            style={{ marginLeft: 'auto', border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
           >
             Delete selected
           </button>
@@ -363,7 +342,12 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                   <input value={editingGroup.name} onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })} placeholder="English name" className="adm-input" />
                   <input value={editingGroup.nameHebrew} onChange={(e) => setEditingGroup({ ...editingGroup, nameHebrew: e.target.value })} placeholder="Hebrew name" className="adm-input" />
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <input type="color" value={editingGroup.color} onChange={(e) => setEditingGroup({ ...editingGroup, color: e.target.value })} style={{ width: 30, height: 24, border: 'none', cursor: 'pointer' }} />
+                    <ColorPicker
+                      variant="swatch-only"
+                      value={editingGroup.color}
+                      onChange={(v) => setEditingGroup({ ...editingGroup, color: v })}
+                      swatchClassName="adm-schedColorSwatch"
+                    />
                     <button onClick={() => { updateGroup(g.id, editingGroup); setEditingGroup(null); }} className="adm-btnSmallSave">Save</button>
                     <button onClick={() => setEditingGroup(null)} className="adm-btnSmallOutline">Cancel</button>
                   </div>
@@ -465,7 +449,7 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                     </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? '#64748b', flexShrink: 0 }} />
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)', flexShrink: 0 }} />
                         <span style={{ fontWeight: 500, ...(ev.isPlaceholder ? { fontStyle: 'italic', color: '#94a3b8' } : {}) }}>
                           {ev.isPlaceholder ? (ev.placeholderLabel || '— spacer —') : ev.name}
                         </span>
@@ -475,8 +459,10 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                     <td style={tdStyle}>
                       <span style={{
                         padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600,
-                        background: ev.groupId ? `${groupMap.get(ev.groupId)?.color ?? '#64748b'}20` : '#fee2e2',
-                        color: ev.groupId ? (groupMap.get(ev.groupId)?.color ?? '#64748b') : '#dc2626',
+                        background: ev.groupId
+                          ? `${groupMap.get(ev.groupId)?.color ?? '#64748b'}20`
+                          : 'var(--adm-sched-ungrouped-pill-bg)',
+                        color: ev.groupId ? (groupMap.get(ev.groupId)?.color ?? 'var(--adm-type-other)') : 'var(--adm-danger)',
                       }}>
                         {getGroupName(ev.groupId)}
                       </span>
@@ -578,13 +564,13 @@ export function ScheduleEditor({ schedules, onChange, groups, onGroupsChange }: 
                       onClick={(e) => e.stopPropagation()}
                       style={{ cursor: 'pointer', flexShrink: 0 }}
                     />
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? '#64748b', flexShrink: 0 }} />
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ev.name}</div>
                       <div style={{ fontSize: 10, color: '#94a3b8' }}>
                         {getTimeDisplay(ev)}
                         {filterMode === 'all' && ev.groupId && (
-                          <span style={{ marginLeft: 4, color: groupMap.get(ev.groupId)?.color ?? '#64748b' }}>
+                          <span style={{ marginLeft: 4, color: groupMap.get(ev.groupId)?.color ?? 'var(--adm-type-other)' }}>
                             [{groupMap.get(ev.groupId)?.nameHebrew ?? ''}]
                           </span>
                         )}

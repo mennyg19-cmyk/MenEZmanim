@@ -4,4 +4,14 @@ export { splitEven, splitFill, buildColumnData } from './tableUtils';
 export { hexToRgba, extractHex } from './colorUtils';
 export { resolveObjBackground, getObjBgMode } from './backgroundUtils';
 export type { BgMode } from './backgroundUtils';
-export { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, TYPE_LABELS, TYPE_ICONS, ZMANIM_OPTIONS_REGULAR, ZMANIM_OPTIONS_TUKACHINSKY, FONT_CATEGORIES } from './constants';
+export {
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_SIZE,
+  TYPE_LABELS,
+  TYPE_ICONS,
+  ZMANIM_OPTIONS_REGULAR,
+  ZMANIM_OPTIONS_TUKACHINSKY,
+  FONT_CATEGORIES,
+  BREAKPOINT_MOBILE_MAX,
+  BREAKPOINT_TABLET_MAX,
+} from './constants';

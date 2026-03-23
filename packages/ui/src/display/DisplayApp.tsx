@@ -438,81 +438,24 @@ export function DisplayApp({
   const { scale, offsetX, offsetY } = useScreenScale(canvasW, canvasH);
 
   if (state.loading) {
-    return (
-      <div
-        style={{
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden',
-          backgroundColor: '#000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#fff',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: 24,
-        }}
-      >
-        Loading display...
-      </div>
-    );
+    return <div className="dsp-loading">Loading display...</div>;
   }
 
   if (state.error && !state.activeStyle) {
     return (
-      <div
-        style={{
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden',
-          backgroundColor: '#1a0000',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#ff6666',
-          fontFamily: 'system-ui, sans-serif',
-          padding: 48,
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 16 }}>Display Error</div>
-        <div style={{ fontSize: 18, opacity: 0.8, maxWidth: 600 }}>{state.error}</div>
+      <div className="dsp-fatalError">
+        <div className="dsp-fatalErrorTitle">Display Error</div>
+        <div className="dsp-fatalErrorMsg">{state.error}</div>
       </div>
     );
   }
 
   if (!state.activeStyle) {
-    return (
-      <div
-        style={{
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden',
-          backgroundColor: '#000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#666',
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: 24,
-        }}
-      >
-        No active display style configured
-      </div>
-    );
+    return <div className="dsp-noStyle">No active display style configured</div>;
   }
 
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
-        backgroundColor: '#000',
-        position: 'relative',
-      }}
-    >
+    <div className="dsp-root">
       {/* Scaled canvas (background + content together so they scale identically) */}
       <FrameRenderer frameId={state.activeStyle?.backgroundFrameId} thickness={state.activeStyle?.backgroundFrameThickness ?? 1}>
       <div
@@ -555,25 +498,7 @@ export function DisplayApp({
       </FrameRenderer>
 
       {/* Error toast overlay */}
-      {state.error && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 16,
-            right: 16,
-            backgroundColor: 'rgba(180, 0, 0, 0.85)',
-            color: '#fff',
-            padding: '8px 16px',
-            borderRadius: 6,
-            fontSize: 14,
-            fontFamily: 'system-ui, sans-serif',
-            maxWidth: 400,
-            zIndex: 9999,
-          }}
-        >
-          {state.error}
-        </div>
-      )}
+      {state.error && <div className="dsp-errorToast">{state.error}</div>}
     </div>
   );
 }

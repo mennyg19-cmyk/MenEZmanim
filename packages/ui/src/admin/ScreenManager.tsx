@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { ConfirmDialog } from '../shared/Modal';
 import type { DisplayStyle } from '@zmanim-app/core';
 import { resolveCanvasBackground } from '../shared/backgroundUtils';
 import {
@@ -537,6 +538,7 @@ function StyleListPanel({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [styleDeleteDraft, setStyleDeleteDraft] = useState<{ id: string; name: string } | null>(null);
 
   const sorted = [...styles].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -706,8 +708,12 @@ function StyleListPanel({
                       </button>
                     )}
                     {onStyleDelete && (
-                      <button className="adm-btnDanger" style={{ padding: '4px 10px', fontSize: 12 }}
-                        onClick={() => { if (window.confirm(`Delete style "${style.name}"?`)) onStyleDelete(style.id); }}>
+                      <button
+                        type="button"
+                        className="adm-btnDanger"
+                        style={{ padding: '4px 10px', fontSize: 12 }}
+                        onClick={() => setStyleDeleteDraft({ id: style.id, name: style.name })}
+                      >
                         Delete
                       </button>
                     )}
@@ -719,6 +725,18 @@ function StyleListPanel({
         })}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={styleDeleteDraft !== null}
+        title="Delete style?"
+        message={styleDeleteDraft ? `Delete style "${styleDeleteDraft.name}"? This cannot be undone.` : ''}
+        danger
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (styleDeleteDraft && onStyleDelete) onStyleDelete(styleDeleteDraft.id);
+        }}
+        onClose={() => setStyleDeleteDraft(null)}
+      />
     </div>
   );
 }
@@ -739,6 +757,7 @@ export function ScreenManager({
   onStyleCreate, onStyleRename, onStyleDuplicate, onStyleDelete, onStyleChange, onEditStyle,
 }: ScreenManagerProps) {
   const [editing, setEditing] = useState<ScreenRow | null>(null);
+  const [pendingScreenDelete, setPendingScreenDelete] = useState<string | null>(null);
 
   const handleAdd = () => setEditing(emptyScreen(styles));
   const handleEdit = (s: ScreenRow) => {
@@ -746,8 +765,7 @@ export function ScreenManager({
     setEditing({ ...s, styleSchedules: scheds });
   };
   const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this screen?')) return;
-    onChange(screens.filter((s) => s.id !== id));
+    setPendingScreenDelete(id);
   };
 
   const handleSaveEdit = () => {
@@ -1052,6 +1070,18 @@ export function ScreenManager({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingScreenDelete !== null}
+        title="Delete screen?"
+        message="This screen will be removed from your organization."
+        danger
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (pendingScreenDelete) onChange(screens.filter((s) => s.id !== pendingScreenDelete));
+        }}
+        onClose={() => setPendingScreenDelete(null)}
+      />
     </div>
   );
 }

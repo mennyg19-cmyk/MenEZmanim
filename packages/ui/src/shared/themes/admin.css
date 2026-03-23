@@ -123,7 +123,7 @@
 .adm-sidebarBrand {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--adm-btn-fg);
   padding: 0 20px 16px;
   border-bottom: 1px solid var(--adm-sidebar-border);
   margin-bottom: 16px;
@@ -283,10 +283,15 @@
   margin-bottom: 16px;
 }
 
-/* Buttons */
-.adm-btn {
+/* Buttons — shared base + variants */
+.adm-btn,
+.adm-btnPrimary,
+.adm-btnSave,
+.adm-btnDanger,
+.adm-btnCancel,
+.adm-btnEdit,
+.adm-btnOutline {
   padding: 6px 14px;
-  border: none;
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
@@ -296,106 +301,65 @@
   gap: 6px;
   transition: opacity 0.1s;
   line-height: 1.4;
+}
+
+/* Default outline-style (move arrows, secondary actions) */
+.adm-btn {
+  border: 1px solid var(--adm-border-input);
+  background-color: var(--adm-bg);
+  color: var(--adm-text);
 }
 
 .adm-btn:hover {
   opacity: 0.9;
+  background-color: var(--adm-bg-muted);
+}
+
+.adm-btnPrimary,
+.adm-btnSave,
+.adm-btnDanger,
+.adm-btnCancel,
+.adm-btnEdit {
+  border: none;
+}
+
+.adm-btn:hover,
+.adm-btnPrimary:hover,
+.adm-btnSave:hover,
+.adm-btnDanger:hover,
+.adm-btnCancel:hover,
+.adm-btnEdit:hover {
+  opacity: 0.9;
 }
 
 .adm-btnPrimary {
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.1s;
-  line-height: 1.4;
   background-color: var(--adm-accent-dark);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 .adm-btnSave {
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.1s;
-  line-height: 1.4;
   background-color: var(--adm-success);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 .adm-btnDanger {
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.1s;
-  line-height: 1.4;
   background-color: var(--adm-danger);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 .adm-btnCancel {
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.1s;
-  line-height: 1.4;
   background-color: var(--adm-text-muted);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 .adm-btnEdit {
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.1s;
-  line-height: 1.4;
   background-color: var(--adm-accent);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 .adm-btnOutline {
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: opacity 0.1s;
-  line-height: 1.4;
-  background-color: var(--adm-bg);
   border: 1px solid var(--adm-border-input);
+  background-color: var(--adm-bg);
   color: var(--adm-text);
 }
 
@@ -403,9 +367,11 @@
   background-color: var(--adm-bg-muted);
 }
 
-.adm-btnSmall {
+.adm-btnSmall,
+.adm-btnSmallOutline,
+.adm-btnSmallDanger,
+.adm-btnSmallSave {
   padding: 4px 10px;
-  border: none;
   border-radius: var(--radius-sm);
   font-size: 12px;
   cursor: pointer;
@@ -415,16 +381,8 @@
 }
 
 .adm-btnSmallOutline {
-  padding: 4px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background-color: var(--adm-bg);
   border: 1px solid var(--adm-border-input);
+  background-color: var(--adm-bg);
   color: var(--adm-text);
 }
 
@@ -433,29 +391,15 @@
 }
 
 .adm-btnSmallDanger {
-  padding: 4px 10px;
   border: none;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   background-color: var(--adm-danger);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 .adm-btnSmallSave {
-  padding: 4px 10px;
   border: none;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   background-color: var(--adm-success);
-  color: #fff;
+  color: var(--adm-btn-fg);
 }
 
 /* Table */
@@ -586,7 +530,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: #fff;
+  background-color: var(--adm-btn-fg);
   position: absolute;
   top: 3px;
   transition: left 0.15s;
@@ -647,6 +591,16 @@
   font-weight: 600;
   background-color: var(--adm-bg-hover);
   color: var(--adm-text-muted);
+}
+
+.adm-badgeAccent {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  background-color: color-mix(in srgb, var(--adm-accent) 16%, transparent);
+  color: var(--adm-accent-dark);
 }
 
 /* Section header */
@@ -749,6 +703,15 @@
   z-index: 1000;
 }
 
+.adm-overlay--stacked {
+  z-index: 10000;
+}
+
+.adm-modal--scroll {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
 .adm-modal {
   background-color: var(--adm-bg);
   border-radius: var(--radius-xl);
@@ -836,4 +799,582 @@
   .adm-dashGrid {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
+}
+
+/* ── AdminApp shell (sidebar + main) ── */
+.adm-appRoot {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.adm-sidebarDyn {
+  transition: width 0.2s ease, min-width 0.2s ease;
+  overflow: hidden;
+  padding: 0;
+}
+
+.adm-sidebarBrand--expanded {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 12px;
+  margin: 0;
+}
+
+.adm-sidebarBrand--collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  margin: 0;
+}
+
+.adm-sidebarBrandTitle {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.adm-sidebarCollapseBtn {
+  background: none;
+  border: none;
+  color: var(--adm-sidebar-text);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+}
+
+.adm-sidebarNav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.adm-navGroupLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--adm-text-muted);
+  padding: 16px 12px 4px;
+  letter-spacing: 1px;
+}
+
+.adm-navGroupSpacer {
+  height: 8px;
+}
+
+.adm-sidebarFooter {
+  padding: 12px 8px;
+  border-top: 1px solid var(--adm-sidebar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adm-themeToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--adm-sidebar-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--adm-sidebar-text);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.adm-themeToggle--collapsed {
+  justify-content: center;
+}
+
+.adm-sidebarLiveLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.adm-sidebarLiveLink--collapsed {
+  justify-content: center;
+}
+
+.adm-mainColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.adm-topHeader {
+  padding: 12px 24px;
+  background-color: var(--adm-bg);
+  border-bottom: 1px solid var(--adm-border);
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.adm-topTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--adm-text);
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-topTitleHe {
+  color: var(--adm-text-dim);
+  font-weight: 400;
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+.adm-previewLinkSm {
+  font-size: 13px;
+}
+
+.adm-mainScroll {
+  flex: 1;
+  background-color: var(--adm-bg-hover);
+}
+
+.adm-mainScroll--locked {
+  overflow: hidden;
+}
+
+.adm-mainScroll--default {
+  overflow: auto;
+}
+
+.adm-contentWrap {
+  padding: 24px;
+}
+
+.adm-contentWrap--flush {
+  padding: 0;
+}
+
+.adm-contentWrap--full {
+  height: 100%;
+}
+
+.adm-contentWrap--screens {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.adm-editorShell {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.adm-editorEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 18px;
+  background-color: var(--ed-bg-deep);
+  color: var(--ed-text-muted);
+}
+
+.adm-screensShell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-dashTitle {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--adm-text);
+}
+
+.adm-dashGridMb {
+  margin-bottom: 24px;
+}
+
+.adm-dashQuickStretch {
+  align-items: stretch;
+}
+
+.adm-dashStat {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.adm-dashCardAccent {
+  text-align: left;
+}
+
+.adm-navBtnPad {
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.adm-navBtnPad--collapsed {
+  padding: 10px 0;
+  justify-content: center;
+}
+
+.adm-navBtnPad--expanded {
+  padding: 10px 12px;
+  justify-content: flex-start;
+}
+
+/* Schedule editor root (admin) */
+.adm-schedRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.adm-navBtn.adm-navBtnPad--expanded,
+.adm-navBtnActive.adm-navBtnPad--expanded {
+  padding: 10px 12px;
+}
+
+.adm-navBtn.adm-navBtnPad--collapsed,
+.adm-navBtnActive.adm-navBtnPad--collapsed {
+  padding: 10px 0;
+  justify-content: center;
+}
+
+/* ── Layout utilities (inline style purge) ─────────────────── */
+.adm-flex {
+  display: flex;
+}
+
+.adm-flexCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-flexWrap {
+  flex-wrap: wrap;
+}
+
+.adm-flexCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adm-flexBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.adm-flexEnd {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-gap4 {
+  gap: 4px;
+}
+
+.adm-gap6 {
+  gap: 6px;
+}
+
+.adm-gap8 {
+  gap: 8px;
+}
+
+.adm-gap10 {
+  gap: 10px;
+}
+
+.adm-gap12 {
+  gap: 12px;
+}
+
+.adm-gap16 {
+  gap: 16px;
+}
+
+.adm-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.adm-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.adm-colorDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid var(--adm-border);
+}
+
+.adm-schedColorSwatch {
+  width: 30px;
+  height: 24px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+
+.adm-schedBulkBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--adm-sched-bulk-bg);
+  border-bottom: 1px solid var(--adm-sched-bulk-border);
+  font-size: 12px;
+}
+
+.adm-schedBulkStrong {
+  color: var(--adm-sched-bulk-strong);
+}
+
+.adm-schedBulkSelect {
+  padding: 3px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--adm-sched-bulk-btn-off);
+}
+
+.adm-schedBulkApply {
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: none;
+  color: #fff;
+}
+
+.adm-schedBulkApply:disabled {
+  background: var(--adm-sched-bulk-btn-off);
+  cursor: default;
+}
+
+.adm-schedBulkApply:not(:disabled) {
+  background: var(--adm-sched-bulk-btn-on);
+  cursor: pointer;
+}
+
+.adm-mlAuto {
+  margin-left: auto;
+}
+
+.adm-bulkBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--adm-bg-active);
+  border-bottom: 1px solid var(--adm-border);
+}
+
+.adm-schedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.adm-schedListItem {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.adm-schedListItem:hover {
+  background: var(--adm-bg-hover);
+}
+
+.adm-schedListItemSelected {
+  background: var(--adm-bg-active);
+  border-color: var(--adm-accent);
+}
+
+.adm-linkBtn {
+  border: none;
+  background: none;
+  color: var(--adm-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+  padding: 0;
+}
+
+.adm-dangerLink {
+  border: none;
+  background: none;
+  color: var(--adm-danger);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+  padding: 0;
+}
+
+.adm-previewThumb {
+  width: 120px;
+  height: 68px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--adm-border);
+  overflow: hidden;
+  background: var(--adm-bg-muted);
+  flex-shrink: 0;
+}
+
+.adm-previewThumbInner {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+.adm-mb8 {
+  margin-bottom: 8px;
+}
+
+.adm-mb12 {
+  margin-bottom: 12px;
+}
+
+.adm-mt10 {
+  margin-top: 10px;
+}
+
+.adm-sectionTitleTight {
+  margin: 0 0 14px;
+}
+
+.adm-sectionTitleLoose {
+  margin: 0 0 10px;
+}
+
+.adm-modalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.adm-btnPad {
+  padding: 8px 16px;
+}
+
+.adm-labelRow {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.adm-selectFlex {
+  flex: 1 1 140px;
+  font-size: 13px;
+}
+
+.adm-selectBp {
+  width: 130px;
+  font-size: 13px;
+}
+
+.adm-previewShell {
+  flex: 1;
+  min-height: 180px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+  border: 1px solid var(--adm-border);
+}
+
+.adm-previewEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--adm-text-muted);
+  font-size: 14px;
+}
+
+.adm-previewInfoBar {
+  font-size: 11px;
+  color: var(--adm-text-muted);
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.adm-previewActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.adm-btnStretch {
+  flex: 1;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.adm-linkAsBtn {
+  padding: 8px 14px;
+  font-size: 13px;
+  text-decoration: none;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.adm-cardStretch {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.adm-quickIcon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.adm-dayToggles {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.adm-labelDay {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.adm-textareaTall {
+  min-height: 100px;
+}
+
+.adm-quickCardIcon {
+  font-size: 26px;
+  line-height: 1;
 }

@@ -1,4 +1,6 @@
-import type { DisplayStyle, ScreenStyleSchedule } from '@zmanim-app/core';
+import type { DisplayStyle, ScreenStyleSchedule, VisibilityRule } from '@zmanim-app/core';
+
+export type { VisibilityCondition, VisibilityRule } from '@zmanim-app/core';
 
 export interface Organization {
   id: string;
@@ -60,27 +62,6 @@ export interface DaveningGroup {
   color: string;
   sortOrder: number;
   active: boolean;
-}
-
-export type VisibilityCondition =
-  | 'weekday'
-  | 'shabbos'
-  | 'chol_hamoed'
-  | 'yom_tov'
-  | 'fast_day'
-  | 'erev_shabbos'
-  | 'erev_chag'
-  | 'erev_pesach'
-  | 'chanukah'
-  | 'behab'
-  | 'rosh_chodesh'
-  | 'purim'
-  | 'dst_on'
-  | 'dst_off';
-
-export interface VisibilityRule {
-  condition: VisibilityCondition;
-  show: boolean;
 }
 
 export interface MinyanSchedule {
