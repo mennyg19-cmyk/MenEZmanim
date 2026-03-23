@@ -13,6 +13,8 @@ import {
   type StyleScheduleRule,
 } from '@zmanim-app/core';
 
+/* ── Data types ──────────────────────────────────────────── */
+
 interface ScreenRow {
   id: string;
   name: string;
@@ -29,13 +31,9 @@ interface ScreenManagerProps {
   onChange: (screens: ScreenRow[]) => void;
 }
 
+/* ── Constants ───────────────────────────────────────────── */
+
 const HEBREW_MONTHS: { v: number; label: string }[] = [
-  { v: 1, label: 'Nissan' },
-  { v: 2, label: 'Iyar' },
-  { v: 3, label: 'Sivan' },
-  { v: 4, label: 'Tammuz' },
-  { v: 5, label: 'Av' },
-  { v: 6, label: 'Elul' },
   { v: 7, label: 'Tishrei' },
   { v: 8, label: 'Cheshvan' },
   { v: 9, label: 'Kislev' },
@@ -43,25 +41,37 @@ const HEBREW_MONTHS: { v: number; label: string }[] = [
   { v: 11, label: 'Shevat' },
   { v: 12, label: 'Adar' },
   { v: 13, label: 'Adar II' },
+  { v: 1, label: 'Nissan' },
+  { v: 2, label: 'Iyar' },
+  { v: 3, label: 'Sivan' },
+  { v: 4, label: 'Tammuz' },
+  { v: 5, label: 'Av' },
+  { v: 6, label: 'Elul' },
 ];
 
 const GREG_MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ].map((label, i) => ({ v: i + 1, label }));
 
-const BP_OPTS: { v: ScreenStyleSchedule['breakpoint']; label: string }[] = [
-  { v: 'all', label: 'All breakpoints' },
-  { v: 'mobile', label: 'Mobile' },
-  { v: 'tablet', label: 'Tablet' },
-  { v: 'full', label: 'Full' },
-];
+const BP_LABELS: Record<ScreenStyleSchedule['breakpoint'], string> = {
+  all: 'All views',
+  mobile: 'Mobile',
+  tablet: 'Tablet',
+  full: 'Full / Desktop',
+};
 
-const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos'];
+
+/* ── Helpers ─────────────────────────────────────────────── */
+
+function uid(): string {
+  return crypto.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function newScheduleEntry(styles: DisplayStyle[], priority: number): ScreenStyleSchedule {
   return {
-    id: crypto.randomUUID ? crypto.randomUUID() : `sch-${Date.now()}-${priority}`,
+    id: uid(),
     styleId: styles[0]?.id ?? '',
     breakpoint: 'all',
     rules: [{ type: 'default' }],
@@ -76,246 +86,134 @@ function effectiveSchedules(screen: ScreenRow, styles: DisplayStyle[]): ScreenSt
   return resolveScreenStyleSchedules(undefined, screen.styleId || undefined, styles);
 }
 
-function hasDefaultRule(schedules: ScreenStyleSchedule[]): boolean {
-  return schedules.some((s) => s.rules.some((r) => r.type === 'default'));
+function hasDefaultEntry(schedules: ScreenStyleSchedule[]): boolean {
+  return schedules.some((s) => s.rules.length === 1 && s.rules[0].type === 'default');
 }
 
 function previewStyleForBp(
   schedules: ScreenStyleSchedule[],
   styles: DisplayStyle[],
   bp: DisplayBreakpoint,
-): string {
+): DisplayStyle | null {
   const ordered = orderedScreenSchedulesForBreakpoint(schedules, bp);
   const now = new Date();
   for (const e of ordered) {
     if (evaluateStyleScheduleRules(e.rules, now)) {
-      const st = styles.find((x) => x.id === e.styleId);
-      return st?.name ?? e.styleId;
+      return styles.find((x) => x.id === e.styleId) ?? null;
     }
   }
-  return '—';
+  return null;
 }
 
-function RuleEditor({
+function styleResLabel(s: DisplayStyle): string {
+  return `${s.canvasWidth}x${s.canvasHeight}`;
+}
+
+function ruleSummary(rule: StyleScheduleRule): string {
+  switch (rule.type) {
+    case 'default':
+      return 'Always (default fallback)';
+    case 'hebrew_date_range': {
+      const sm = HEBREW_MONTHS.find((m) => m.v === rule.startMonth)?.label ?? String(rule.startMonth);
+      const em = HEBREW_MONTHS.find((m) => m.v === rule.endMonth)?.label ?? String(rule.endMonth);
+      return `${sm} ${rule.startDay} – ${em} ${rule.endDay}`;
+    }
+    case 'gregorian_date_range': {
+      const sm = GREG_MONTHS.find((m) => m.v === rule.startMonth)?.label ?? String(rule.startMonth);
+      const em = GREG_MONTHS.find((m) => m.v === rule.endMonth)?.label ?? String(rule.endMonth);
+      return `${sm} ${rule.startDay} – ${em} ${rule.endDay}`;
+    }
+    case 'hebrew_month':
+      return HEBREW_MONTHS.find((m) => m.v === rule.month)?.label ?? `Hebrew month ${rule.month}`;
+    case 'gregorian_month':
+      return GREG_MONTHS.find((m) => m.v === rule.month)?.label ?? `Month ${rule.month}`;
+    case 'day_of_week':
+      return rule.days.map((d) => DOW_LABELS[d]).join(', ');
+    case 'day_type':
+      return DAY_TYPE_OPTIONS.find((o) => o.value === rule.dayType)?.label ?? rule.dayType;
+    case 'week_of_month':
+      return `Week ${rule.week} of month`;
+    default:
+      return '?';
+  }
+}
+
+function entrySummary(entry: ScreenStyleSchedule, styles: DisplayStyle[]): string {
+  const styleName = styles.find((s) => s.id === entry.styleId)?.name ?? 'Unknown';
+  if (entry.rules.length === 1 && entry.rules[0].type === 'default') {
+    return `${styleName} — Default`;
+  }
+  const conditions = entry.rules.map(ruleSummary).join(' + ');
+  return `${styleName} — ${conditions}`;
+}
+
+/* ── Inline rule editor (compact) ────────────────────────── */
+
+function RuleFields({
   rule,
   onChange,
-  onRemove,
 }: {
   rule: StyleScheduleRule;
   onChange: (r: StyleScheduleRule) => void;
-  onRemove: () => void;
 }) {
-  const type = rule.type;
+  switch (rule.type) {
+    case 'default':
+      return <span style={{ fontSize: 13, color: 'var(--adm-text-muted)' }}>Matches always (fallback)</span>;
 
-  return (
-    <div
-      style={{
-        border: '1px solid var(--adm-border)',
-        borderRadius: 6,
-        padding: 8,
-        marginBottom: 6,
-        background: 'var(--adm-bg)',
-      }}
-    >
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-        <label className="adm-labelSm">Rule type</label>
-        <select
-          className="adm-select"
-          style={{ minWidth: 160 }}
-          value={type}
-          onChange={(e) => {
-            const t = e.target.value as StyleScheduleRule['type'];
-            if (t === 'default') onChange({ type: 'default' });
-            else if (t === 'hebrew_date_range') {
-              onChange({
-                type: 'hebrew_date_range',
-                startMonth: 6,
-                startDay: 23,
-                endMonth: 7,
-                endDay: 23,
-              });
-            } else if (t === 'gregorian_date_range') {
-              onChange({
-                type: 'gregorian_date_range',
-                startMonth: 1,
-                startDay: 1,
-                endMonth: 12,
-                endDay: 31,
-              });
-            } else if (t === 'hebrew_month') onChange({ type: 'hebrew_month', month: 7 });
-            else if (t === 'gregorian_month') onChange({ type: 'gregorian_month', month: 1 });
-            else if (t === 'day_of_week') onChange({ type: 'day_of_week', days: [6] });
-            else if (t === 'day_type') onChange({ type: 'day_type', dayType: 'shabbos' });
-            else if (t === 'week_of_month') onChange({ type: 'week_of_month', week: 1 });
-          }}
-        >
-          <option value="default">Default (fallback)</option>
-          <option value="hebrew_date_range">Hebrew date range</option>
-          <option value="gregorian_date_range">Gregorian date range</option>
-          <option value="hebrew_month">Hebrew month</option>
-          <option value="gregorian_month">Gregorian month</option>
-          <option value="day_of_week">Day of week</option>
-          <option value="day_type">Day type (chag, fast…)</option>
-          <option value="week_of_month">Week of month</option>
-        </select>
-        <button type="button" className="adm-btnDanger" style={{ padding: '4px 8px', fontSize: 12 }} onClick={onRemove}>
-          Remove rule
-        </button>
-      </div>
-
-      {type === 'hebrew_date_range' && rule.type === 'hebrew_date_range' && (
+    case 'hebrew_date_range':
+      return (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="adm-labelSm">From</span>
-          <select
-            className="adm-select"
-            value={rule.startMonth}
-            onChange={(e) =>
-              onChange({ ...rule, startMonth: parseInt(e.target.value, 10) })
-            }
-          >
-            {HEBREW_MONTHS.map((m) => (
-              <option key={m.v} value={m.v}>
-                {m.label}
-              </option>
-            ))}
+          <select className="adm-select" value={rule.startMonth} onChange={(e) => onChange({ ...rule, startMonth: +e.target.value })}>
+            {HEBREW_MONTHS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
           </select>
-          <input
-            className="adm-input"
-            type="number"
-            min={1}
-            max={30}
-            style={{ width: 56 }}
-            value={rule.startDay}
-            onChange={(e) =>
-              onChange({ ...rule, startDay: parseInt(e.target.value, 10) || 1 })
-            }
-          />
-          <span className="adm-labelSm">to</span>
-          <select
-            className="adm-select"
-            value={rule.endMonth}
-            onChange={(e) =>
-              onChange({ ...rule, endMonth: parseInt(e.target.value, 10) })
-            }
-          >
-            {HEBREW_MONTHS.map((m) => (
-              <option key={m.v} value={m.v}>
-                {m.label}
-              </option>
-            ))}
+          <input className="adm-input" type="number" min={1} max={30} style={{ width: 52 }} value={rule.startDay} onChange={(e) => onChange({ ...rule, startDay: +e.target.value || 1 })} />
+          <span style={{ fontSize: 13 }}>to</span>
+          <select className="adm-select" value={rule.endMonth} onChange={(e) => onChange({ ...rule, endMonth: +e.target.value })}>
+            {HEBREW_MONTHS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
           </select>
-          <input
-            className="adm-input"
-            type="number"
-            min={1}
-            max={30}
-            style={{ width: 56 }}
-            value={rule.endDay}
-            onChange={(e) =>
-              onChange({ ...rule, endDay: parseInt(e.target.value, 10) || 1 })
-            }
-          />
+          <input className="adm-input" type="number" min={1} max={30} style={{ width: 52 }} value={rule.endDay} onChange={(e) => onChange({ ...rule, endDay: +e.target.value || 1 })} />
         </div>
-      )}
+      );
 
-      {type === 'gregorian_date_range' && rule.type === 'gregorian_date_range' && (
+    case 'gregorian_date_range':
+      return (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="adm-labelSm">From</span>
-          <select
-            className="adm-select"
-            value={rule.startMonth}
-            onChange={(e) =>
-              onChange({ ...rule, startMonth: parseInt(e.target.value, 10) })
-            }
-          >
-            {GREG_MONTHS.map((m) => (
-              <option key={m.v} value={m.v}>
-                {m.label}
-              </option>
-            ))}
+          <select className="adm-select" value={rule.startMonth} onChange={(e) => onChange({ ...rule, startMonth: +e.target.value })}>
+            {GREG_MONTHS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
           </select>
-          <input
-            className="adm-input"
-            type="number"
-            min={1}
-            max={31}
-            style={{ width: 56 }}
-            value={rule.startDay}
-            onChange={(e) =>
-              onChange({ ...rule, startDay: parseInt(e.target.value, 10) || 1 })
-            }
-          />
-          <span className="adm-labelSm">to</span>
-          <select
-            className="adm-select"
-            value={rule.endMonth}
-            onChange={(e) =>
-              onChange({ ...rule, endMonth: parseInt(e.target.value, 10) })
-            }
-          >
-            {GREG_MONTHS.map((m) => (
-              <option key={m.v} value={m.v}>
-                {m.label}
-              </option>
-            ))}
+          <input className="adm-input" type="number" min={1} max={31} style={{ width: 52 }} value={rule.startDay} onChange={(e) => onChange({ ...rule, startDay: +e.target.value || 1 })} />
+          <span style={{ fontSize: 13 }}>to</span>
+          <select className="adm-select" value={rule.endMonth} onChange={(e) => onChange({ ...rule, endMonth: +e.target.value })}>
+            {GREG_MONTHS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
           </select>
-          <input
-            className="adm-input"
-            type="number"
-            min={1}
-            max={31}
-            style={{ width: 56 }}
-            value={rule.endDay}
-            onChange={(e) =>
-              onChange({ ...rule, endDay: parseInt(e.target.value, 10) || 1 })
-            }
-          />
+          <input className="adm-input" type="number" min={1} max={31} style={{ width: 52 }} value={rule.endDay} onChange={(e) => onChange({ ...rule, endDay: +e.target.value || 1 })} />
         </div>
-      )}
+      );
 
-      {type === 'hebrew_month' && rule.type === 'hebrew_month' && (
-        <select
-          className="adm-select"
-          value={rule.month}
-          onChange={(e) =>
-            onChange({ ...rule, month: parseInt(e.target.value, 10) })
-          }
-        >
-          {HEBREW_MONTHS.map((m) => (
-            <option key={m.v} value={m.v}>
-              {m.label}
-            </option>
-          ))}
+    case 'hebrew_month':
+      return (
+        <select className="adm-select" value={rule.month} onChange={(e) => onChange({ ...rule, month: +e.target.value })}>
+          {HEBREW_MONTHS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
         </select>
-      )}
+      );
 
-      {type === 'gregorian_month' && rule.type === 'gregorian_month' && (
-        <select
-          className="adm-select"
-          value={rule.month}
-          onChange={(e) =>
-            onChange({ ...rule, month: parseInt(e.target.value, 10) })
-          }
-        >
-          {GREG_MONTHS.map((m) => (
-            <option key={m.v} value={m.v}>
-              {m.label}
-            </option>
-          ))}
+    case 'gregorian_month':
+      return (
+        <select className="adm-select" value={rule.month} onChange={(e) => onChange({ ...rule, month: +e.target.value })}>
+          {GREG_MONTHS.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
         </select>
-      )}
+      );
 
-      {type === 'day_of_week' && rule.type === 'day_of_week' && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {DOW.map((d, i) => (
-            <label key={d} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+    case 'day_of_week':
+      return (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {DOW_LABELS.map((d, i) => (
+            <label key={d} style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={rule.days.includes(i)}
                 onChange={() => {
-                  const days = rule.days.includes(i)
-                    ? rule.days.filter((x) => x !== i)
-                    : [...rule.days, i].sort((a, b) => a - b);
+                  const days = rule.days.includes(i) ? rule.days.filter((x) => x !== i) : [...rule.days, i].sort((a, b) => a - b);
                   onChange({ ...rule, days });
                 }}
               />
@@ -323,49 +221,283 @@ function RuleEditor({
             </label>
           ))}
         </div>
-      )}
+      );
 
-      {type === 'day_type' && rule.type === 'day_type' && (
-        <select
-          className="adm-select"
-          value={rule.dayType}
-          onChange={(e) =>
-            onChange({ type: 'day_type', dayType: e.target.value as DayType })
-          }
-        >
-          {DAY_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
+    case 'day_type':
+      return (
+        <select className="adm-select" value={rule.dayType} onChange={(e) => onChange({ type: 'day_type', dayType: e.target.value as DayType })}>
+          {DAY_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-      )}
+      );
 
-      {type === 'week_of_month' && rule.type === 'week_of_month' && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="adm-labelSm">Week 1–5</span>
-          <input
-            className="adm-input"
-            type="number"
-            min={1}
-            max={5}
-            style={{ width: 64 }}
-            value={rule.week}
-            onChange={(e) =>
-              onChange({
-                ...rule,
-                week: Math.min(5, Math.max(1, parseInt(e.target.value, 10) || 1)),
-              })
-            }
-          />
-        </label>
+    case 'week_of_month':
+      return (
+        <input className="adm-input" type="number" min={1} max={5} style={{ width: 64 }} value={rule.week}
+          onChange={(e) => onChange({ ...rule, week: Math.min(5, Math.max(1, +e.target.value || 1)) })} />
+      );
+
+    default:
+      return null;
+  }
+}
+
+/* ── Schedule entry editor (one row in the schedule) ─────── */
+
+function ScheduleEntryEditor({
+  entry,
+  styles,
+  isDefault,
+  onChange,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}: {
+  entry: ScreenStyleSchedule;
+  styles: DisplayStyle[];
+  isDefault: boolean;
+  onChange: (e: ScreenStyleSchedule) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const selectedStyle = styles.find((s) => s.id === entry.styleId);
+
+  const conditionLabel = isDefault
+    ? 'Default fallback'
+    : entry.rules.map(ruleSummary).join(' + ');
+
+  return (
+    <div style={{
+      border: '1px solid var(--adm-border)',
+      borderRadius: 8,
+      overflow: 'hidden',
+      background: isDefault ? 'var(--adm-bg)' : 'var(--adm-bg-hover)',
+    }}>
+      {/* Collapsed header */}
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+          cursor: 'pointer', userSelect: 'none',
+        }}
+      >
+        <span style={{ fontSize: 14, opacity: 0.5, width: 18, textAlign: 'center' }}>
+          {expanded ? '▾' : '▸'}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>
+            {selectedStyle?.name ?? 'No style'}
+            <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', marginLeft: 8, fontSize: 12 }}>
+              {BP_LABELS[entry.breakpoint]}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginTop: 2 }}>
+            {conditionLabel}
+            {selectedStyle && (
+              <span style={{ marginLeft: 8, opacity: 0.7 }}>
+                ({styleResLabel(selectedStyle)})
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+          <button type="button" className="adm-btn" style={{ padding: '2px 6px', fontSize: 12 }} disabled={isFirst} onClick={onMoveUp}>▲</button>
+          <button type="button" className="adm-btn" style={{ padding: '2px 6px', fontSize: 12 }} disabled={isLast} onClick={onMoveDown}>▼</button>
+        </div>
+      </div>
+
+      {/* Expanded editor */}
+      {expanded && (
+        <div style={{ padding: '0 14px 14px', borderTop: '1px solid var(--adm-border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+            <div>
+              <label className="adm-labelSm">Style</label>
+              <select className="adm-select" value={entry.styleId} onChange={(e) => onChange({ ...entry, styleId: e.target.value })}>
+                {styles.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} ({styleResLabel(s)})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="adm-labelSm">Applies to</label>
+              <select className="adm-select" value={entry.breakpoint}
+                onChange={(e) => onChange({ ...entry, breakpoint: e.target.value as ScreenStyleSchedule['breakpoint'] })}>
+                {Object.entries(BP_LABELS).map(([v, label]) => (
+                  <option key={v} value={v}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label className="adm-labelSm" style={{ marginBottom: 6, display: 'block' }}>
+              When to show {entry.rules.length > 1 ? '(all conditions must match)' : ''}
+            </label>
+            {entry.rules.map((rule, ri) => (
+              <div key={ri} style={{
+                display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8,
+                padding: 8, borderRadius: 6, background: 'var(--adm-bg)',
+                border: '1px solid var(--adm-border)',
+              }}>
+                <div style={{ flex: 1 }}>
+                  <select
+                    className="adm-select"
+                    style={{ marginBottom: 6 }}
+                    value={rule.type}
+                    onChange={(e) => {
+                      const t = e.target.value as StyleScheduleRule['type'];
+                      let newRule: StyleScheduleRule;
+                      switch (t) {
+                        case 'default': newRule = { type: 'default' }; break;
+                        case 'hebrew_date_range': newRule = { type: 'hebrew_date_range', startMonth: 6, startDay: 23, endMonth: 7, endDay: 23 }; break;
+                        case 'gregorian_date_range': newRule = { type: 'gregorian_date_range', startMonth: 1, startDay: 1, endMonth: 12, endDay: 31 }; break;
+                        case 'hebrew_month': newRule = { type: 'hebrew_month', month: 7 }; break;
+                        case 'gregorian_month': newRule = { type: 'gregorian_month', month: 1 }; break;
+                        case 'day_of_week': newRule = { type: 'day_of_week', days: [6] }; break;
+                        case 'day_type': newRule = { type: 'day_type', dayType: 'shabbos' }; break;
+                        case 'week_of_month': newRule = { type: 'week_of_month', week: 1 }; break;
+                        default: return;
+                      }
+                      const rules = [...entry.rules];
+                      rules[ri] = newRule;
+                      onChange({ ...entry, rules });
+                    }}
+                  >
+                    <option value="default">Always (default)</option>
+                    <option value="hebrew_date_range">Hebrew date range</option>
+                    <option value="gregorian_date_range">Gregorian date range</option>
+                    <option value="hebrew_month">Hebrew month</option>
+                    <option value="gregorian_month">Gregorian month</option>
+                    <option value="day_of_week">Day of week</option>
+                    <option value="day_type">Day type (Shabbos, Chag…)</option>
+                    <option value="week_of_month">Week of month</option>
+                  </select>
+                  <RuleFields
+                    rule={rule}
+                    onChange={(r) => {
+                      const rules = [...entry.rules];
+                      rules[ri] = r;
+                      onChange({ ...entry, rules });
+                    }}
+                  />
+                </div>
+                {entry.rules.length > 1 && (
+                  <button type="button" className="adm-btnDanger" style={{ padding: '3px 8px', fontSize: 11, flexShrink: 0, marginTop: 2 }}
+                    onClick={() => {
+                      const rules = entry.rules.filter((_, i) => i !== ri);
+                      onChange({ ...entry, rules: rules.length ? rules : [{ type: 'default' }] });
+                    }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="adm-btn" style={{ fontSize: 12, padding: '4px 10px' }}
+              onClick={() => onChange({ ...entry, rules: [...entry.rules, { type: 'day_type', dayType: 'shabbos' }] })}>
+              + Add condition
+            </button>
+          </div>
+
+          {!isDefault && (
+            <div style={{ marginTop: 12, textAlign: 'right' }}>
+              <button type="button" className="adm-btnDanger" style={{ padding: '5px 14px', fontSize: 13 }} onClick={onRemove}>
+                Remove this entry
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
+/* ── Resolution warning ──────────────────────────────────── */
+
+function ResolutionWarnings({ schedules, styles }: { schedules: ScreenStyleSchedule[]; styles: DisplayStyle[] }) {
+  const resolutions = new Map<string, Set<string>>();
+  for (const entry of schedules) {
+    const st = styles.find((s) => s.id === entry.styleId);
+    if (!st) continue;
+    const key = entry.breakpoint === 'all' ? 'all' : entry.breakpoint;
+    if (!resolutions.has(key)) resolutions.set(key, new Set());
+    resolutions.get(key)!.add(`${st.canvasWidth}x${st.canvasHeight}`);
+  }
+
+  // Collect all unique resolutions used across all entries
+  const allRes = new Set<string>();
+  for (const entry of schedules) {
+    const st = styles.find((s) => s.id === entry.styleId);
+    if (st) allRes.add(`${st.canvasWidth}x${st.canvasHeight}`);
+  }
+
+  if (allRes.size <= 1) return null;
+
+  const warnings: string[] = [];
+  for (const [bp, resSet] of resolutions) {
+    if (resSet.size > 1) {
+      const bpLabel = bp === 'all' ? 'All views' : BP_LABELS[bp as DisplayBreakpoint] ?? bp;
+      warnings.push(`${bpLabel}: styles use different resolutions (${[...resSet].join(', ')})`);
+    }
+  }
+
+  if (warnings.length === 0 && allRes.size > 1) {
+    warnings.push(`Styles across entries use different resolutions (${[...allRes].join(', ')}). The display will scale to fit, but layouts may not align perfectly.`);
+  }
+
+  if (warnings.length === 0) return null;
+
+  return (
+    <div style={{
+      padding: '8px 12px', borderRadius: 6, fontSize: 13,
+      background: '#422006', border: '1px solid #92400e', color: '#fbbf24',
+      marginBottom: 12,
+    }}>
+      <strong style={{ display: 'block', marginBottom: 2 }}>Resolution mismatch</strong>
+      {warnings.map((w, i) => <div key={i}>{w}</div>)}
+    </div>
+  );
+}
+
+/* ── Today's preview panel ───────────────────────────────── */
+
+function TodayPreview({ schedules, styles }: { schedules: ScreenStyleSchedule[]; styles: DisplayStyle[] }) {
+  const bps: DisplayBreakpoint[] = ['full', 'tablet', 'mobile'];
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+      padding: 10, borderRadius: 6, background: 'var(--adm-bg)', border: '1px dashed var(--adm-border)',
+    }}>
+      {bps.map((bp) => {
+        const st = previewStyleForBp(schedules, styles, bp);
+        return (
+          <div key={bp} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 700, color: 'var(--adm-text-muted)', letterSpacing: 0.5 }}>
+              {BP_LABELS[bp]}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 500, marginTop: 2 }}>
+              {st?.name ?? '—'}
+            </div>
+            {st && (
+              <div style={{ fontSize: 11, color: 'var(--adm-text-muted)' }}>
+                {styleResLabel(st)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Main component ──────────────────────────────────────── */
+
 const emptyScreen = (styles: DisplayStyle[]): ScreenRow => ({
-  id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+  id: uid(),
   name: '',
   styleId: styles[0]?.id ?? '',
   resolution: '1920x1080',
@@ -377,27 +509,28 @@ export function ScreenManager({ screens, styles, orgSlug = 'demo', onChange }: S
   const [editing, setEditing] = useState<ScreenRow | null>(null);
 
   const handleAdd = () => setEditing(emptyScreen(styles));
-  const handleEdit = (s: ScreenRow) =>
-    setEditing({
-      ...s,
-      styleSchedules:
-        s.styleSchedules?.length && hasDefaultRule(s.styleSchedules)
-          ? [...s.styleSchedules]
-          : effectiveSchedules(s, styles),
-    });
-  const handleDelete = (id: string) => onChange(screens.filter((s) => s.id !== id));
+  const handleEdit = (s: ScreenRow) => {
+    const scheds = effectiveSchedules(s, styles);
+    setEditing({ ...s, styleSchedules: scheds });
+  };
+  const handleDelete = (id: string) => {
+    if (!window.confirm('Delete this screen?')) return;
+    onChange(screens.filter((s) => s.id !== id));
+  };
 
   const handleSaveEdit = () => {
     if (!editing) return;
     let scheds = editing.styleSchedules?.length
-      ? [...editing.styleSchedules].sort((a, b) => a.priority - b.priority)
+      ? [...editing.styleSchedules]
       : [newScheduleEntry(styles, 0)];
-    if (!hasDefaultRule(scheds)) {
-      window.alert('Add at least one schedule entry with a "Default" rule (fallback).');
+
+    if (!hasDefaultEntry(scheds)) {
+      window.alert('You need at least one entry with an "Always (default)" condition as a fallback.');
       return;
     }
+
     scheds = scheds.map((s, i) => ({ ...s, priority: i }));
-    const toSave = { ...editing, styleSchedules: scheds };
+    const toSave: ScreenRow = { ...editing, styleSchedules: scheds };
 
     const idx = screens.findIndex((s) => s.id === editing.id);
     if (idx >= 0) {
@@ -410,18 +543,22 @@ export function ScreenManager({ screens, styles, orgSlug = 'demo', onChange }: S
     setEditing(null);
   };
 
-  const editingSchedules = editing
-    ? editing.styleSchedules?.length
-      ? editing.styleSchedules
-      : [newScheduleEntry(styles, 0)]
-    : [];
-
-  const previewLines = useMemo(() => {
-    if (!editing) return null;
-    const eff = effectiveSchedules(editing, styles);
-    const bps: DisplayBreakpoint[] = ['mobile', 'tablet', 'full'];
-    return bps.map((bp) => `${bp}: ${previewStyleForBp(eff, styles, bp)}`);
+  const editingSchedules = useMemo(() => {
+    if (!editing) return [];
+    return editing.styleSchedules?.length ? editing.styleSchedules : [newScheduleEntry(styles, 0)];
   }, [editing, styles]);
+
+  const updateSchedules = (next: ScreenStyleSchedule[]) => {
+    if (!editing) return;
+    setEditing({ ...editing, styleSchedules: next });
+  };
+
+  const moveEntry = (from: number, to: number) => {
+    const arr = [...editingSchedules];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    updateSchedules(arr.map((s, i) => ({ ...s, priority: i })));
+  };
 
   return (
     <div className="adm-card">
@@ -432,296 +569,185 @@ export function ScreenManager({ screens, styles, orgSlug = 'demo', onChange }: S
         </button>
       </div>
 
+      {/* ── Screen edit form ── */}
       {editing && (
         <div className="adm-formPanel" style={{ marginBottom: 20 }}>
-          <h3 className="adm-sectionTitle" style={{ margin: '0 0 12px' }}>
-            {screens.find((s) => s.id === editing.id) ? 'Edit' : 'Add'} Screen
+          <h3 className="adm-sectionTitle" style={{ margin: '0 0 16px' }}>
+            {screens.find((s) => s.id === editing.id) ? 'Edit Screen' : 'New Screen'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label className="adm-labelSm">Screen Name</label>
+
+          {/* Basic info */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label className="adm-labelSm">Screen name</label>
               <input
                 className="adm-input"
                 value={editing.name}
                 onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                placeholder="e.g. Main Hall, Lobby"
+                placeholder="e.g. Main Hall, Lobby TV"
               />
             </div>
-            <div>
-              <label className="adm-labelSm">Primary style (legacy sync)</label>
-              <select
-                className="adm-select"
-                value={editing.styleId}
-                onChange={(e) => setEditing({ ...editing, styleId: e.target.value })}
-              >
-                <option value="">— No Style —</option>
-                {styles.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name || s.id}
-                  </option>
-                ))}
-              </select>
-              <p style={{ fontSize: 11, color: 'var(--adm-text-muted)', margin: '4px 0 0' }}>
-                Kept for compatibility; schedule below decides which style is shown.
-              </p>
-            </div>
-            <div>
-              <label className="adm-labelSm">Resolution</label>
-              <select
-                className="adm-select"
-                value={editing.resolution}
-                onChange={(e) => setEditing({ ...editing, resolution: e.target.value })}
-              >
-                <option value="1920x1080">1920x1080 (FHD)</option>
-                <option value="3840x2160">3840x2160 (4K)</option>
-                <option value="1280x720">1280x720 (HD)</option>
-                <option value="1080x1920">1080x1920 (Portrait)</option>
-              </select>
-            </div>
-            <div>
-              <label className="adm-labelSm">Active</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '6px 0' }}>
                 <input
                   type="checkbox"
                   checked={editing.active}
                   onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
                 />
-                Screen is active
+                Active
               </label>
             </div>
           </div>
 
-          <h4 className="adm-sectionTitle" style={{ margin: '16px 0 8px' }}>
-            Style schedule
-          </h4>
-          <p style={{ fontSize: 13, color: 'var(--adm-text-muted)', marginBottom: 8 }}>
-            Order matters: first matching entry wins. Use breakpoint-specific rows before &quot;All breakpoints&quot; for
-            overrides. Include one entry with a <strong>Default</strong> rule as fallback.
-          </p>
+          {/* Schedule section */}
+          <div style={{ marginBottom: 16 }}>
+            <h4 className="adm-sectionTitle" style={{ margin: '0 0 4px' }}>Style schedule</h4>
+            <p style={{ fontSize: 13, color: 'var(--adm-text-muted)', margin: '0 0 12px' }}>
+              Entries are checked top to bottom. The first entry whose conditions match today is used.
+              You need at least one &quot;Always (default)&quot; entry as a fallback.
+              Use breakpoint-specific entries to show different styles on mobile vs desktop.
+            </p>
 
-          {editingSchedules.map((entry, ei) => (
-            <div
-              key={entry.id}
-              style={{
-                border: '1px solid var(--adm-border)',
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 12,
-                background: 'var(--adm-bg-hover)',
+            <ResolutionWarnings schedules={editingSchedules} styles={styles} />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {editingSchedules.map((entry, ei) => {
+                const isDefault = entry.rules.length === 1 && entry.rules[0].type === 'default';
+                return (
+                  <ScheduleEntryEditor
+                    key={entry.id}
+                    entry={entry}
+                    styles={styles}
+                    isDefault={isDefault}
+                    onChange={(updated) => {
+                      const next = [...editingSchedules];
+                      next[ei] = updated;
+                      updateSchedules(next);
+                    }}
+                    onRemove={() => updateSchedules(editingSchedules.filter((_, i) => i !== ei))}
+                    onMoveUp={() => moveEntry(ei, ei - 1)}
+                    onMoveDown={() => moveEntry(ei, ei + 1)}
+                    isFirst={ei === 0}
+                    isLast={ei === editingSchedules.length - 1}
+                  />
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              className="adm-btnPrimary"
+              style={{ marginTop: 10, padding: '6px 14px', fontSize: 13 }}
+              onClick={() => {
+                const next = [...editingSchedules, {
+                  id: uid(),
+                  styleId: styles[0]?.id ?? '',
+                  breakpoint: 'all' as const,
+                  rules: [{ type: 'day_type' as const, dayType: 'shabbos' as const }],
+                  priority: editingSchedules.length,
+                }];
+                updateSchedules(next);
               }}
             >
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-                <div>
-                  <label className="adm-labelSm">Style</label>
-                  <select
-                    className="adm-select"
-                    value={entry.styleId}
-                    onChange={(e) => {
-                      const next = [...editingSchedules];
-                      next[ei] = { ...entry, styleId: e.target.value };
-                      setEditing({ ...editing, styleSchedules: next });
-                    }}
-                  >
-                    {styles.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="adm-labelSm">Breakpoint</label>
-                  <select
-                    className="adm-select"
-                    value={entry.breakpoint}
-                    onChange={(e) => {
-                      const next = [...editingSchedules];
-                      next[ei] = {
-                        ...entry,
-                        breakpoint: e.target.value as ScreenStyleSchedule['breakpoint'],
-                      };
-                      setEditing({ ...editing, styleSchedules: next });
-                    }}
-                  >
-                    {BP_OPTS.map((o) => (
-                      <option key={o.v} value={o.v}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="adm-labelSm">Priority</label>
-                  <input
-                    className="adm-input"
-                    type="number"
-                    style={{ width: 72 }}
-                    value={entry.priority}
-                    onChange={(e) => {
-                      const next = [...editingSchedules];
-                      next[ei] = { ...entry, priority: parseInt(e.target.value, 10) || 0 };
-                      setEditing({ ...editing, styleSchedules: next });
-                    }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="adm-btn"
-                  onClick={() => {
-                    if (editingSchedules.length <= 1) return;
-                    const next = editingSchedules.filter((_, i) => i !== ei);
-                    setEditing({ ...editing, styleSchedules: next });
-                  }}
-                  disabled={editingSchedules.length <= 1}
-                >
-                  Remove entry
-                </button>
-              </div>
-              <div style={{ marginBottom: 6 }}>
-                <span className="adm-labelSm">Rules (all must match)</span>
-                {entry.rules.map((rule, ri) => (
-                  <RuleEditor
-                    key={`${entry.id}-r-${ri}`}
-                    rule={rule}
-                    onChange={(r) => {
-                      const next = [...editingSchedules];
-                      const rules = [...next[ei].rules];
-                      rules[ri] = r;
-                      next[ei] = { ...next[ei], rules };
-                      setEditing({ ...editing, styleSchedules: next });
-                    }}
-                    onRemove={() => {
-                      const next = [...editingSchedules];
-                      const rules = next[ei].rules.filter((_, i) => i !== ri);
-                      if (rules.length === 0) rules.push({ type: 'default' });
-                      next[ei] = { ...next[ei], rules };
-                      setEditing({ ...editing, styleSchedules: next });
-                    }}
-                  />
-                ))}
-                <button
-                  type="button"
-                  className="adm-btn"
-                  style={{ marginTop: 4 }}
-                  onClick={() => {
-                    const next = [...editingSchedules];
-                    next[ei] = {
-                      ...next[ei],
-                      rules: [...next[ei].rules, { type: 'default' }],
-                    };
-                    setEditing({ ...editing, styleSchedules: next });
-                  }}
-                >
-                  + Add rule
-                </button>
-              </div>
-            </div>
-          ))}
+              + Add schedule entry
+            </button>
+          </div>
 
-          <button
-            type="button"
-            className="adm-btnPrimary"
-            style={{ marginBottom: 12 }}
-            onClick={() => {
-              const next = [...editingSchedules, newScheduleEntry(styles, editingSchedules.length)];
-              setEditing({ ...editing, styleSchedules: next });
-            }}
-          >
-            + Add schedule entry
-          </button>
+          {/* Today's preview */}
+          <div style={{ marginBottom: 16 }}>
+            <label className="adm-labelSm" style={{ marginBottom: 6, display: 'block' }}>Today&apos;s active style</label>
+            <TodayPreview schedules={editingSchedules} styles={styles} />
+          </div>
 
-          {previewLines && (
-            <div
-              style={{
-                fontSize: 13,
-                padding: 10,
-                borderRadius: 6,
-                background: 'var(--adm-bg)',
-                border: '1px dashed var(--adm-border)',
-              }}
-            >
-              <strong>Today&apos;s preview</strong>
-              {previewLines.map((line) => (
-                <div key={line}>{line}</div>
-              ))}
-            </div>
-          )}
-
-          <div className="adm-inlineGroup" style={{ marginTop: 12 }}>
-            <button onClick={handleSaveEdit} className="adm-btnSave" style={{ padding: '8px 16px' }}>
+          {/* Actions */}
+          <div className="adm-inlineGroup" style={{ gap: 8 }}>
+            <button onClick={handleSaveEdit} className="adm-btnSave" style={{ padding: '8px 20px' }}>
               Save
             </button>
-            <button onClick={() => setEditing(null)} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
+            <button onClick={() => setEditing(null)} className="adm-btnCancel" style={{ padding: '8px 20px' }}>
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table className="adm-table">
-          <thead>
-            <tr>
-              <th className="adm-th">Screen Name</th>
-              <th className="adm-th">Primary style</th>
-              <th className="adm-th">Schedule</th>
-              <th className="adm-th">Resolution</th>
-              <th className="adm-th">Active</th>
-              <th className="adm-th" style={{ width: 140 }}>
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {screens.map((s) => {
-              const styleName = styles.find((st) => st.id === s.styleId)?.name || s.styleId || '—';
-              const eff = effectiveSchedules(s, styles);
-              const schedSummary = `${eff.length} entr${eff.length !== 1 ? 'ies' : 'y'}`;
-              return (
-                <tr key={s.id}>
-                  <td className="adm-td" style={{ fontWeight: 500 }}>
-                    {s.name || '—'}
-                  </td>
-                  <td className="adm-td">{styleName}</td>
-                  <td className="adm-td">{schedSummary}</td>
-                  <td className="adm-td">{s.resolution || '—'}</td>
-                  <td className="adm-td">
-                    <span className={s.active ? 'adm-badgeSuccess' : 'adm-badgeMuted'}>
+      {/* ── Screen list ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {screens.map((s) => {
+          const eff = effectiveSchedules(s, styles);
+          const bps: DisplayBreakpoint[] = ['full', 'tablet', 'mobile'];
+          return (
+            <div key={s.id} style={{
+              border: '1px solid var(--adm-border)', borderRadius: 8,
+              padding: 14, background: 'var(--adm-bg)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>
+                    {s.name || 'Unnamed screen'}
+                    <span className={s.active ? 'adm-badgeSuccess' : 'adm-badgeMuted'} style={{ marginLeft: 8, fontSize: 11 }}>
                       {s.active ? 'Active' : 'Inactive'}
                     </span>
-                  </td>
-                  <td className="adm-tdActions">
-                    <div className="adm-inlineGroup">
-                      <button
-                        onClick={() => {
-                          const idx = screens.indexOf(s);
-                          window.open(`/${orgSlug}/${idx + 1}`, '_blank');
-                        }}
-                        className="adm-btn"
-                        style={{ backgroundColor: '#8b5cf6', color: '#fff' }}
-                      >
-                        Preview
-                      </button>
-                      <button onClick={() => handleEdit(s)} className="adm-btnEdit">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDelete(s.id)} className="adm-btnDanger">
-                        Del
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {screens.length === 0 && (
-              <tr>
-                <td colSpan={6} className="adm-empty">
-                  No screens configured. Click &quot;+ Add Screen&quot; to add one.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginTop: 2 }}>
+                    {eff.length} schedule {eff.length === 1 ? 'entry' : 'entries'}
+                  </div>
+                </div>
+                <div className="adm-inlineGroup" style={{ gap: 6 }}>
+                  <button
+                    onClick={() => {
+                      const idx = screens.indexOf(s);
+                      window.open(`/${orgSlug}/${idx + 1}`, '_blank');
+                    }}
+                    className="adm-btn"
+                    style={{ backgroundColor: '#8b5cf6', color: '#fff', padding: '5px 12px', fontSize: 13 }}
+                  >
+                    Preview
+                  </button>
+                  <button onClick={() => handleEdit(s)} className="adm-btnEdit" style={{ padding: '5px 12px', fontSize: 13 }}>
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(s.id)} className="adm-btnDanger" style={{ padding: '5px 12px', fontSize: 13 }}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              {/* Schedule summary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
+                {eff.slice(0, 4).map((entry) => (
+                  <div key={entry.id} style={{ fontSize: 12, color: 'var(--adm-text-muted)', display: 'flex', gap: 6 }}>
+                    <span style={{ opacity: 0.5, minWidth: 60 }}>{BP_LABELS[entry.breakpoint]}</span>
+                    <span>{entrySummary(entry, styles)}</span>
+                  </div>
+                ))}
+                {eff.length > 4 && (
+                  <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>
+                    +{eff.length - 4} more…
+                  </div>
+                )}
+              </div>
+
+              {/* Today's active */}
+              <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                {bps.map((bp) => {
+                  const st = previewStyleForBp(eff, styles, bp);
+                  return (
+                    <span key={bp} style={{ color: 'var(--adm-text-muted)' }}>
+                      <strong>{BP_LABELS[bp]}:</strong> {st?.name ?? '—'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {screens.length === 0 && (
+          <div className="adm-empty" style={{ padding: 32, textAlign: 'center' }}>
+            No screens configured. Click &quot;+ Add Screen&quot; to create one.
+          </div>
+        )}
       </div>
     </div>
   );
