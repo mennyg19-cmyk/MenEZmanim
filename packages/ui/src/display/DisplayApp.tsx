@@ -182,6 +182,9 @@ export function DisplayApp({
   onError,
 }: DisplayAppProps) {
   const displayBreakpoint = useDisplayBreakpoint();
+  const breakpointRef = useRef<DisplayBreakpoint>(displayBreakpoint);
+  breakpointRef.current = displayBreakpoint;
+
   const [state, setState] = useState<DisplayState>({
     styles: [],
     activeStyle: null,
@@ -276,7 +279,7 @@ export function DisplayApp({
     try {
       let activeStyle: DisplayStyle | null = null;
       if (getResolvedStyle) {
-        activeStyle = await getResolvedStyle(displayBreakpoint);
+        activeStyle = await getResolvedStyle(breakpointRef.current);
       } else {
         const styles = await getStyles();
         activeStyle = getActiveStyle(styles, new Date(), false);
@@ -296,7 +299,7 @@ export function DisplayApp({
     } catch {
       // Silently ignore style refresh failures to avoid flashing errors
     }
-  }, [getResolvedStyle, getStyles, resolveVisibleObjects, displayBreakpoint]);
+  }, [getResolvedStyle, getStyles, resolveVisibleObjects]);
 
   const fullRefresh = useCallback(async () => {
     try {
@@ -308,7 +311,7 @@ export function DisplayApp({
       if (getResolvedStyle) {
         const [resolved, zmanim, calendarInfo, announcements, memorials, rawSchedules, media, displayNames] =
           await Promise.all([
-            getResolvedStyle(displayBreakpoint),
+            getResolvedStyle(breakpointRef.current),
             getZmanim(now),
             getCalendarInfo(now),
             getAnnouncements(),
@@ -395,7 +398,6 @@ export function DisplayApp({
     getDisplayNames,
     handleError,
     resolveVisibleObjects,
-    displayBreakpoint,
   ]);
 
   const scheduleMidnightRefresh = useCallback(() => {
@@ -551,6 +553,26 @@ export function DisplayApp({
         />
       </div>
       </FrameRenderer>
+
+      {/* Breakpoint debug overlay – shows current breakpoint and viewport size */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 4,
+          left: 4,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          color: '#0f0',
+          padding: '2px 8px',
+          borderRadius: 4,
+          fontSize: 11,
+          fontFamily: 'monospace',
+          zIndex: 99999,
+          pointerEvents: 'none',
+        }}
+      >
+        bp:{displayBreakpoint} | {typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : '?'}
+        {state.activeStyle ? ` | style:${state.activeStyle.name}` : ''}
+      </div>
 
       {/* Error toast overlay */}
       {state.error && (
