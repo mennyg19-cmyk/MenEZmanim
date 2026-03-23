@@ -803,6 +803,7 @@ export function WysiwygCanvas({
           canvasStyle={style}
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}
+          media={media?.map((m: any) => ({ id: m.id ?? '', url: m.url ?? '', mimeType: m.mimeType ?? '', filename: m.filename }))}
         />
       )}
     </div>

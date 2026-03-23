@@ -20,6 +20,13 @@ interface DaveningGroupInfo {
   color: string;
 }
 
+interface MediaItem {
+  id: string;
+  url: string;
+  mimeType: string;
+  filename?: string;
+}
+
 interface EditorPropertyPanelProps {
   popupObj: DisplayObject;
   popupTab: 'general' | 'appearance' | 'content';
@@ -40,12 +47,14 @@ interface EditorPropertyPanelProps {
   canvasStyle?: import('@zmanim-app/core').DisplayStyle;
   canvasWidth?: number;
   canvasHeight?: number;
+  media?: MediaItem[];
 }
 
 export function EditorPropertyPanel({
   popupObj, popupTab, setPopupTab, setPopupId, setSelectedId, setSelectedIds,
   pUpdate, pPos, pFont, pContent, deleteObj, daveningGroups, onUploadImage,
   boxBgUploading, setBoxBgUploading, boxBgFileRef, canvasStyle, canvasWidth, canvasHeight,
+  media,
 }: EditorPropertyPanelProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -90,7 +99,7 @@ export function EditorPropertyPanel({
           />
         )}
         {popupTab === 'content' && (
-          <ContentTab popupObj={popupObj} pContent={pContent} daveningGroups={daveningGroups} />
+          <ContentTab popupObj={popupObj} pContent={pContent} daveningGroups={daveningGroups} media={media} onUploadImage={onUploadImage} />
         )}
       </div>
 
@@ -281,10 +290,12 @@ function AppearanceTab({ popupObj, pFont, pContent, pUpdate, onUploadImage, boxB
 
 /* ── Tab: Content ─────────────────────────────────────── */
 
-function ContentTab({ popupObj, pContent, daveningGroups }: {
+function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage }: {
   popupObj: DisplayObject;
   pContent: (patch: Record<string, any>) => void;
   daveningGroups: DaveningGroupInfo[];
+  media?: MediaItem[];
+  onUploadImage?: (file: File) => Promise<string | null>;
 }) {
   const content = popupObj.content || {};
 
@@ -332,7 +343,7 @@ function ContentTab({ popupObj, pContent, daveningGroups }: {
         </>
       )}
       {popupObj.type === DisplayObjectType.MEDIA_VIEWER && (
-        <Field label="Media URL"><Input value={content.url || ''} onChange={(v) => pContent({ url: v })} placeholder="https://..." /></Field>
+        <MediaContentSection popupObj={popupObj} pContent={pContent} media={media} onUploadImage={onUploadImage} />
       )}
       {popupObj.type === DisplayObjectType.SCROLLING_TICKER && (
         <Field label="Ticker Text">
@@ -664,6 +675,164 @@ function RowStylingSection({ popupObj, pContent }: { popupObj: DisplayObject; pC
         </Field>
       )}
     </Section>
+  );
+}
+
+/* ── Media Content Section ────────────────────────────── */
+
+function MediaContentSection({ popupObj, pContent, media, onUploadImage }: {
+  popupObj: DisplayObject;
+  pContent: (patch: Record<string, any>) => void;
+  media?: MediaItem[];
+  onUploadImage?: (file: File) => Promise<string | null>;
+}) {
+  const content = popupObj.content || {};
+  const selectedIds: string[] = content.mediaIds ?? [];
+  const useAll = !content.mediaIds || content.mediaIds.length === 0;
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadImage) return;
+    setUploading(true);
+    try {
+      await onUploadImage(file);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const toggleItem = (id: string) => {
+    if (useAll) {
+      pContent({ mediaIds: [id] });
+    } else if (selectedIds.includes(id)) {
+      const next = selectedIds.filter((x) => x !== id);
+      pContent({ mediaIds: next.length > 0 ? next : undefined });
+    } else {
+      pContent({ mediaIds: [...selectedIds, id] });
+    }
+  };
+
+  const selectAll = () => pContent({ mediaIds: undefined });
+
+  const items = media ?? [];
+
+  return (
+    <>
+      <Section title="Media Library">
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+          <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleUpload} />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || !onUploadImage}
+            className="ed-btnSmall"
+            style={{ flex: 1, cursor: uploading ? 'wait' : 'pointer' }}
+          >
+            {uploading ? 'Uploading...' : '+ Upload'}
+          </button>
+          <button
+            type="button"
+            onClick={selectAll}
+            className={useAll ? 'ed-optionBtnActive' : 'ed-optionBtn'}
+            style={{ fontSize: 11, padding: '4px 8px' }}
+          >
+            Use all
+          </button>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="ed-hint">No media uploaded yet. Upload images from here or the Media &amp; Flyers section.</div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 4,
+            maxHeight: 240,
+            overflowY: 'auto',
+          }}>
+            {items.map((item) => {
+              const isSelected = useAll || selectedIds.includes(item.id);
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleItem(item.id)}
+                  style={{
+                    position: 'relative',
+                    paddingBottom: '75%',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: isSelected ? '2px solid var(--ed-accent, #4a9eff)' : '2px solid transparent',
+                    opacity: isSelected ? 1 : 0.45,
+                    transition: 'opacity 0.15s, border-color 0.15s',
+                  }}
+                >
+                  <img
+                    src={item.url}
+                    alt={item.filename || ''}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                  {isSelected && !useAll && (
+                    <div style={{
+                      position: 'absolute', top: 2, right: 2,
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: 'var(--ed-accent, #4a9eff)',
+                      color: '#fff', fontSize: 10, lineHeight: '16px', textAlign: 'center',
+                    }}>
+                      {selectedIds.indexOf(item.id) + 1}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!useAll && selectedIds.length > 0 && (
+          <div className="ed-hint" style={{ marginTop: 4 }}>
+            {selectedIds.length} of {items.length} selected — click to toggle, numbers show slideshow order
+          </div>
+        )}
+        {useAll && items.length > 0 && (
+          <div className="ed-hint" style={{ marginTop: 4 }}>
+            Showing all {items.length} media items. Click an image to select specific items.
+          </div>
+        )}
+      </Section>
+
+      <Section title="Slideshow Settings">
+        <Field label={`Rotation Interval: ${content.rotationInterval ?? 10}s`}>
+          <input
+            type="range"
+            min={2}
+            max={60}
+            step={1}
+            value={content.rotationInterval ?? 10}
+            onChange={(e) => pContent({ rotationInterval: parseInt(e.target.value) })}
+            className="ed-range"
+          />
+        </Field>
+        <Field label="Image Fit">
+          <Select
+            value={content.fit ?? 'contain'}
+            onChange={(v) => pContent({ fit: v })}
+            options={[['contain', 'Contain'], ['cover', 'Cover'], ['fill', 'Fill']]}
+          />
+        </Field>
+        <Field label="Fade Transition">
+          <Toggle checked={content.showTransition ?? true} onChange={(v) => pContent({ showTransition: v })} />
+        </Field>
+      </Section>
+    </>
   );
 }
 

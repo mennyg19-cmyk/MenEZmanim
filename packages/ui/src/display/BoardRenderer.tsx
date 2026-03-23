@@ -194,7 +194,12 @@ export function renderWidget(
     }
 
     case 'MEDIA_VIEWER': {
-      const sources = (media || []).map((m) => m.url);
+      const allMedia = media || [];
+      const mediaIds: string[] | undefined = content.mediaIds;
+      const filtered = mediaIds && mediaIds.length > 0
+        ? mediaIds.map((id: string) => allMedia.find((m) => m.id === id)).filter(Boolean)
+        : allMedia;
+      const sources = filtered.map((m: any) => m.url);
       return (
         <MediaViewer
           sources={sources}
