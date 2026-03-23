@@ -554,26 +554,6 @@ export function DisplayApp({
       </div>
       </FrameRenderer>
 
-      {/* Breakpoint debug overlay – shows current breakpoint and viewport size */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 4,
-          left: 4,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          color: '#0f0',
-          padding: '2px 8px',
-          borderRadius: 4,
-          fontSize: 11,
-          fontFamily: 'monospace',
-          zIndex: 99999,
-          pointerEvents: 'none',
-        }}
-      >
-        bp:{displayBreakpoint} | {typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : '?'}
-        {state.activeStyle ? ` | style:${state.activeStyle.name}` : ''}
-      </div>
-
       {/* Error toast overlay */}
       {state.error && (
         <div
