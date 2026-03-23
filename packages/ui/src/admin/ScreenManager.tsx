@@ -29,6 +29,13 @@ interface ScreenManagerProps {
   styles: DisplayStyle[];
   orgSlug?: string;
   onChange: (screens: ScreenRow[]) => void;
+  onStyleCreate?: (name: string) => void;
+  onStyleRename?: (styleId: string, name: string) => void;
+  onStyleDuplicate?: (styleId: string) => void;
+  onStyleDelete?: (styleId: string) => void;
+  onStyleChange?: (style: DisplayStyle) => void;
+  /** Navigate to the display editor with this style selected */
+  onEditStyle?: (styleId: string) => void;
 }
 
 /* ── Constants ───────────────────────────────────────────── */
@@ -494,6 +501,207 @@ function TodayPreview({ schedules, styles }: { schedules: ScreenStyleSchedule[];
   );
 }
 
+/* ── Style list panel (left side) ─────────────────────────── */
+
+const RESOLUTION_PRESETS = [
+  { label: '1920x1080 (FHD)', w: 1920, h: 1080 },
+  { label: '3840x2160 (4K)', w: 3840, h: 2160 },
+  { label: '1280x720 (HD)', w: 1280, h: 720 },
+  { label: '1080x1920 (Portrait)', w: 1080, h: 1920 },
+];
+
+function StyleListPanel({
+  styles,
+  onStyleCreate,
+  onStyleRename,
+  onStyleDuplicate,
+  onStyleDelete,
+  onStyleChange,
+  onEditStyle,
+}: {
+  styles: DisplayStyle[];
+  onStyleCreate?: (name: string) => void;
+  onStyleRename?: (styleId: string, name: string) => void;
+  onStyleDuplicate?: (styleId: string) => void;
+  onStyleDelete?: (styleId: string) => void;
+  onStyleChange?: (style: DisplayStyle) => void;
+  onEditStyle?: (styleId: string) => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const sorted = [...styles].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const handleCreate = () => {
+    const name = newName.trim();
+    if (!name || !onStyleCreate) return;
+    onStyleCreate(name);
+    setNewName('');
+    setCreating(false);
+  };
+
+  const handleRename = (id: string) => {
+    const name = renameValue.trim();
+    if (!name || !onStyleRename) return;
+    onStyleRename(id, name);
+    setRenamingId(null);
+    setRenameValue('');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--adm-border)' }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Styles</h3>
+        {onStyleCreate && (
+          <button className="adm-btnPrimary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setCreating(true)}>
+            + New
+          </button>
+        )}
+      </div>
+
+      {creating && (
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--adm-border)', display: 'flex', gap: 6 }}>
+          <input
+            className="adm-input"
+            style={{ flex: 1, fontSize: 13 }}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
+            placeholder="Style name..."
+            autoFocus
+          />
+          <button className="adm-btnSave" style={{ padding: '4px 10px', fontSize: 12 }} onClick={handleCreate}>Add</button>
+          <button className="adm-btnCancel" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setCreating(false)}>Cancel</button>
+        </div>
+      )}
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+        {sorted.length === 0 && (
+          <div style={{ padding: 20, textAlign: 'center', color: 'var(--adm-text-muted)', fontSize: 13 }}>
+            No styles yet. Create one to get started.
+          </div>
+        )}
+
+        {sorted.map((style) => {
+          const isExpanded = expandedId === style.id;
+          return (
+            <div key={style.id} style={{
+              border: '1px solid var(--adm-border)', borderRadius: 8, marginBottom: 6,
+              overflow: 'hidden', background: 'var(--adm-bg)',
+            }}>
+              {/* Style preview + name */}
+              <div
+                onClick={() => setExpandedId(isExpanded ? null : style.id)}
+                style={{ padding: '8px 10px', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <div style={{
+                  width: '100%', height: 36, borderRadius: 4, marginBottom: 6,
+                  backgroundColor: style.backgroundColor || '#000',
+                  backgroundImage: style.backgroundImage ? `url(${style.backgroundImage})` : undefined,
+                  backgroundSize: 'cover', backgroundPosition: 'center',
+                  position: 'relative', overflow: 'hidden',
+                  border: '1px solid var(--adm-border)',
+                }}>
+                  {style.objects.slice(0, 5).map((obj) => (
+                    <div key={obj.id} style={{
+                      position: 'absolute',
+                      left: `${(obj.position.x / (style.canvasWidth || 1920)) * 100}%`,
+                      top: `${(obj.position.y / (style.canvasHeight || 1080)) * 100}%`,
+                      width: `${(obj.position.width / (style.canvasWidth || 1920)) * 100}%`,
+                      height: `${(obj.position.height / (style.canvasHeight || 1080)) * 100}%`,
+                      backgroundColor: 'rgba(74, 158, 255, 0.3)',
+                      border: '1px solid rgba(74, 158, 255, 0.5)',
+                      borderRadius: 1,
+                    }} />
+                  ))}
+                </div>
+
+                {renamingId === style.id ? (
+                  <div style={{ display: 'flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="adm-input"
+                      style={{ flex: 1, fontSize: 12, padding: '3px 6px' }}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleRename(style.id); if (e.key === 'Escape') setRenamingId(null); }}
+                      autoFocus
+                    />
+                    <button className="adm-btnSave" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handleRename(style.id)}>OK</button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{style.name}</div>
+                )}
+                <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginTop: 1 }}>
+                  {styleResLabel(style)} &middot; {style.objects.length} object{style.objects.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Expanded actions */}
+              {isExpanded && (
+                <div style={{ padding: '0 10px 10px', borderTop: '1px solid var(--adm-border)' }}>
+                  {/* Resolution changer */}
+                  {onStyleChange && (
+                    <div style={{ marginTop: 8, marginBottom: 8 }}>
+                      <label className="adm-labelSm">Resolution</label>
+                      <select
+                        className="adm-select"
+                        value={`${style.canvasWidth}x${style.canvasHeight}`}
+                        onChange={(e) => {
+                          const preset = RESOLUTION_PRESETS.find((p) => `${p.w}x${p.h}` === e.target.value);
+                          if (preset) {
+                            onStyleChange({ ...style, canvasWidth: preset.w, canvasHeight: preset.h });
+                          }
+                        }}
+                      >
+                        {RESOLUTION_PRESETS.map((p) => (
+                          <option key={`${p.w}x${p.h}`} value={`${p.w}x${p.h}`}>{p.label}</option>
+                        ))}
+                        {!RESOLUTION_PRESETS.some((p) => p.w === style.canvasWidth && p.h === style.canvasHeight) && (
+                          <option value={`${style.canvasWidth}x${style.canvasHeight}`}>
+                            {style.canvasWidth}x{style.canvasHeight} (custom)
+                          </option>
+                        )}
+                      </select>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {onEditStyle && (
+                      <button className="adm-btnPrimary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => onEditStyle(style.id)}>
+                        Open in Editor
+                      </button>
+                    )}
+                    {onStyleRename && (
+                      <button className="adm-btn" style={{ padding: '4px 10px', fontSize: 12 }}
+                        onClick={() => { setRenamingId(style.id); setRenameValue(style.name); setExpandedId(null); }}>
+                        Rename
+                      </button>
+                    )}
+                    {onStyleDuplicate && (
+                      <button className="adm-btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => onStyleDuplicate(style.id)}>
+                        Duplicate
+                      </button>
+                    )}
+                    {onStyleDelete && (
+                      <button className="adm-btnDanger" style={{ padding: '4px 10px', fontSize: 12 }}
+                        onClick={() => { if (window.confirm(`Delete style "${style.name}"?`)) onStyleDelete(style.id); }}>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main component ──────────────────────────────────────── */
 
 const emptyScreen = (styles: DisplayStyle[]): ScreenRow => ({
@@ -505,7 +713,10 @@ const emptyScreen = (styles: DisplayStyle[]): ScreenRow => ({
   styleSchedules: [newScheduleEntry(styles, 0)],
 });
 
-export function ScreenManager({ screens, styles, orgSlug = 'demo', onChange }: ScreenManagerProps) {
+export function ScreenManager({
+  screens, styles, orgSlug = 'demo', onChange,
+  onStyleCreate, onStyleRename, onStyleDuplicate, onStyleDelete, onStyleChange, onEditStyle,
+}: ScreenManagerProps) {
   const [editing, setEditing] = useState<ScreenRow | null>(null);
 
   const handleAdd = () => setEditing(emptyScreen(styles));
@@ -560,194 +771,223 @@ export function ScreenManager({ screens, styles, orgSlug = 'demo', onChange }: S
     updateSchedules(arr.map((s, i) => ({ ...s, priority: i })));
   };
 
+  const hasStyleCallbacks = !!(onStyleCreate || onStyleDelete || onStyleDuplicate || onStyleRename);
+
   return (
-    <div className="adm-card">
-      <div className="adm-pageHeader">
-        <h2 className="adm-pageTitle">ניהול מסכים — Screen Manager</h2>
-        <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
-          + Add Screen
-        </button>
-      </div>
-
-      {/* ── Screen edit form ── */}
-      {editing && (
-        <div className="adm-formPanel" style={{ marginBottom: 20 }}>
-          <h3 className="adm-sectionTitle" style={{ margin: '0 0 16px' }}>
-            {screens.find((s) => s.id === editing.id) ? 'Edit Screen' : 'New Screen'}
-          </h3>
-
-          {/* Basic info */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 200px' }}>
-              <label className="adm-labelSm">Screen name</label>
-              <input
-                className="adm-input"
-                value={editing.name}
-                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                placeholder="e.g. Main Hall, Lobby TV"
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '6px 0' }}>
-                <input
-                  type="checkbox"
-                  checked={editing.active}
-                  onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-                />
-                Active
-              </label>
-            </div>
-          </div>
-
-          {/* Schedule section */}
-          <div style={{ marginBottom: 16 }}>
-            <h4 className="adm-sectionTitle" style={{ margin: '0 0 4px' }}>Style schedule</h4>
-            <p style={{ fontSize: 13, color: 'var(--adm-text-muted)', margin: '0 0 12px' }}>
-              Entries are checked top to bottom. The first entry whose conditions match today is used.
-              You need at least one &quot;Always (default)&quot; entry as a fallback.
-              Use breakpoint-specific entries to show different styles on mobile vs desktop.
-            </p>
-
-            <ResolutionWarnings schedules={editingSchedules} styles={styles} />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {editingSchedules.map((entry, ei) => {
-                const isDefault = entry.rules.length === 1 && entry.rules[0].type === 'default';
-                return (
-                  <ScheduleEntryEditor
-                    key={entry.id}
-                    entry={entry}
-                    styles={styles}
-                    isDefault={isDefault}
-                    onChange={(updated) => {
-                      const next = [...editingSchedules];
-                      next[ei] = updated;
-                      updateSchedules(next);
-                    }}
-                    onRemove={() => updateSchedules(editingSchedules.filter((_, i) => i !== ei))}
-                    onMoveUp={() => moveEntry(ei, ei - 1)}
-                    onMoveDown={() => moveEntry(ei, ei + 1)}
-                    isFirst={ei === 0}
-                    isLast={ei === editingSchedules.length - 1}
-                  />
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              className="adm-btnPrimary"
-              style={{ marginTop: 10, padding: '6px 14px', fontSize: 13 }}
-              onClick={() => {
-                const next = [...editingSchedules, {
-                  id: uid(),
-                  styleId: styles[0]?.id ?? '',
-                  breakpoint: 'all' as const,
-                  rules: [{ type: 'day_type' as const, dayType: 'shabbos' as const }],
-                  priority: editingSchedules.length,
-                }];
-                updateSchedules(next);
-              }}
-            >
-              + Add schedule entry
-            </button>
-          </div>
-
-          {/* Today's preview */}
-          <div style={{ marginBottom: 16 }}>
-            <label className="adm-labelSm" style={{ marginBottom: 6, display: 'block' }}>Today&apos;s active style</label>
-            <TodayPreview schedules={editingSchedules} styles={styles} />
-          </div>
-
-          {/* Actions */}
-          <div className="adm-inlineGroup" style={{ gap: 8 }}>
-            <button onClick={handleSaveEdit} className="adm-btnSave" style={{ padding: '8px 20px' }}>
-              Save
-            </button>
-            <button onClick={() => setEditing(null)} className="adm-btnCancel" style={{ padding: '8px 20px' }}>
-              Cancel
-            </button>
-          </div>
+    <div style={{ display: 'flex', gap: 0, minHeight: 0, height: '100%' }}>
+      {/* ── Left: Styles panel ── */}
+      {hasStyleCallbacks && (
+        <div style={{
+          width: 280, minWidth: 240, maxWidth: 320, flexShrink: 0,
+          borderRight: '1px solid var(--adm-border)',
+          background: 'var(--adm-bg-hover)',
+          borderRadius: '8px 0 0 8px',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          <StyleListPanel
+            styles={styles}
+            onStyleCreate={onStyleCreate}
+            onStyleRename={onStyleRename}
+            onStyleDuplicate={onStyleDuplicate}
+            onStyleDelete={onStyleDelete}
+            onStyleChange={onStyleChange}
+            onEditStyle={onEditStyle}
+          />
         </div>
       )}
 
-      {/* ── Screen list ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {screens.map((s) => {
-          const eff = effectiveSchedules(s, styles);
-          const bps: DisplayBreakpoint[] = ['full', 'tablet', 'mobile'];
-          return (
-            <div key={s.id} style={{
-              border: '1px solid var(--adm-border)', borderRadius: 8,
-              padding: 14, background: 'var(--adm-bg)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>
-                    {s.name || 'Unnamed screen'}
-                    <span className={s.active ? 'adm-badgeSuccess' : 'adm-badgeMuted'} style={{ marginLeft: 8, fontSize: 11 }}>
-                      {s.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginTop: 2 }}>
-                    {eff.length} schedule {eff.length === 1 ? 'entry' : 'entries'}
-                  </div>
+      {/* ── Right: Screens panel ── */}
+      <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
+        <div className="adm-card" style={{ borderRadius: hasStyleCallbacks ? '0 8px 8px 0' : undefined, border: hasStyleCallbacks ? 'none' : undefined, height: '100%' }}>
+          <div className="adm-pageHeader">
+            <h2 className="adm-pageTitle">Screens</h2>
+            <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
+              + Add Screen
+            </button>
+          </div>
+
+          {/* ── Screen edit form ── */}
+          {editing && (
+            <div className="adm-formPanel" style={{ marginBottom: 20 }}>
+              <h3 className="adm-sectionTitle" style={{ margin: '0 0 16px' }}>
+                {screens.find((s) => s.id === editing.id) ? 'Edit Screen' : 'New Screen'}
+              </h3>
+
+              {/* Basic info */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 200px' }}>
+                  <label className="adm-labelSm">Screen name</label>
+                  <input
+                    className="adm-input"
+                    value={editing.name}
+                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                    placeholder="e.g. Main Hall, Lobby TV"
+                  />
                 </div>
-                <div className="adm-inlineGroup" style={{ gap: 6 }}>
-                  <button
-                    onClick={() => {
-                      const idx = screens.indexOf(s);
-                      window.open(`/${orgSlug}/${idx + 1}`, '_blank');
-                    }}
-                    className="adm-btn"
-                    style={{ backgroundColor: '#8b5cf6', color: '#fff', padding: '5px 12px', fontSize: 13 }}
-                  >
-                    Preview
-                  </button>
-                  <button onClick={() => handleEdit(s)} className="adm-btnEdit" style={{ padding: '5px 12px', fontSize: 13 }}>
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(s.id)} className="adm-btnDanger" style={{ padding: '5px 12px', fontSize: 13 }}>
-                    Delete
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: '6px 0' }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.active}
+                      onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
+                    />
+                    Active
+                  </label>
                 </div>
               </div>
 
-              {/* Schedule summary */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
-                {eff.slice(0, 4).map((entry) => (
-                  <div key={entry.id} style={{ fontSize: 12, color: 'var(--adm-text-muted)', display: 'flex', gap: 6 }}>
-                    <span style={{ opacity: 0.5, minWidth: 60 }}>{BP_LABELS[entry.breakpoint]}</span>
-                    <span>{entrySummary(entry, styles)}</span>
-                  </div>
-                ))}
-                {eff.length > 4 && (
-                  <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>
-                    +{eff.length - 4} more…
-                  </div>
-                )}
+              {/* Schedule section */}
+              <div style={{ marginBottom: 16 }}>
+                <h4 className="adm-sectionTitle" style={{ margin: '0 0 4px' }}>Style schedule</h4>
+                <p style={{ fontSize: 13, color: 'var(--adm-text-muted)', margin: '0 0 12px' }}>
+                  Entries are checked top to bottom. The first entry whose conditions match today is used.
+                  You need at least one &quot;Always (default)&quot; entry as a fallback.
+                  Use breakpoint-specific entries to show different styles on mobile vs desktop.
+                </p>
+
+                <ResolutionWarnings schedules={editingSchedules} styles={styles} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {editingSchedules.map((entry, ei) => {
+                    const isDefault = entry.rules.length === 1 && entry.rules[0].type === 'default';
+                    return (
+                      <ScheduleEntryEditor
+                        key={entry.id}
+                        entry={entry}
+                        styles={styles}
+                        isDefault={isDefault}
+                        onChange={(updated) => {
+                          const next = [...editingSchedules];
+                          next[ei] = updated;
+                          updateSchedules(next);
+                        }}
+                        onRemove={() => updateSchedules(editingSchedules.filter((_, i) => i !== ei))}
+                        onMoveUp={() => moveEntry(ei, ei - 1)}
+                        onMoveDown={() => moveEntry(ei, ei + 1)}
+                        isFirst={ei === 0}
+                        isLast={ei === editingSchedules.length - 1}
+                      />
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  className="adm-btnPrimary"
+                  style={{ marginTop: 10, padding: '6px 14px', fontSize: 13 }}
+                  onClick={() => {
+                    const next = [...editingSchedules, {
+                      id: uid(),
+                      styleId: styles[0]?.id ?? '',
+                      breakpoint: 'all' as const,
+                      rules: [{ type: 'day_type' as const, dayType: 'shabbos' as const }],
+                      priority: editingSchedules.length,
+                    }];
+                    updateSchedules(next);
+                  }}
+                >
+                  + Add schedule entry
+                </button>
               </div>
 
-              {/* Today's active */}
-              <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-                {bps.map((bp) => {
-                  const st = previewStyleForBp(eff, styles, bp);
-                  return (
-                    <span key={bp} style={{ color: 'var(--adm-text-muted)' }}>
-                      <strong>{BP_LABELS[bp]}:</strong> {st?.name ?? '—'}
-                    </span>
-                  );
-                })}
+              {/* Today's preview */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="adm-labelSm" style={{ marginBottom: 6, display: 'block' }}>Today&apos;s active style</label>
+                <TodayPreview schedules={editingSchedules} styles={styles} />
+              </div>
+
+              {/* Actions */}
+              <div className="adm-inlineGroup" style={{ gap: 8 }}>
+                <button onClick={handleSaveEdit} className="adm-btnSave" style={{ padding: '8px 20px' }}>
+                  Save
+                </button>
+                <button onClick={() => setEditing(null)} className="adm-btnCancel" style={{ padding: '8px 20px' }}>
+                  Cancel
+                </button>
               </div>
             </div>
-          );
-        })}
+          )}
 
-        {screens.length === 0 && (
-          <div className="adm-empty" style={{ padding: 32, textAlign: 'center' }}>
-            No screens configured. Click &quot;+ Add Screen&quot; to create one.
+          {/* ── Screen list ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {screens.map((s) => {
+              const eff = effectiveSchedules(s, styles);
+              const bps: DisplayBreakpoint[] = ['full', 'tablet', 'mobile'];
+              return (
+                <div key={s.id} style={{
+                  border: '1px solid var(--adm-border)', borderRadius: 8,
+                  padding: 14, background: 'var(--adm-bg)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 15 }}>
+                        {s.name || 'Unnamed screen'}
+                        <span className={s.active ? 'adm-badgeSuccess' : 'adm-badgeMuted'} style={{ marginLeft: 8, fontSize: 11 }}>
+                          {s.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginTop: 2 }}>
+                        {eff.length} schedule {eff.length === 1 ? 'entry' : 'entries'}
+                      </div>
+                    </div>
+                    <div className="adm-inlineGroup" style={{ gap: 6 }}>
+                      <button
+                        onClick={() => {
+                          const idx = screens.indexOf(s);
+                          window.open(`/${orgSlug}/${idx + 1}`, '_blank');
+                        }}
+                        className="adm-btn"
+                        style={{ backgroundColor: '#8b5cf6', color: '#fff', padding: '5px 12px', fontSize: 13 }}
+                      >
+                        Preview
+                      </button>
+                      <button onClick={() => handleEdit(s)} className="adm-btnEdit" style={{ padding: '5px 12px', fontSize: 13 }}>
+                        Edit
+                      </button>
+                      <button onClick={() => handleDelete(s.id)} className="adm-btnDanger" style={{ padding: '5px 12px', fontSize: 13 }}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Schedule summary */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
+                    {eff.slice(0, 4).map((entry) => (
+                      <div key={entry.id} style={{ fontSize: 12, color: 'var(--adm-text-muted)', display: 'flex', gap: 6 }}>
+                        <span style={{ opacity: 0.5, minWidth: 60 }}>{BP_LABELS[entry.breakpoint]}</span>
+                        <span>{entrySummary(entry, styles)}</span>
+                      </div>
+                    ))}
+                    {eff.length > 4 && (
+                      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>
+                        +{eff.length - 4} more…
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Today's active */}
+                  <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                    {bps.map((bp) => {
+                      const st = previewStyleForBp(eff, styles, bp);
+                      return (
+                        <span key={bp} style={{ color: 'var(--adm-text-muted)' }}>
+                          <strong>{BP_LABELS[bp]}:</strong> {st?.name ?? '—'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {screens.length === 0 && (
+              <div className="adm-empty" style={{ padding: 32, textAlign: 'center' }}>
+                No screens configured. Click &quot;+ Add Screen&quot; to create one.
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

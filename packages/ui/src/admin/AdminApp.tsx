@@ -15,6 +15,7 @@ import { ImportWizard } from './ImportWizard';
 import { ExportPanel } from './ExportPanel';
 import { ScreenManager } from './ScreenManager';
 import { DisplayNamesEditor } from './DisplayNamesEditor';
+import { QuickActionsPanel, ScreenPreviewWidget } from './DashboardWidgets';
 import { WysiwygCanvas } from '../editor/WysiwygCanvas';
 import type { ColorTheme } from '../editor/ThemePicker';
 import type { DisplayNameOverrides } from '@zmanim-app/core';
@@ -46,7 +47,7 @@ type Section =
 const navItems: { key: Section; icon: string; labelHe: string; labelEn: string; group?: string }[] = [
   { key: 'dashboard', icon: '🏠', labelHe: 'לוח בקרה', labelEn: 'Dashboard' },
   { key: 'editor', icon: '🎨', labelHe: 'עורך תצוגה', labelEn: 'Display Editor', group: 'display' },
-  { key: 'screens', icon: '🖥️', labelHe: 'מסכים', labelEn: 'Screens', group: 'display' },
+  { key: 'screens', icon: '🖥️', labelHe: 'מסכים וסגנונות', labelEn: 'Screens & Styles', group: 'display' },
   { key: 'schedules', icon: '📅', labelHe: 'זמני תפילה', labelEn: 'Davening Times', group: 'content' },
   { key: 'announcements', icon: '📢', labelHe: 'הודעות', labelEn: 'Announcements', group: 'content' },
   { key: 'yahrzeit', icon: '🕯️', labelHe: 'יארצייט', labelEn: 'Yahrzeit', group: 'content' },
@@ -230,6 +231,25 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
     onDelete('styles', id).catch(console.error);
   }, [editorStyleId, styles, onDelete]);
 
+  const handleStyleRename = useCallback((id: string, name: string) => {
+    setStyles((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)));
+    const style = styles.find((s) => s.id === id);
+    if (style) onSave('styles', { ...style, name }).catch(console.error);
+  }, [styles, onSave]);
+
+  const handleStyleDuplicate = useCallback((id: string) => {
+    const source = styles.find((s) => s.id === id);
+    if (!source) return;
+    const dup: DisplayStyle = {
+      ...source,
+      id: `style-${Date.now()}`,
+      name: `${source.name} (copy)`,
+      sortOrder: styles.length,
+    };
+    setStyles((prev) => [...prev, dup]);
+    onSave('styles', dup).catch(console.error);
+  }, [styles, onSave]);
+
 
   // ── Render sections ─────────────────────────────────────
   const renderContent = () => {
@@ -261,30 +281,49 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
                 </button>
               ))}
             </div>
-            <div className="adm-dashQuickGrid">
-              <div className="adm-card">
-                <h3 className="adm-sectionTitle" style={{ margin: '0 0 12px' }}>Quick Actions</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {bp !== 'mobile' && (
-                    <button type="button" onClick={() => setActiveSection('editor')} className="adm-quickBtn">Open Display Editor</button>
-                  )}
-                  <button type="button" onClick={() => setActiveSection('schedules')} className="adm-quickBtn">Manage Davening Times</button>
-                  <button type="button" onClick={() => setActiveSection('announcements')} className="adm-quickBtn">Edit Announcements</button>
-                </div>
-              </div>
-              <div className="adm-card">
-                <h3 className="adm-sectionTitle" style={{ margin: '0 0 12px' }}>Preview</h3>
-                <a
-                  href="/show/demo/1"
-                  target="_blank"
-                  rel="noopener"
-                  className="adm-btnPrimary"
-                  style={{ display: 'inline-block', padding: '10px 20px', textDecoration: 'none', fontSize: 14 }}
-                >
-                  Open Live Display
-                </a>
-                <p style={{ color: 'var(--adm-text-muted)', fontSize: 13, marginTop: 8 }}>Opens the display board in a new tab.</p>
-              </div>
+            <div className="adm-dashQuickGrid" style={{ alignItems: 'stretch' }}>
+              <QuickActionsPanel
+                showEditorLink={bp !== 'mobile'}
+                onNavigate={(s) => setActiveSection(s as Section)}
+                onAddEvent={(item) => {
+                  const next = [...schedules, item];
+                  setSchedules(next);
+                  setPreviewSchedules(next);
+                  onSave('schedules', next).catch(console.error);
+                }}
+                onAddAnnouncement={(item) => {
+                  const next = [...announcements, item];
+                  setAnnouncements(next);
+                  onSave('announcements', next).catch(console.error);
+                }}
+                onAddYahrzeit={(item) => {
+                  const next = [...memorials, item];
+                  setMemorials(next);
+                  onSave('memorials', next).catch(console.error);
+                }}
+                onAddSponsor={(item) => {
+                  const next = [...sponsors, item];
+                  setSponsors(next);
+                  onSave('sponsors', next).catch(console.error);
+                }}
+              />
+              <ScreenPreviewWidget
+                screens={screens}
+                styles={styles}
+                orgSlug={orgId}
+                zmanim={previewZmanim}
+                calendarInfo={previewCalendar}
+                announcements={announcements}
+                memorials={memorials}
+                schedules={previewSchedules}
+                media={media}
+                displayNames={displayNames}
+                onEditStyle={(styleId, screenId) => {
+                  setEditorStyleId(styleId);
+                  setEditorScreenId(screenId);
+                  setActiveSection('editor');
+                }}
+              />
             </div>
           </div>
         );
@@ -369,7 +408,23 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete }: AdminAppProps) {
         );
 
       case 'screens':
-        return <ScreenManager screens={screens} styles={styles} orgSlug={orgId} onChange={handleScreensChange} />;
+        return (
+          <ScreenManager
+            screens={screens}
+            styles={styles}
+            orgSlug={orgId}
+            onChange={handleScreensChange}
+            onStyleCreate={handleStyleCreate}
+            onStyleRename={handleStyleRename}
+            onStyleDuplicate={handleStyleDuplicate}
+            onStyleDelete={handleStyleDelete}
+            onStyleChange={handleStyleChange}
+            onEditStyle={(styleId) => {
+              setEditorStyleId(styleId);
+              setActiveSection('editor');
+            }}
+          />
+        );
       case 'location':
         return <LocationSetup location={location} onChange={handleLocationChange} />;
       case 'zmanim':
