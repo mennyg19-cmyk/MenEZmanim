@@ -97,18 +97,30 @@ export function ColorPicker({
     [onChange, trackColor],
   );
 
-  const handleNativeChange = useCallback(
+  const handleNativeLive = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       onChange(e.target.value);
+    },
+    [onChange],
+  );
+
+  const handleNativeCommit = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
       trackColor(e.target.value);
     },
-    [onChange, trackColor],
+    [trackColor],
   );
 
   return (
     <div className={className ?? 'ed-colorPickerRoot'}>
       <div className="ed-colorRow">
-        <input type="color" value={value} onChange={handleNativeChange} className={swatchClassName ?? 'ed-colorSwatch'} />
+        <input
+          type="color"
+          value={value}
+          onChange={handleNativeLive}
+          onBlur={handleNativeCommit}
+          className={swatchClassName ?? 'ed-colorSwatch'}
+        />
         <input
           id={id}
           value={value}

@@ -10,6 +10,22 @@ function normalizeHex(color: string): string {
   return color.toLowerCase().slice(0, 7);
 }
 
+function parseHexRgb(hex: string): [number, number, number] | null {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return null;
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+}
+
+/** Manhattan distance between two hex colours. Returns Infinity for unparseable values. */
+function colorDistance(a: string, b: string): number {
+  const ra = parseHexRgb(a);
+  const rb = parseHexRgb(b);
+  if (!ra || !rb) return Infinity;
+  return Math.abs(ra[0] - rb[0]) + Math.abs(ra[1] - rb[1]) + Math.abs(ra[2] - rb[2]);
+}
+
+const NEAR_DUPLICATE_THRESHOLD = 12;
+
 function loadRecent(): string[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -40,7 +56,9 @@ export function useRecentColors() {
     const hex = normalizeHex(color);
     if (!hex || hex.length < 4) return;
     setRecentColors((prev) => {
-      const filtered = prev.filter((c) => c !== hex);
+      const filtered = prev.filter(
+        (c) => c !== hex && colorDistance(c, hex) > NEAR_DUPLICATE_THRESHOLD,
+      );
       const next = [hex, ...filtered].slice(0, MAX_RECENT);
       saveRecent(next);
       return next;
