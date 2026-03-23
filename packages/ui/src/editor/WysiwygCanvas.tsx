@@ -891,21 +891,27 @@ export function WysiwygCanvas({
               >
                 <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
                 <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
-                <div style={{
-                  pointerEvents: 'none', width: '100%',
-                  ...(obj.content?.scroll?.enabled ? {} : { height: '100%', overflow: 'hidden' }),
-                  display: 'flex', flexDirection: 'column',
-                  justifyContent: (obj.content?.verticalAlign ?? 'top') === 'middle' ? 'center' : (obj.content?.verticalAlign ?? 'top') === 'bottom' ? 'flex-end' : 'flex-start',
-                }}>
-                  {renderWidget(
-                    obj, zmanim,
-                    previewCalendar as any,
-                    announcements?.map((a: any) => ({ id: a.id ?? '', title: a.title ?? '', content: a.content, priority: a.priority ?? 0 })),
-                    memorials?.map((m: any) => ({ id: m.id ?? '', hebrewName: m.hebrewName ?? '', englishName: m.englishName, hebrewDate: m.hebrewDate, relationship: m.relationship })),
-                    previewSchedules?.map((s) => ({ id: s.name, name: s.name, hebrewName: s.hebrewName ?? s.name, time: s.time ?? s.fixedTime ?? '', type: s.type, groupId: s.groupId, isPlaceholder: s.isPlaceholder, placeholderLabel: s.placeholderLabel })),
-                    media?.map((m: any) => ({ id: m.id ?? '', url: m.url ?? '', mimeType: m.mimeType ?? '' })),
-                  )}
-                </div>
+                {(() => {
+                  const sCfg = obj.content?.scroll as ScrollConfig | undefined;
+                  const isHz = sCfg?.enabled && (sCfg.direction === 'left' || sCfg.direction === 'right');
+                  return (
+                    <div style={{
+                      pointerEvents: 'none',
+                      ...(isHz ? { display: 'inline-block', whiteSpace: 'nowrap' } : { width: '100%', display: 'flex', flexDirection: 'column' as const }),
+                      ...(sCfg?.enabled ? {} : { height: '100%', overflow: 'hidden' }),
+                      justifyContent: (obj.content?.verticalAlign ?? 'top') === 'middle' ? 'center' : (obj.content?.verticalAlign ?? 'top') === 'bottom' ? 'flex-end' : 'flex-start',
+                    }}>
+                      {renderWidget(
+                        obj, zmanim,
+                        previewCalendar as any,
+                        announcements?.map((a: any) => ({ id: a.id ?? '', title: a.title ?? '', content: a.content, priority: a.priority ?? 0 })),
+                        memorials?.map((m: any) => ({ id: m.id ?? '', hebrewName: m.hebrewName ?? '', englishName: m.englishName, hebrewDate: m.hebrewDate, relationship: m.relationship })),
+                        previewSchedules?.map((s) => ({ id: s.name, name: s.name, hebrewName: s.hebrewName ?? s.name, time: s.time ?? s.fixedTime ?? '', type: s.type, groupId: s.groupId, isPlaceholder: s.isPlaceholder, placeholderLabel: s.placeholderLabel })),
+                        media?.map((m: any) => ({ id: m.id ?? '', url: m.url ?? '', mimeType: m.mimeType ?? '' })),
+                      )}
+                    </div>
+                  );
+                })()}
                 </ScrollWrapper>
                 </FrameRenderer>
                 <div className="ed-typeBadge">

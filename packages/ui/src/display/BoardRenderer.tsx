@@ -413,20 +413,24 @@ export function BoardRenderer({
           >
             <FrameRenderer frameId={obj.content?.frameId as string | undefined} thickness={typeof obj.content?.frameThickness === 'number' ? obj.content.frameThickness : 1}>
               <ScrollWrapper config={obj.content?.scroll as ScrollConfig | undefined}>
-                <div style={{
-                  width: '100%',
-                  ...(obj.content?.scroll?.enabled ? {} : { height: '100%' }),
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent:
-                    (obj.content?.verticalAlign ?? 'top') === 'middle'
-                      ? 'center'
-                      : (obj.content?.verticalAlign ?? 'top') === 'bottom'
-                        ? 'flex-end'
-                        : 'flex-start',
-                }}>
-                  {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
-                </div>
+                {(() => {
+                  const scrollCfg = obj.content?.scroll as ScrollConfig | undefined;
+                  const isHScroll = scrollCfg?.enabled && (scrollCfg.direction === 'left' || scrollCfg.direction === 'right');
+                  return (
+                    <div style={{
+                      ...(isHScroll ? { display: 'inline-block', whiteSpace: 'nowrap' } : { width: '100%', display: 'flex', flexDirection: 'column' as const }),
+                      ...(scrollCfg?.enabled ? {} : { height: '100%' }),
+                      justifyContent:
+                        (obj.content?.verticalAlign ?? 'top') === 'middle'
+                          ? 'center'
+                          : (obj.content?.verticalAlign ?? 'top') === 'bottom'
+                            ? 'flex-end'
+                            : 'flex-start',
+                    }}>
+                      {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
+                    </div>
+                  );
+                })()}
               </ScrollWrapper>
             </FrameRenderer>
           </div>

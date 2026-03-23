@@ -39,16 +39,19 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
       ? containerRef.current.clientHeight
       : containerRef.current.clientWidth;
 
-    // Temporarily remove overflow constraint to measure true content size
     const el = measureRef.current;
     const prevOverflow = el.style.overflow;
     const prevHeight = el.style.height;
     const prevWidth = el.style.width;
+    const prevPosition = el.style.position;
     el.style.overflow = 'visible';
     if (isVertical) {
       el.style.height = 'auto';
     } else {
-      el.style.width = 'auto';
+      // Let children expand to their natural width by removing width
+      // constraint and making the element out of flow for measurement.
+      el.style.width = 'max-content';
+      el.style.position = 'absolute';
     }
 
     const mSize = isVertical ? el.scrollHeight : el.scrollWidth;
@@ -56,6 +59,7 @@ export function ScrollWrapper({ config, children, style }: ScrollWrapperProps) {
     el.style.overflow = prevOverflow;
     el.style.height = prevHeight;
     el.style.width = prevWidth;
+    el.style.position = prevPosition;
 
     setContainerSize(cSize);
     setContentSize(mSize);

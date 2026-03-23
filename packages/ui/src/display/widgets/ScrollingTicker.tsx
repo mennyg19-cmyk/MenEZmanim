@@ -14,7 +14,11 @@ export interface ScrollingTickerProps {
 }
 
 /**
- * Static ticker text. Horizontal/vertical scrolling is applied by `ScrollWrapper` from object appearance settings.
+ * Static ticker text. Horizontal/vertical scrolling is applied by
+ * `ScrollWrapper` from object appearance settings.
+ *
+ * The root intentionally uses `width: max-content` so that ScrollWrapper
+ * can measure the true intrinsic text width for horizontal scrolling.
  */
 export function ScrollingTicker({
   items,
@@ -31,17 +35,14 @@ export function ScrollingTicker({
       dir={textDirection}
       className="wgt-tickerRoot"
       style={{
-        width: '100%',
-        overflow: 'hidden',
+        display: 'inline-block',
+        whiteSpace: 'nowrap',
         padding: '8px 0',
-        position: 'relative',
         boxSizing: 'border-box',
       }}
     >
       <span
         style={{
-          display: 'inline-block',
-          whiteSpace: 'nowrap',
           fontSize,
           fontFamily,
           color,
