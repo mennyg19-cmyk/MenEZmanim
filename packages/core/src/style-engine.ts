@@ -79,6 +79,7 @@ export enum DisplayObjectType {
   FIDS_BOARD = 'FIDS_BOARD',
   SEFIRA_COUNTER = 'SEFIRA_COUNTER',
   COUNTDOWN_TIMER = 'COUNTDOWN_TIMER',
+  DATE_PICKER = 'DATE_PICKER',
 }
 
 export interface Position {

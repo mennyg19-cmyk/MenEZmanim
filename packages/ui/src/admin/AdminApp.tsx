@@ -14,6 +14,17 @@ import { MemberManager } from './MemberManager';
 import { ImportWizard } from './ImportWizard';
 import { ExportPanel } from './ExportPanel';
 import { ScreenManager } from './ScreenManager';
+import {
+  ThemePickerAdmin,
+  ADMIN_THEME_KEY,
+  applyCustomThemeColors,
+  clearCustomThemeColors,
+  loadCustomThemeFromStorage,
+  saveCustomThemeToStorage,
+  DEFAULT_CUSTOM_LIGHT,
+  type AdminThemeId,
+  type AdminCustomThemeColors,
+} from './ThemePickerAdmin';
 import { QuickActionsPanel, ScreenPreviewWidget } from './DashboardWidgets';
 import { WysiwygCanvas } from '../editor/WysiwygCanvas';
 import type { ColorTheme } from '../editor/ThemePicker';
@@ -64,6 +75,14 @@ const groupLabels: Record<string, string> = {
   tools: 'Tools',
 };
 
+const VALID_ADMIN_THEMES: AdminThemeId[] = [
+  'light',
+  'dark',
+  'monochrome-light',
+  'monochrome-dark',
+  'custom',
+];
+
 export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: weekExportFetcherProp }: AdminAppProps) {
   const bp = useBreakpoint();
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
@@ -87,6 +106,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   const [importResult, setImportResult] = useState<any>(null);
   const [screens, setScreens] = useState<any[]>([]);
   const [styles, setStyles] = useState<DisplayStyle[]>([]);
+  const [orgPlan, setOrgPlan] = useState<string>('free');
   const [scheduleTab, setScheduleTab] = useState<ScheduleEditorTab>('events');
   const [previewCalendar, setPreviewCalendar] = useState<any>(null);
   const [previewZmanim, setPreviewZmanim] = useState<any[]>([]);
@@ -131,6 +151,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
       }),
       load('org').then((org: any) => {
         if (org?.location) setLocation(org.location);
+        if (typeof org?.plan === 'string') setOrgPlan(org.plan);
         const disp = org?.settings?.display;
         if (disp && typeof disp === 'object') {
           setDisplaySettingsData((prev: any) => ({ ...prev, ...disp }));
@@ -149,29 +170,57 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const THEME_KEY = 'zmanim-admin-theme';
-
-  const applyTheme = useCallback((mode: 'light' | 'dark') => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-theme', mode);
-  }, []);
+  const [adminTheme, setAdminTheme] = useState<AdminThemeId>('light');
+  const [customThemeColors, setCustomThemeColors] = useState<AdminCustomThemeColors>(() =>
+    typeof window !== 'undefined' ? loadCustomThemeFromStorage() ?? DEFAULT_CUSTOM_LIGHT : DEFAULT_CUSTOM_LIGHT,
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const stored = localStorage.getItem(THEME_KEY) as 'light' | 'dark' | null;
-    if (stored === 'light' || stored === 'dark') {
-      applyTheme(stored);
+    const stored = localStorage.getItem(ADMIN_THEME_KEY) as AdminThemeId | null;
+    if (stored && VALID_ADMIN_THEMES.includes(stored)) {
+      setAdminTheme(stored);
+      if (stored === 'custom') {
+        const c = loadCustomThemeFromStorage() ?? DEFAULT_CUSTOM_LIGHT;
+        setCustomThemeColors(c);
+        applyCustomThemeColors(c);
+        document.documentElement.setAttribute('data-theme', 'custom');
+      } else {
+        clearCustomThemeColors();
+        document.documentElement.setAttribute('data-theme', stored);
+      }
       return;
     }
     const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-    applyTheme(prefersDark ? 'dark' : 'light');
-  }, [applyTheme]);
+    const initial = prefersDark ? 'dark' : 'light';
+    setAdminTheme(initial);
+    clearCustomThemeColors();
+    document.documentElement.setAttribute('data-theme', initial);
+  }, []);
 
-  const toggleTheme = useCallback(() => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    localStorage.setItem(THEME_KEY, next);
-    applyTheme(next);
-  }, [applyTheme]);
+  const handleSelectAdminTheme = useCallback((id: AdminThemeId) => {
+    localStorage.setItem(ADMIN_THEME_KEY, id);
+    if (id === 'custom') {
+      const c = loadCustomThemeFromStorage() ?? customThemeColors;
+      setCustomThemeColors(c);
+      applyCustomThemeColors(c);
+      document.documentElement.setAttribute('data-theme', 'custom');
+      setAdminTheme('custom');
+      return;
+    }
+    clearCustomThemeColors();
+    document.documentElement.setAttribute('data-theme', id);
+    setAdminTheme(id);
+  }, [customThemeColors]);
+
+  const handleCustomThemeColorsChange = useCallback((c: AdminCustomThemeColors) => {
+    setCustomThemeColors(c);
+    saveCustomThemeToStorage(c);
+    applyCustomThemeColors(c);
+    localStorage.setItem(ADMIN_THEME_KEY, 'custom');
+    document.documentElement.setAttribute('data-theme', 'custom');
+    setAdminTheme('custom');
+  }, []);
 
   useEffect(() => {
     if (bp === 'tablet') setSidebarCollapsed(true);
@@ -444,6 +493,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
             onDisplayNamesChange={handleDisplayNamesChange}
             displayPrefs={displaySettingsData}
             onDisplayPrefsChange={handleDisplaySettingsChange}
+            orgPlan={orgPlan}
           />
         );
       case 'members':
@@ -561,15 +611,13 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
         </nav>
 
         <div className="adm-sidebarFooter" data-tutorial="sidebar-footer">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            title="Toggle light / dark mode"
-            className={`adm-themeToggle ${sidebarCollapsed ? 'adm-themeToggle--collapsed' : ''}`}
-          >
-            <span aria-hidden>🌓</span>
-            {!sidebarCollapsed && <span>Theme</span>}
-          </button>
+          <ThemePickerAdmin
+            collapsed={sidebarCollapsed}
+            currentTheme={adminTheme}
+            customColors={customThemeColors}
+            onSelectTheme={handleSelectAdminTheme}
+            onCustomColorsChange={handleCustomThemeColorsChange}
+          />
           <a
             href={`/show/${encodeURIComponent(orgId)}/${encodeURIComponent(screens[0]?.id ?? '1')}`}
             target="_blank"

@@ -11,6 +11,7 @@ interface OrgRow {
   status: string;
   timezone: string;
   createdAt: string;
+  plan?: string;
 }
 
 interface UserRow {
@@ -62,6 +63,19 @@ export default function SuperAdminPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
+      });
+      await loadData();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const updateOrgPlan = async (orgId: string, plan: string) => {
+    try {
+      await apiFetch(`/api/admin/orgs/${orgId}/plan`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
       });
       await loadData();
     } catch (err: any) {
@@ -173,6 +187,21 @@ export default function SuperAdminPage() {
                 </div>
                 <div className="web-superCardMeta">
                   Slug: {org.slug} | TZ: {org.timezone}
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                    Plan:
+                    <select
+                      value={org.plan ?? 'free'}
+                      onChange={(e) => updateOrgPlan(org.id, e.target.value)}
+                      style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                    >
+                      <option value="free">free</option>
+                      <option value="basic">basic</option>
+                      <option value="pro">pro</option>
+                      <option value="enterprise">enterprise</option>
+                    </select>
+                  </label>
                 </div>
                 <div className="web-superCardActions">
                   <button

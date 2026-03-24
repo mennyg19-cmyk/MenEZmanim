@@ -395,6 +395,17 @@ function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage, 
       )}
       {popupObj.type === DisplayObjectType.ZMANIM_TABLE && (
         <>
+          <Section title="Date offset">
+            <Field label="Days ahead">
+              <NumInput
+                value={typeof content.daysAhead === 'number' ? content.daysAhead : 0}
+                onChange={(v) => pContent({ daysAhead: Math.max(0, Math.min(365, Math.floor(v))) })}
+              />
+            </Field>
+            <div className="ed-hintSm" style={{ marginTop: 6 }}>
+              Show zmanim as if &quot;today&quot; were this many days ahead (e.g. preview Shabbos). The live display loads zmanim for that civil day.
+            </div>
+          </Section>
           <Section title="Regular Zmanim">
             <Field label="Zmanim to show">
               {ZMANIM_OPTIONS_REGULAR.map((z) => (
@@ -435,6 +446,17 @@ function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage, 
       )}
       {popupObj.type === DisplayObjectType.EVENTS_TABLE && (
         <>
+          <Section title="Date offset">
+            <Field label="Days ahead">
+              <NumInput
+                value={typeof content.daysAhead === 'number' ? content.daysAhead : 0}
+                onChange={(v) => pContent({ daysAhead: Math.max(0, Math.min(365, Math.floor(v))) })}
+              />
+            </Field>
+            <div className="ed-hintSm" style={{ marginTop: 6 }}>
+              Show events and times as if &quot;today&quot; were this many days ahead (e.g. Shabbos after a DST change). Uses zmanim for that calendar day.
+            </div>
+          </Section>
           <Section title="Display Settings">
             <Field label="Title">
               <Input value={content.title || ''} onChange={(v) => pContent({ title: v })} placeholder="e.g. מניינים" />
@@ -464,7 +486,7 @@ function ContentTab({ popupObj, pContent, daveningGroups, media, onUploadImage, 
           </Section>
         </>
       )}
-      {[DisplayObjectType.ANALOG_CLOCK, DisplayObjectType.YAHRZEIT_DISPLAY, DisplayObjectType.FIDS_BOARD, DisplayObjectType.SEFIRA_COUNTER].includes(popupObj.type) && (
+      {[DisplayObjectType.ANALOG_CLOCK, DisplayObjectType.YAHRZEIT_DISPLAY, DisplayObjectType.FIDS_BOARD, DisplayObjectType.SEFIRA_COUNTER, DisplayObjectType.DATE_PICKER].includes(popupObj.type) && (
         <div className="ed-hint">This widget auto-populates its content from data.</div>
       )}
     </>

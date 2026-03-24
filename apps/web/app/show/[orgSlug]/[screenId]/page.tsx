@@ -23,7 +23,7 @@ export default function DisplayPage({ params }: Props) {
     return apiFetch(`/api/org/${orgId}/styles`);
   }, [orgId]);
 
-  const getResolvedStyle = useCallback(async (breakpoint: DisplayBreakpoint) => {
+  const getResolvedStyle = useCallback(async (breakpoint: DisplayBreakpoint, atDate: Date) => {
     const [screenRes, styles, org] = await Promise.all([
       apiFetch<{
         id: string;
@@ -50,7 +50,7 @@ export default function DisplayPage({ params }: Props) {
     return manager.resolveStyleForScreen(
       screenConfig,
       styles,
-      new Date(),
+      atDate,
       org?.location?.inIsrael ?? false,
       breakpoint,
     );
@@ -118,7 +118,13 @@ export default function DisplayPage({ params }: Props) {
   return (
     <>
       <style>{`
-        html, body { margin: 0; padding: 0; overflow: hidden; width: 100vw; height: 100vh; }
+        html, body { margin: 0; padding: 0; width: 100vw; min-height: 100vh; }
+        /* Default: letterboxed display (no scroll). Mobile scroll overrides via .dsp-display-mobile-scroll from DisplayApp */
+        html:not(.dsp-display-mobile-scroll),
+        body:not(.dsp-display-mobile-scroll) {
+          overflow: hidden;
+          height: 100vh;
+        }
       `}</style>
       <DisplayApp
         orgId={orgId}

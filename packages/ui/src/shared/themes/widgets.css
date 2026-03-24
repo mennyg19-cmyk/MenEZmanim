@@ -320,6 +320,105 @@
   position: relative;
 }
 
+/* Mobile: fit canvas width, scroll vertically when canvas is taller than viewport */
+.dsp-root--mobileScroll {
+  height: auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.dsp-display-mobile-scroll,
+body.dsp-display-mobile-scroll {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  max-width: 100vw;
+}
+
+/* Display date picker (public board) */
+.wgt-datePickerRoot {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+}
+
+.wgt-calNavBtn {
+  background: var(--wgt-on-canvas-fill, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--wgt-on-canvas-border, rgba(255, 255, 255, 0.12));
+  color: inherit;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: inherit;
+}
+
+.wgt-quickBtn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--wgt-on-canvas-border, rgba(255, 255, 255, 0.15));
+  background: var(--wgt-on-canvas-fill, rgba(255, 255, 255, 0.06));
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.wgt-calendar {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: var(--radius-lg, 8px);
+  background: var(--wgt-on-canvas-fill, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--wgt-on-canvas-border, rgba(255, 255, 255, 0.1));
+}
+
+.wgt-calNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.wgt-calMonthLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wgt-calDayName {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+.wgt-calDay,
+.wgt-calDayToday,
+.wgt-calDaySelected {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+.wgt-calDay:hover {
+  background: var(--wgt-on-canvas-muted, rgba(255, 255, 255, 0.08));
+}
+
+.wgt-calDayToday {
+  outline: 1px solid var(--wgt-on-canvas-border-strong, rgba(255, 255, 255, 0.25));
+}
+
+.wgt-calDaySelected {
+  background: var(--wgt-on-canvas-border-strong, rgba(255, 255, 255, 0.2));
+  font-weight: 700;
+}
+
 .dsp-errorToast {
   position: absolute;
   bottom: 16px;

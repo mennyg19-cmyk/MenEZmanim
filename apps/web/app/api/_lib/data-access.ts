@@ -50,11 +50,13 @@ function orgRowToDto(row: PrismaOrgRow): Organization {
   const settings = parseSettingsJson(row.settings);
   const nameHebrew = (settings.nameHebrew as string) ?? row.name;
   const locationName = (settings.locationName as string) ?? row.name;
+  const plan = (row as { plan?: string }).plan ?? 'free';
   return {
     id: row.id,
     name: row.name,
     nameHebrew,
     slug: row.slug,
+    plan,
     location: {
       name: locationName,
       latitude: row.latitude,
@@ -1011,6 +1013,11 @@ export async function getAllOrgs() {
 export async function updateOrgStatus(orgId: string, status: string) {
   const db = getDbClient();
   return db.organization.update({ where: { id: orgId }, data: { status } as any });
+}
+
+export async function updateOrgPlan(orgId: string, plan: string) {
+  const db = getDbClient();
+  return db.organization.update({ where: { id: orgId }, data: { plan } });
 }
 
 export async function getAllUsers() {

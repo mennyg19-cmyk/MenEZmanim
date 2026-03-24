@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { DisplayStyle, DisplayObject, DisplayBreakpoint } from '@zmanim-app/core';
 import { getActiveStyle, getVisibleObjects } from '@zmanim-app/core';
 import { buildScheduleContext } from '@zmanim-app/core';
@@ -10,9 +10,9 @@ import { FrameRenderer } from './FrameRenderer';
 import { resolveCanvasBackground } from '../shared/backgroundUtils';
 import type { DisplayNameOverrides } from '@zmanim-app/core';
 import type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaData, ZmanResult } from '../shared/types';
-import { formatTime12h } from '../shared/timeUtils';
+import { formatTime12h, addDays } from '../shared/timeUtils';
 
-function computeMinyanTime(schedule: any, zmanim: ZmanResult[]): string {
+function computeMinyanTime(schedule: any, zmanim: ZmanResult[], refDay: Date): string {
   if (schedule.isPlaceholder) return '';
   if (typeof schedule.time === 'string' && schedule.time) return schedule.time;
 
@@ -22,7 +22,7 @@ function computeMinyanTime(schedule: any, zmanim: ZmanResult[]): string {
     const h = parseInt(hStr, 10);
     const m = parseInt(mStr, 10);
     if (!isNaN(h) && !isNaN(m)) {
-      const base = new Date();
+      const base = new Date(refDay);
       base.setHours(h, m, 0, 0);
       return formatTime12h(base);
     }
@@ -35,7 +35,7 @@ function computeMinyanTime(schedule: any, zmanim: ZmanResult[]): string {
     const h = parseInt(hStr, 10);
     const m = parseInt(mStr, 10);
     if (isNaN(h) || isNaN(m)) return schedule.fixedTime;
-    const base = new Date();
+    const base = new Date(refDay);
     base.setHours(h, m, 0, 0);
     return formatTime12h(base);
   }
@@ -98,12 +98,12 @@ function computeMinyanTime(schedule: any, zmanim: ZmanResult[]): string {
   return '';
 }
 
-function mapSchedulesToMinyanData(schedules: any[], zmanim: ZmanResult[]): MinyanData[] {
+function mapSchedulesToMinyanData(schedules: any[], zmanim: ZmanResult[], refDay: Date): MinyanData[] {
   return (schedules || []).map((s) => ({
     id: s.id,
     name: s.name,
     hebrewName: s.hebrewName ?? s.name,
-    time: computeMinyanTime(s, zmanim),
+    time: computeMinyanTime(s, zmanim, refDay),
     room: s.room,
     type: s.type,
     groupId: s.groupId,
@@ -113,12 +113,25 @@ function mapSchedulesToMinyanData(schedules: any[], zmanim: ZmanResult[]): Minya
   }));
 }
 
+/** Unique `daysAhead` offsets used by events/zmanim tables, always including 0. */
+function collectDaysAheadOffsets(style: DisplayStyle | null): number[] {
+  if (!style?.objects) return [0];
+  const s = new Set<number>([0]);
+  for (const obj of style.objects) {
+    if (obj.type === 'EVENTS_TABLE' || obj.type === 'ZMANIM_TABLE') {
+      const d = obj.content?.daysAhead;
+      s.add(typeof d === 'number' && Number.isFinite(d) ? Math.trunc(d) : 0);
+    }
+  }
+  return [...s].sort((a, b) => a - b);
+}
+
 export interface DisplayAppProps {
   orgId: string;
   screenId: string;
   getStyles: () => Promise<DisplayStyle[]>;
   /** When provided, use this instead of getStyles + getActiveStyle for screen-specific style resolution */
-  getResolvedStyle?: (breakpoint: DisplayBreakpoint) => Promise<DisplayStyle | null>;
+  getResolvedStyle?: (breakpoint: DisplayBreakpoint, atDate: Date) => Promise<DisplayStyle | null>;
   getZmanim: (date: Date) => Promise<ZmanResult[]>;
   getCalendarInfo: (date: Date) => Promise<CalendarInfo>;
   getAnnouncements: () => Promise<AnnouncementData[]>;
@@ -134,6 +147,9 @@ interface DisplayState {
   activeStyle: DisplayStyle | null;
   visibleObjects: DisplayObject[];
   zmanim: ZmanResult[];
+  /** Zmanim per `daysAhead` offset from the effective display date */
+  zmanimByOffset: Record<number, ZmanResult[]>;
+  rawSchedules: any[];
   calendarInfo: CalendarInfo | null;
   announcements: AnnouncementData[];
   memorials: MemorialData[];
@@ -154,9 +170,12 @@ function getMidnightMs(): number {
   return midnight.getTime() - now.getTime();
 }
 
+export type DisplayScaleMode = 'fit' | 'width-fit';
+
 function useScreenScale(
   canvasWidth: number,
   canvasHeight: number,
+  mode: DisplayScaleMode = 'fit',
 ): { scale: number; offsetX: number; offsetY: number } {
   const [dims, setDims] = useState({ w: typeof window !== 'undefined' ? window.innerWidth : 1920, h: typeof window !== 'undefined' ? window.innerHeight : 1080 });
 
@@ -172,12 +191,20 @@ function useScreenScale(
 
   const scaleX = dims.w / canvasWidth;
   const scaleY = dims.h / canvasHeight;
+  if (mode === 'width-fit') {
+    const scale = scaleX;
+    const offsetX = (dims.w - canvasWidth * scale) / 2;
+    const offsetY = 0;
+    return { scale, offsetX, offsetY };
+  }
   const scale = Math.min(scaleX, scaleY);
   const offsetX = (dims.w - canvasWidth * scale) / 2;
   const offsetY = (dims.h - canvasHeight * scale) / 2;
 
   return { scale, offsetX, offsetY };
 }
+
+const MOBILE_SCROLL_BODY_CLASS = 'dsp-display-mobile-scroll';
 
 export function DisplayApp({
   orgId,
@@ -202,6 +229,8 @@ export function DisplayApp({
     activeStyle: null,
     visibleObjects: [],
     zmanim: [],
+    zmanimByOffset: { 0: [] },
+    rawSchedules: [],
     calendarInfo: null,
     announcements: [],
     memorials: [],
@@ -212,11 +241,34 @@ export function DisplayApp({
     error: null,
   });
 
+  const [dateOverride, setDateOverride] = useState<Date | null>(null);
+  const [wallClock, setWallClock] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setWallClock(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const onPick = (e: Event) => {
+      const d = (e as CustomEvent<Date>).detail;
+      if (d instanceof Date && !isNaN(d.getTime())) setDateOverride(new Date(d.getTime()));
+    };
+    window.addEventListener('zmanim-display-date-override', onPick as EventListener);
+    return () => window.removeEventListener('zmanim-display-date-override', onPick as EventListener);
+  }, []);
+
+  const effectiveDisplayDate = dateOverride ?? wallClock;
+
   const midnightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zmanimIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const styleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const secondaryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const activeStyleRef = useRef<DisplayStyle | null>(null);
+  activeStyleRef.current = state.activeStyle;
+  const effectiveDisplayDateRef = useRef(effectiveDisplayDate);
+  effectiveDisplayDateRef.current = effectiveDisplayDate;
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -230,13 +282,17 @@ export function DisplayApp({
   );
 
   const resolveVisibleObjects = useCallback(
-    (style: DisplayStyle, zmanim: ZmanResult[]): DisplayObject[] => {
-      const now = new Date();
+    (style: DisplayStyle, zmanim: ZmanResult[], effective: Date): DisplayObject[] => {
       const zmanimMap = new Map<string, Date | null>();
       for (const z of zmanim) {
         zmanimMap.set(z.type, z.time);
       }
-      const ctx = buildScheduleContext(now, Intl.DateTimeFormat().resolvedOptions().timeZone, zmanimMap, new Set());
+      const ctx = buildScheduleContext(
+        effective,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        zmanimMap,
+        new Set(),
+      );
       return getVisibleObjects(style, ctx);
     },
     [],
@@ -244,18 +300,23 @@ export function DisplayApp({
 
   const refreshZmanimAndCalendar = useCallback(async () => {
     try {
-      const now = new Date();
-      const [zmanim, calendarInfo] = await Promise.all([
-        getZmanim(now),
-        getCalendarInfo(now),
-      ]);
+      const effective = effectiveDisplayDateRef.current;
+      const style = activeStyleRef.current;
+      const offsets = style ? collectDaysAheadOffsets(style) : [0];
+      const zmanimResults = await Promise.all(offsets.map((off) => getZmanim(addDays(effective, off))));
+      const zmanimByOffset: Record<number, ZmanResult[]> = {};
+      offsets.forEach((off, i) => {
+        zmanimByOffset[off] = zmanimResults[i] ?? [];
+      });
+      const zmanim = zmanimByOffset[0] ?? [];
+      const calendarInfo = await getCalendarInfo(effective);
       if (!mountedRef.current) return;
 
       setState((prev) => {
         const visibleObjects = prev.activeStyle
-          ? resolveVisibleObjects(prev.activeStyle, zmanim)
+          ? resolveVisibleObjects(prev.activeStyle, zmanim, effective)
           : prev.visibleObjects;
-        return { ...prev, zmanim, calendarInfo, visibleObjects };
+        return { ...prev, zmanim, zmanimByOffset, calendarInfo, visibleObjects };
       });
     } catch (err) {
       handleError(err);
@@ -264,24 +325,28 @@ export function DisplayApp({
 
   const refreshSecondary = useCallback(async () => {
     try {
-      const now = new Date();
-      const promises: [Promise<AnnouncementData[]>, Promise<MemorialData[]>, Promise<MinyanData[]>, Promise<MediaData[]>, Promise<DisplayNameOverrides>] = [
+      const effective = effectiveDisplayDateRef.current;
+      const promises: [Promise<AnnouncementData[]>, Promise<MemorialData[]>, Promise<any[]>, Promise<MediaData[]>, Promise<DisplayNameOverrides>] = [
         getAnnouncements(),
-        getMemorials(now),
-        getMinyanSchedule(now),
+        getMemorials(effective),
+        getMinyanSchedule(effective),
         getMedia(),
         getDisplayNames ? getDisplayNames() : Promise.resolve({}),
       ];
       const [announcements, memorials, rawSchedules, media, displayNames] = await Promise.all(promises);
       if (!mountedRef.current) return;
-      setState((prev) => ({
-        ...prev,
-        announcements,
-        memorials,
-        minyans: mapSchedulesToMinyanData(rawSchedules, prev.zmanim),
-        media,
-        displayNames,
-      }));
+      setState((prev) => {
+        const z0 = prev.zmanimByOffset[0] ?? prev.zmanim;
+        return {
+          ...prev,
+          announcements,
+          memorials,
+          rawSchedules,
+          minyans: mapSchedulesToMinyanData(rawSchedules, z0, effective),
+          media,
+          displayNames,
+        };
+      });
     } catch (err) {
       handleError(err);
     }
@@ -289,18 +354,19 @@ export function DisplayApp({
 
   const refreshStyle = useCallback(async () => {
     try {
+      const effective = effectiveDisplayDateRef.current;
       let activeStyle: DisplayStyle | null = null;
       if (getResolvedStyle) {
-        activeStyle = await getResolvedStyle(breakpointRef.current);
+        activeStyle = await getResolvedStyle(breakpointRef.current, effective);
       } else {
         const styles = await getStyles();
-        activeStyle = getActiveStyle(styles, new Date(), false);
+        activeStyle = getActiveStyle(styles, effective, false);
       }
       if (!mountedRef.current || !activeStyle) return;
 
       setState((prev) => {
         if (JSON.stringify(prev.activeStyle) === JSON.stringify(activeStyle)) return prev;
-        const visibleObjects = resolveVisibleObjects(activeStyle!, prev.zmanim);
+        const visibleObjects = resolveVisibleObjects(activeStyle!, prev.zmanim, effective);
         return {
           ...prev,
           activeStyle,
@@ -315,38 +381,42 @@ export function DisplayApp({
 
   const fullRefresh = useCallback(async () => {
     try {
-      const now = new Date();
-      let activeStyle: DisplayStyle | null = null;
-
+      const effective = effectiveDisplayDateRef.current;
       const displayNamesPromise = getDisplayNames ? getDisplayNames() : Promise.resolve({});
 
       if (getResolvedStyle) {
-        const [resolved, zmanim, calendarInfo, announcements, memorials, rawSchedules, media, displayNames] =
-          await Promise.all([
-            getResolvedStyle(breakpointRef.current),
-            getZmanim(now),
-            getCalendarInfo(now),
-            getAnnouncements(),
-            getMemorials(now),
-            getMinyanSchedule(now),
-            getMedia(),
-            displayNamesPromise,
-          ]);
-        activeStyle = resolved ?? null;
+        const resolved = await getResolvedStyle(breakpointRef.current, effective);
+        const activeStyle = resolved ?? null;
+        const offsets = activeStyle ? collectDaysAheadOffsets(activeStyle) : [0];
+        const zmanimResults = await Promise.all(offsets.map((off) => getZmanim(addDays(effective, off))));
+        const zmanimByOffset: Record<number, ZmanResult[]> = {};
+        offsets.forEach((off, i) => {
+          zmanimByOffset[off] = zmanimResults[i] ?? [];
+        });
+        const zmanim = zmanimByOffset[0] ?? [];
+
+        const [calendarInfo, announcements, memorials, rawSchedules, media, displayNames] = await Promise.all([
+          getCalendarInfo(effective),
+          getAnnouncements(),
+          getMemorials(effective),
+          getMinyanSchedule(effective),
+          getMedia(),
+          displayNamesPromise,
+        ]);
 
         if (!mountedRef.current) return;
 
         const styles = activeStyle ? [activeStyle] : [];
-        const visibleObjects = activeStyle
-          ? resolveVisibleObjects(activeStyle, zmanim)
-          : [];
-        const minyans = mapSchedulesToMinyanData(rawSchedules, zmanim);
+        const visibleObjects = activeStyle ? resolveVisibleObjects(activeStyle, zmanim, effective) : [];
+        const minyans = mapSchedulesToMinyanData(rawSchedules, zmanim, effective);
 
         setState({
           styles,
           activeStyle,
           visibleObjects,
           zmanim,
+          zmanimByOffset,
+          rawSchedules,
           calendarInfo,
           announcements,
           memorials,
@@ -357,31 +427,37 @@ export function DisplayApp({
           error: null,
         });
       } else {
-        const [styles, zmanim, calendarInfo, announcements, memorials, rawSchedules, media, displayNames] =
-          await Promise.all([
-            getStyles(),
-            getZmanim(now),
-            getCalendarInfo(now),
-            getAnnouncements(),
-            getMemorials(now),
-            getMinyanSchedule(now),
-            getMedia(),
-            displayNamesPromise,
-          ]);
+        const styles = await getStyles();
+        const activeStyle = getActiveStyle(styles, effective, false);
+        const offsets = activeStyle ? collectDaysAheadOffsets(activeStyle) : [0];
+        const zmanimResults = await Promise.all(offsets.map((off) => getZmanim(addDays(effective, off))));
+        const zmanimByOffset: Record<number, ZmanResult[]> = {};
+        offsets.forEach((off, i) => {
+          zmanimByOffset[off] = zmanimResults[i] ?? [];
+        });
+        const zmanim = zmanimByOffset[0] ?? [];
+
+        const [calendarInfo, announcements, memorials, rawSchedules, media, displayNames] = await Promise.all([
+          getCalendarInfo(effective),
+          getAnnouncements(),
+          getMemorials(effective),
+          getMinyanSchedule(effective),
+          getMedia(),
+          displayNamesPromise,
+        ]);
 
         if (!mountedRef.current) return;
 
-        activeStyle = getActiveStyle(styles, now, false);
-        const visibleObjects = activeStyle
-          ? resolveVisibleObjects(activeStyle, zmanim)
-          : [];
-        const minyans = mapSchedulesToMinyanData(rawSchedules, zmanim);
+        const visibleObjects = activeStyle ? resolveVisibleObjects(activeStyle, zmanim, effective) : [];
+        const minyans = mapSchedulesToMinyanData(rawSchedules, zmanim, effective);
 
         setState({
           styles,
           activeStyle,
           visibleObjects,
           zmanim,
+          zmanimByOffset,
+          rawSchedules,
           calendarInfo,
           announcements,
           memorials,
@@ -411,6 +487,9 @@ export function DisplayApp({
     handleError,
     resolveVisibleObjects,
   ]);
+
+  const fullRefreshRef = useRef(fullRefresh);
+  fullRefreshRef.current = fullRefresh;
 
   const scheduleMidnightRefresh = useCallback(() => {
     if (midnightTimerRef.current) clearTimeout(midnightTimerRef.current);
@@ -445,9 +524,48 @@ export function DisplayApp({
     }
   }, [displayBreakpoint, getResolvedStyle, refreshStyle]);
 
+  const mobileVerticalScroll = displayBreakpoint === 'mobile';
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const body = document.body;
+    if (mobileVerticalScroll) {
+      root.classList.add(MOBILE_SCROLL_BODY_CLASS);
+      body.classList.add(MOBILE_SCROLL_BODY_CLASS);
+    } else {
+      root.classList.remove(MOBILE_SCROLL_BODY_CLASS);
+      body.classList.remove(MOBILE_SCROLL_BODY_CLASS);
+    }
+    return () => {
+      root.classList.remove(MOBILE_SCROLL_BODY_CLASS);
+      body.classList.remove(MOBILE_SCROLL_BODY_CLASS);
+    };
+  }, [mobileVerticalScroll]);
+
+  const minyansByOffsetComputed = useMemo(() => {
+    const raw = state.rawSchedules;
+    const zb = state.zmanimByOffset;
+    if (!raw.length || !Object.keys(zb).length) return {} as Record<number, MinyanData[]>;
+    const out: Record<number, MinyanData[]> = {};
+    for (const off of Object.keys(zb).map(Number)) {
+      const z = zb[off] ?? state.zmanim;
+      out[off] = mapSchedulesToMinyanData(raw, z, addDays(effectiveDisplayDate, off));
+    }
+    return out;
+  }, [state.rawSchedules, state.zmanimByOffset, state.zmanim, effectiveDisplayDate]);
+
+  useEffect(() => {
+    if (!dateOverride) return;
+    void fullRefreshRef.current();
+  }, [dateOverride]);
+
   const canvasW = state.activeStyle?.canvasWidth ?? 1920;
   const canvasH = state.activeStyle?.canvasHeight ?? 1080;
-  const { scale, offsetX, offsetY } = useScreenScale(canvasW, canvasH);
+  const { scale, offsetX, offsetY } = useScreenScale(
+    canvasW,
+    canvasH,
+    mobileVerticalScroll ? 'width-fit' : 'fit',
+  );
 
   if (state.loading) {
     return <div className="dsp-loading">Loading display...</div>;
@@ -467,7 +585,16 @@ export function DisplayApp({
   }
 
   return (
-    <div className="dsp-root">
+    <div
+      className={mobileVerticalScroll ? 'dsp-root dsp-root--mobileScroll' : 'dsp-root'}
+      style={
+        mobileVerticalScroll
+          ? {
+              minHeight: `max(100vh, ${offsetY + canvasH * scale}px)`,
+            }
+          : undefined
+      }
+    >
       {/* Scaled canvas (background + content together so they scale identically) */}
       <FrameRenderer frameId={state.activeStyle?.backgroundFrameId} thickness={state.activeStyle?.backgroundFrameThickness ?? 1}>
       <div
@@ -486,6 +613,7 @@ export function DisplayApp({
           objects={state.visibleObjects}
           canvasWidth={canvasW}
           canvasHeight={canvasH}
+          mobileVerticalScroll={mobileVerticalScroll}
           canvasBgColor={state.activeStyle?.backgroundColor ?? '#000'}
           canvasBgImage={state.activeStyle?.backgroundImage}
           canvasBgExtras={
@@ -499,12 +627,15 @@ export function DisplayApp({
               : undefined
           }
           zmanim={state.zmanim}
+          zmanimByOffset={state.zmanimByOffset}
           calendarInfo={state.calendarInfo ?? undefined}
           announcements={state.announcements}
           memorials={state.memorials}
           minyans={state.minyans}
+          minyansByOffset={minyansByOffsetComputed}
           media={state.media}
           displayNames={state.displayNames}
+          referenceDate={effectiveDisplayDate}
         />
       </div>
       </FrameRenderer>

@@ -20,6 +20,8 @@ import { YahrzeitDisplay } from './widgets/YahrzeitDisplay';
 import { ScrollingTicker } from './widgets/ScrollingTicker';
 import { SefiraCounter } from './widgets/SefiraCounter';
 import { CountdownTimer } from './widgets/CountdownTimer';
+import { DisplayDatePickerWidget } from './widgets/DisplayDatePickerWidget';
+import { addDays } from '../shared/timeUtils';
 
 export type { CalendarInfo, AnnouncementData, MemorialData, MinyanData, MediaData, ZmanResult };
 
@@ -39,6 +41,57 @@ export interface BoardRendererProps {
   media?: MediaData[];
   displayNames?: DisplayNameOverrides;
   scale?: number;
+  /** Mobile public display: allow vertical scroll past viewport; do not clip canvas height */
+  mobileVerticalScroll?: boolean;
+  /** Effective "today" for the board (date picker override or wall clock) */
+  referenceDate?: Date;
+  /** Precomputed minyan rows per `daysAhead` offset */
+  minyansByOffset?: Record<number, MinyanData[]>;
+  /** Zmanim per `daysAhead` offset from referenceDate */
+  zmanimByOffset?: Record<number, ZmanResult[]>;
+}
+
+export interface WidgetRenderContext {
+  referenceDate: Date;
+  primaryZmanim: ZmanResult[];
+  zmanimByOffset: Record<number, ZmanResult[]>;
+  minyansByOffset: Record<number, MinyanData[]>;
+}
+
+function daysAheadFromObject(obj: DisplayObject): number {
+  const c = obj.content || {};
+  if (obj.type === 'EVENTS_TABLE' || obj.type === 'ZMANIM_TABLE') {
+    const d = c.daysAhead;
+    return typeof d === 'number' && Number.isFinite(d) ? Math.trunc(d) : 0;
+  }
+  return 0;
+}
+
+function zmanimListForObject(
+  obj: DisplayObject,
+  fallbackZmanim: ZmanResult[] | undefined,
+  ctx?: WidgetRenderContext,
+): ZmanResult[] {
+  if (!ctx) return fallbackZmanim ?? [];
+  const off = daysAheadFromObject(obj);
+  if (off in ctx.zmanimByOffset) return ctx.zmanimByOffset[off] ?? [];
+  return ctx.primaryZmanim ?? fallbackZmanim ?? [];
+}
+
+function minyanListForObject(
+  obj: DisplayObject,
+  fallbackMinyans: MinyanData[] | undefined,
+  ctx?: WidgetRenderContext,
+): MinyanData[] {
+  if (!ctx) return fallbackMinyans ?? [];
+  const off = daysAheadFromObject(obj);
+  if (off in ctx.minyansByOffset) return ctx.minyansByOffset[off] ?? [];
+  return fallbackMinyans ?? [];
+}
+
+function referenceDateForObject(obj: DisplayObject, ctx?: WidgetRenderContext): Date {
+  const base = ctx?.referenceDate ?? new Date();
+  return addDays(base, daysAheadFromObject(obj));
 }
 
 export function renderWidget(
@@ -50,15 +103,18 @@ export function renderWidget(
   minyans: MinyanData[] | undefined,
   media: MediaData[] | undefined,
   displayNames?: DisplayNameOverrides,
+  ctx?: WidgetRenderContext,
 ): React.ReactNode {
   const lang = (obj.language || 'english') as 'hebrew' | 'english';
   const content = obj.content || {};
   const font = obj.font;
+  const objZmanim = zmanimListForObject(obj, zmanim, ctx);
+  const objMinyans = minyanListForObject(obj, minyans, ctx);
 
   switch (obj.type as string) {
     case 'ZMANIM_TABLE': {
       const zmanimSelection = content.zmanim as Record<string, boolean> | undefined;
-      const filteredZmanim = (zmanim || []).filter((z) => {
+      const filteredZmanim = (objZmanim || []).filter((z) => {
         if (zmanimSelection && z.type in zmanimSelection) return zmanimSelection[z.type];
         const isVariant = z.type.includes('TUKACHINSKY') || z.type.includes('_MGA');
         if (isVariant) return false;
@@ -214,10 +270,11 @@ export function renderWidget(
     case 'EVENTS_TABLE': {
       const ebSchedules = content.eventBoxSchedules as EventBoxScheduleEntry[] | undefined;
       const staticGroupIds = content.groupIds as string[] | undefined;
-      const resolvedGroupIds = resolveEventBoxGroups(ebSchedules, staticGroupIds, new Date());
+      const refD = ctx ? referenceDateForObject(obj, ctx) : new Date();
+      const resolvedGroupIds = resolveEventBoxGroups(ebSchedules, staticGroupIds, refD);
       const filteredMinyans = resolvedGroupIds.length > 0
-        ? (minyans || []).filter((m) => resolvedGroupIds.includes(m.groupId ?? ''))
-        : (minyans || []);
+        ? (objMinyans || []).filter((m) => resolvedGroupIds.includes(m.groupId ?? ''))
+        : (objMinyans || []);
       const events = filteredMinyans.map((m) => ({
         name: m.name,
         hebrewName: m.hebrewName,
@@ -325,8 +382,8 @@ export function renderWidget(
 
     case 'COUNTDOWN_TIMER': {
       let targetTime: Date | null = null;
-      if (content.targetZmanType && zmanim) {
-        const match = zmanim.find((z) => z.type === content.targetZmanType);
+      if (content.targetZmanType && objZmanim) {
+        const match = objZmanim.find((z) => z.type === content.targetZmanType);
         if (match?.time) targetTime = match.time;
       } else if (content.targetTime) {
         targetTime = new Date(content.targetTime);
@@ -364,6 +421,21 @@ export function renderWidget(
       );
     }
 
+    case 'DATE_PICKER': {
+      const sel = ctx?.referenceDate ?? new Date();
+      return (
+        <DisplayDatePickerWidget
+          selectedDate={sel}
+          onChange={(d) => {
+            window.dispatchEvent(new CustomEvent('zmanim-display-date-override', { detail: d }));
+          }}
+          fontSize={font?.size}
+          fontFamily={font?.family}
+          color={font?.color}
+        />
+      );
+    }
+
     default:
       return null;
   }
@@ -384,7 +456,20 @@ export function BoardRenderer({
   media,
   displayNames,
   scale = 1,
+  mobileVerticalScroll = false,
+  referenceDate,
+  minyansByOffset: minyansByOffsetProp,
+  zmanimByOffset: zmanimByOffsetProp,
 }: BoardRendererProps) {
+  const widgetCtx: WidgetRenderContext | undefined = referenceDate
+    ? {
+        referenceDate,
+        primaryZmanim: zmanim ?? [],
+        zmanimByOffset: zmanimByOffsetProp ?? { 0: zmanim ?? [] },
+        minyansByOffset: minyansByOffsetProp ?? { 0: minyans ?? [] },
+      }
+    : undefined;
+
   const visibleSorted = objects
     .filter((obj) => obj.visible)
     .sort((a, b) => a.zIndex - b.zIndex);
@@ -395,7 +480,8 @@ export function BoardRenderer({
         width: canvasWidth,
         height: canvasHeight,
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: mobileVerticalScroll ? 'visible' : 'hidden',
       }}
     >
       {visibleSorted.map((obj) => {
@@ -430,7 +516,17 @@ export function BoardRenderer({
                             ? 'flex-end'
                             : 'flex-start',
                     }}>
-                      {renderWidget(obj, zmanim, calendarInfo, announcements, memorials, minyans, media, displayNames)}
+                      {renderWidget(
+                        obj,
+                        zmanim,
+                        calendarInfo,
+                        announcements,
+                        memorials,
+                        minyans,
+                        media,
+                        displayNames,
+                        widgetCtx,
+                      )}
                     </div>
                   );
                 })()}

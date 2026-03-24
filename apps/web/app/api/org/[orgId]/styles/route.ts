@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { json, error, options } from '../../../_lib/response';
 import * as da from '../../../_lib/data-access';
 import { authorizeWrite, isAuthError } from '../../../_lib/auth-helpers';
+import { assertPlanStyleCreate } from '../../../_lib/plan-helpers';
 
 type Ctx = { params: Promise<{ orgId: string }> };
 
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     const { orgId } = await ctx.params;
     const authResult = await authorizeWrite(orgId);
     if (isAuthError(authResult)) return authResult;
+    const planErr = await assertPlanStyleCreate(orgId);
+    if (planErr) return planErr;
     const resolvedId = await da.resolveOrgId(orgId);
     if (!resolvedId) return error('Organization not found', 404);
 

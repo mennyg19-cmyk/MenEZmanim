@@ -373,6 +373,9 @@ export function WysiwygCanvas({
   const addObj = useCallback((type: DisplayObjectType) => {
     const maxZ = style.objects.reduce((m, o) => Math.max(m, o.zIndex), 0);
     const obj = createObject(type, 100, 100);
+    if (type === DisplayObjectType.DATE_PICKER) {
+      obj.position = { x: 80, y: 80, width: 360, height: 220 };
+    }
     obj.zIndex = maxZ + 1;
     if (lastFormatRef.current) {
       obj.font = { ...lastFormatRef.current.font };

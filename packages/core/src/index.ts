@@ -12,3 +12,4 @@ export * from './tukachinsky-content';
 export * from './tukachinsky-tables';
 export * from './sync';
 export * from './screen-manager';
+export * from './plans';

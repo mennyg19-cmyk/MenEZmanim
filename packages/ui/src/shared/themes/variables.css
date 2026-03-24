@@ -179,3 +179,187 @@
 
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
+
+/* Monochrome light — greyscale admin (no blue accent) */
+[data-theme='monochrome-light'] {
+  --adm-bg: #ffffff;
+  --adm-bg-muted: #f4f4f5;
+  --adm-bg-hover: #e4e4e7;
+  --adm-bg-active: #d4d4d8;
+  --adm-border: #d4d4d8;
+  --adm-border-input: #a1a1aa;
+  --adm-text: #27272a;
+  --adm-text-dark: #18181b;
+  --adm-text-muted: #71717a;
+  --adm-text-dim: #a1a1aa;
+  --adm-accent: #52525b;
+  --adm-accent-dark: #3f3f46;
+  --adm-accent-hover: #27272a;
+  --adm-danger: #dc2626;
+  --adm-danger-hover: #b91c1c;
+  --adm-success: #15803d;
+  --adm-warning: #a16207;
+  --adm-sidebar-bg: #18181b;
+  --adm-sidebar-active: #27272a;
+  --adm-sidebar-text: #e4e4e7;
+  --adm-sidebar-border: #3f3f46;
+  --adm-btn-fg: #ffffff;
+  --adm-stat-amber: #a16207;
+  --adm-stat-purple: #52525b;
+  --adm-stat-pink: #71717a;
+  --adm-preview-btn: #52525b;
+  --adm-warning-bg: #fef9c3;
+  --adm-warning-text: #854d0e;
+  --adm-warning-border: #eab308;
+  --adm-sched-bulk-bg: #f4f4f5;
+  --adm-sched-bulk-border: #d4d4d8;
+  --adm-sched-bulk-strong: #3f3f46;
+  --adm-sched-bulk-link: #52525b;
+  --adm-sched-bulk-muted: #a1a1aa;
+  --adm-sched-bulk-btn-on: #52525b;
+  --adm-sched-bulk-btn-off: #d4d4d8;
+  --adm-sched-border-soft: #e4e4e7;
+  --adm-sched-row-alt: #fafafa;
+  --adm-sched-row-sel: #f4f4f5;
+  --adm-sched-group-sel-bg: #e4e4e7;
+  --adm-type-shacharit: #71717a;
+  --adm-type-mincha: #52525b;
+  --adm-type-maariv: #3f3f46;
+  --adm-type-other: #a1a1aa;
+  --adm-sched-ungrouped-pill-bg: #fecaca;
+  --web-auth-gradient: linear-gradient(135deg, #18181b 0%, #27272a 50%, #3f3f46 100%);
+  --web-onboarding-gradient: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+  --web-super-link-bg: #3f3f46;
+  --web-tool-msg-ok-bg: #dcfce7;
+  --web-tool-msg-ok-fg: #166534;
+  --web-tool-msg-err-bg: #fee2e2;
+  --web-tool-msg-err-fg: #991b1b;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Monochrome dark — greyscale on dark bg */
+[data-theme='monochrome-dark'] {
+  --adm-bg: #09090b;
+  --adm-bg-muted: #18181b;
+  --adm-bg-hover: #27272a;
+  --adm-bg-active: #3f3f46;
+  --adm-border: #3f3f46;
+  --adm-border-input: #52525b;
+  --adm-text: #e4e4e7;
+  --adm-text-dark: #fafafa;
+  --adm-text-muted: #a1a1aa;
+  --adm-text-dim: #71717a;
+  --adm-accent: #d4d4d8;
+  --adm-accent-dark: #e4e4e7;
+  --adm-accent-hover: #fafafa;
+  --adm-danger: #f87171;
+  --adm-danger-hover: #ef4444;
+  --adm-success: #4ade80;
+  --adm-warning: #fbbf24;
+  --adm-sidebar-bg: #000000;
+  --adm-sidebar-active: #18181b;
+  --adm-sidebar-text: #e4e4e7;
+  --adm-sidebar-border: #27272a;
+  --adm-btn-fg: #18181b;
+  --adm-stat-amber: #fbbf24;
+  --adm-stat-purple: #a1a1aa;
+  --adm-stat-pink: #d4d4d8;
+  --adm-preview-btn: #a1a1aa;
+  --adm-warning-bg: rgba(251, 191, 36, 0.12);
+  --adm-warning-text: #fcd34d;
+  --adm-warning-border: rgba(251, 191, 36, 0.35);
+  --adm-sched-bulk-bg: #18181b;
+  --adm-sched-bulk-border: #3f3f46;
+  --adm-sched-bulk-strong: #e4e4e7;
+  --adm-sched-bulk-link: #d4d4d8;
+  --adm-sched-bulk-muted: #71717a;
+  --adm-sched-bulk-btn-on: #d4d4d8;
+  --adm-sched-bulk-btn-off: #52525b;
+  --adm-sched-border-soft: #3f3f46;
+  --adm-sched-row-alt: #0c0c0e;
+  --adm-sched-row-sel: #27272a;
+  --adm-sched-group-sel-bg: #18181b;
+  --adm-type-shacharit: #a1a1aa;
+  --adm-type-mincha: #d4d4d8;
+  --adm-type-maariv: #e4e4e7;
+  --adm-type-other: #71717a;
+  --adm-sched-ungrouped-pill-bg: rgba(248, 113, 113, 0.2);
+  --web-auth-gradient: linear-gradient(135deg, #000000 0%, #18181b 50%, #27272a 100%);
+  --web-onboarding-gradient: linear-gradient(135deg, #000000 0%, #09090b 100%);
+  --web-super-link-bg: #52525b;
+  --web-tool-msg-ok-bg: rgba(74, 222, 128, 0.12);
+  --web-tool-msg-ok-fg: #86efac;
+  --web-tool-msg-err-bg: rgba(248, 113, 113, 0.12);
+  --web-tool-msg-err-fg: #fca5a5;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Custom admin theme — set --custom-adm-* on <html> via ThemePickerAdmin */
+[data-theme='custom'] {
+  --adm-bg: var(--custom-adm-bg, #ffffff);
+  --adm-bg-muted: color-mix(in srgb, var(--custom-adm-bg, #ffffff) 92%, var(--custom-adm-text, #374151));
+  --adm-bg-hover: color-mix(in srgb, var(--custom-adm-bg, #ffffff) 85%, var(--custom-adm-text, #374151));
+  --adm-bg-active: color-mix(in srgb, var(--custom-adm-bg, #ffffff) 78%, var(--custom-adm-text, #374151));
+  --adm-border: color-mix(in srgb, var(--custom-adm-border, #e5e7eb) 70%, var(--custom-adm-text, #374151));
+  --adm-border-input: color-mix(in srgb, var(--custom-adm-border, #e5e7eb) 50%, var(--custom-adm-text, #374151));
+  --adm-text: var(--custom-adm-text, #374151);
+  --adm-text-dark: color-mix(in srgb, var(--custom-adm-text, #374151) 92%, #000000);
+  --adm-text-muted: color-mix(in srgb, var(--custom-adm-text, #374151) 55%, var(--custom-adm-bg, #ffffff));
+  --adm-text-dim: color-mix(in srgb, var(--custom-adm-text, #374151) 40%, var(--custom-adm-bg, #ffffff));
+  --adm-accent: var(--custom-adm-accent, #3b82f6);
+  --adm-accent-dark: color-mix(in srgb, var(--custom-adm-accent, #3b82f6) 75%, #000000);
+  --adm-accent-hover: color-mix(in srgb, var(--custom-adm-accent, #3b82f6) 55%, #000000);
+  --adm-danger: var(--custom-adm-danger, #ef4444);
+  --adm-danger-hover: color-mix(in srgb, var(--custom-adm-danger, #ef4444) 80%, #000000);
+  --adm-success: var(--custom-adm-success, #059669);
+  --adm-warning: #f59e0b;
+  --adm-sidebar-bg: var(--custom-adm-sidebar-bg, #111827);
+  --adm-sidebar-active: color-mix(in srgb, var(--custom-adm-sidebar-bg, #111827) 85%, var(--custom-adm-sidebar-text, #d1d5db));
+  --adm-sidebar-text: var(--custom-adm-sidebar-text, #d1d5db);
+  --adm-sidebar-border: color-mix(in srgb, var(--custom-adm-sidebar-bg, #111827) 70%, var(--custom-adm-sidebar-text, #d1d5db));
+  --adm-btn-fg: #ffffff;
+  --adm-stat-amber: #f59e0b;
+  --adm-stat-purple: #8b5cf6;
+  --adm-stat-pink: #ec4899;
+  --adm-preview-btn: #8b5cf6;
+  --adm-warning-bg: color-mix(in srgb, #fef3c7 80%, var(--custom-adm-bg, #ffffff));
+  --adm-warning-text: #b45309;
+  --adm-warning-border: #fbbf24;
+  --adm-sched-bulk-bg: color-mix(in srgb, var(--custom-adm-accent, #3b82f6) 8%, var(--custom-adm-bg, #ffffff));
+  --adm-sched-bulk-border: color-mix(in srgb, var(--custom-adm-accent, #3b82f6) 25%, var(--custom-adm-bg, #ffffff));
+  --adm-sched-bulk-strong: var(--custom-adm-accent-dark, #2563eb);
+  --adm-sched-bulk-link: var(--custom-adm-accent, #3b82f6);
+  --adm-sched-bulk-muted: var(--adm-text-muted);
+  --adm-sched-bulk-btn-on: var(--custom-adm-accent, #3b82f6);
+  --adm-sched-bulk-btn-off: var(--adm-border-input);
+  --adm-sched-border-soft: var(--adm-border);
+  --adm-sched-row-alt: color-mix(in srgb, var(--custom-adm-bg, #ffffff) 97%, var(--custom-adm-text, #374151));
+  --adm-sched-row-sel: color-mix(in srgb, var(--custom-adm-accent, #3b82f6) 10%, var(--custom-adm-bg, #ffffff));
+  --adm-sched-group-sel-bg: color-mix(in srgb, var(--custom-adm-accent, #3b82f6) 8%, var(--custom-adm-bg, #ffffff));
+  --adm-type-shacharit: #f59e0b;
+  --adm-type-mincha: var(--custom-adm-accent, #3b82f6);
+  --adm-type-maariv: #8b5cf6;
+  --adm-type-other: #64748b;
+  --adm-sched-ungrouped-pill-bg: #fee2e2;
+  --web-auth-gradient: linear-gradient(135deg, var(--custom-adm-sidebar-bg, #1a1a2e) 0%, color-mix(in srgb, var(--custom-adm-sidebar-bg, #1a1a2e) 80%, var(--custom-adm-accent, #3b82f6)) 50%, var(--custom-adm-accent-dark, #0f3460) 100%);
+  --web-onboarding-gradient: linear-gradient(135deg, color-mix(in srgb, var(--custom-adm-bg, #ffffff) 15%, #0f172a) 0%, #0f172a 100%);
+  --web-super-link-bg: #7c3aed;
+  --web-tool-msg-ok-bg: #dcfce7;
+  --web-tool-msg-ok-fg: #166534;
+  --web-tool-msg-err-bg: #fee2e2;
+  --web-tool-msg-err-fg: #991b1b;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='custom'][data-custom-dark='1'] {
+  --adm-btn-fg: #ffffff;
+  --adm-text-dark: color-mix(in srgb, var(--custom-adm-text, #e2e8f0) 95%, #ffffff);
+  --adm-warning-bg: rgba(251, 191, 36, 0.12);
+  --adm-warning-text: #fcd34d;
+  --adm-warning-border: rgba(251, 191, 36, 0.35);
+  --web-tool-msg-ok-bg: rgba(34, 197, 94, 0.15);
+  --web-tool-msg-ok-fg: #86efac;
+  --web-tool-msg-err-bg: rgba(239, 68, 68, 0.15);
+  --web-tool-msg-err-fg: #fca5a5;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
+}

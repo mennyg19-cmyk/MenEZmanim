@@ -24,6 +24,8 @@ model Organization {
   amPmFormat             Boolean  @default(false)
   inIsrael               Boolean  @default(false)
   settings               String   @default("{}")
+  /** Subscription tier: free | basic | pro | enterprise */
+  plan                   String   @default("free")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

@@ -22,6 +22,7 @@ export const TYPE_LABELS: Record<DisplayObjectType, string> = {
   [DisplayObjectType.SEFIRA_COUNTER]: 'Sefira Counter',
   [DisplayObjectType.COUNTDOWN_TIMER]: 'Countdown Timer',
   [DisplayObjectType.FIDS_BOARD]: 'FIDS Board',
+  [DisplayObjectType.DATE_PICKER]: 'Date Picker',
 };
 
 export const TYPE_ICONS: Record<DisplayObjectType, string> = {
@@ -38,6 +39,7 @@ export const TYPE_ICONS: Record<DisplayObjectType, string> = {
   [DisplayObjectType.SEFIRA_COUNTER]: '🔢',
   [DisplayObjectType.COUNTDOWN_TIMER]: '⏳',
   [DisplayObjectType.FIDS_BOARD]: '✈️',
+  [DisplayObjectType.DATE_PICKER]: '📆',
 };
 
 export const ZMANIM_OPTIONS_REGULAR = [

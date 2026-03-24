@@ -21,6 +21,8 @@ export interface SettingsPageProps {
   onDisplayNamesChange: (names: DisplayNameOverrides) => void;
   displayPrefs: DisplayPrefsSettings;
   onDisplayPrefsChange: (prefs: DisplayPrefsSettings) => void;
+  /** Current org subscription tier (from API) */
+  orgPlan?: string;
 }
 
 export function SettingsPage({
@@ -30,6 +32,7 @@ export function SettingsPage({
   onDisplayNamesChange,
   displayPrefs,
   onDisplayPrefsChange,
+  orgPlan = 'free',
 }: SettingsPageProps) {
   const [form, setForm] = useState<DisplayPrefsSettings>({
     defaultLanguage: 'Hebrew',
@@ -59,6 +62,19 @@ export function SettingsPage({
       <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--adm-text-muted)' }}>
         Location, display labels, and default preferences for this organization.
       </p>
+
+      <div className="adm-card" style={{ marginBottom: 16, padding: '14px 16px' }}>
+        <div className="adm-sectionHeader" style={{ marginBottom: 8 }}>
+          <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Plan</h3>
+        </div>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--adm-text)' }}>
+          Current tier: <strong style={{ textTransform: 'capitalize' }}>{orgPlan}</strong>
+        </p>
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--adm-text-muted)' }}>
+          Billing and self-serve upgrades are not enabled yet. Contact support to change your plan. Limits apply to
+          screens, styles, and team seats per tier.
+        </p>
+      </div>
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
         {/* Location — 25% */}

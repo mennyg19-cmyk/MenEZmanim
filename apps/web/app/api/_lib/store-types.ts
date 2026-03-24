@@ -16,6 +16,8 @@ export interface Organization {
     inIsrael: boolean;
   };
   settings: Record<string, unknown>;
+  /** Subscription tier from DB */
+  plan?: string;
 }
 
 export interface Screen {

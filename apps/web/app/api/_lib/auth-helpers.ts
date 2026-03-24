@@ -24,7 +24,11 @@ export async function authorizeWrite(
     return error('Unauthorized', 401);
   }
 
-  const result = await da.authorizeOrgAccess(clerkUserId, orgId, requiredRoles);
+  const effectiveRoles =
+    !requiredRoles || requiredRoles.length === 0
+      ? ['owner', 'admin', 'editor']
+      : requiredRoles;
+  const result = await da.authorizeOrgAccess(clerkUserId, orgId, effectiveRoles);
   if (!result.ok) {
     return error(result.message, result.status);
   }
