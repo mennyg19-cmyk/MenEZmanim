@@ -5,7 +5,6 @@ export type AdminSection =
   | 'screens'
   | 'settings'
   | 'members'
-  | 'schedules'
   | 'content-hub'
   | 'import-export';
 

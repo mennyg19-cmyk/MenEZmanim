@@ -42,8 +42,8 @@ export function useTutorialOptional(): TutorialContextValue | null {
 type TutorialProviderProps = {
   children: React.ReactNode;
   setActiveSection: (s: AdminSection) => void;
-  scheduleTab: ScheduleEditorTab;
-  setScheduleTab: (t: ScheduleEditorTab) => void;
+  scheduleTab?: ScheduleEditorTab;
+  setScheduleTab?: (t: ScheduleEditorTab) => void;
 };
 
 function loadCompleted(): Set<ChapterId> {
@@ -87,7 +87,7 @@ export function TutorialProvider({
   const nav: NavHelpers = useMemo(
     () => ({
       goSection: (s: AdminSection) => setActiveSection(s),
-      goScheduleTab: (t: ScheduleEditorTab) => setScheduleTab(t),
+      goScheduleTab: (t: ScheduleEditorTab) => setScheduleTab?.(t),
       requestEditorTab,
     }),
     [setActiveSection, setScheduleTab, requestEditorTab],

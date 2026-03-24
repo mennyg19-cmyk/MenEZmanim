@@ -256,7 +256,7 @@ export function QuickActionsPanel({
   const [modal, setModal] = useState<QuickActionType | null>(null);
 
   const actions: { key: QuickActionType; icon: string; label: string; color: string; navigateTo: string }[] = [
-    { key: 'event', icon: '📅', label: 'Add Event', color: '#f59e0b', navigateTo: 'schedules' },
+    { key: 'event', icon: '📅', label: 'Add Event', color: '#f59e0b', navigateTo: 'content-hub:schedules' },
     { key: 'announcement', icon: '📢', label: 'Add Announcement', color: '#10b981', navigateTo: 'content-hub:announcements' },
     { key: 'yahrzeit', icon: '🕯️', label: 'Add Yahrzeit', color: '#a78bfa', navigateTo: 'content-hub:yahrzeit' },
     { key: 'sponsor', icon: '💰', label: 'Add Sponsor', color: '#f472b6', navigateTo: 'content-hub:sponsors' },

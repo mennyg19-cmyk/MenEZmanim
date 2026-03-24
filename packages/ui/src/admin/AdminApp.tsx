@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useBreakpoint } from '../shared/useBreakpoint';
 import type { DisplayStyle } from '@zmanim-app/core';
-import { ScheduleEditor, type WeekExportFetcher, type ScheduleEditorTab } from './ScheduleEditor';
+import type { WeekExportFetcher } from './ScheduleEditor';
 import { TutorialProvider, TutorialLauncher, TutorialHelpLink } from '../tutorial';
 import { ContentHub, type ContentHubSeed, type ContentHubSection } from './ContentHub';
 import { ImportExportHub, type ImportHubTab } from './ImportExportHub';
@@ -41,7 +41,6 @@ type Section =
   | 'screens'
   | 'settings'
   | 'members'
-  | 'schedules'
   | 'content-hub'
   | 'import-export';
 
@@ -49,7 +48,6 @@ const navItems: { key: Section; icon: string; labelHe: string; labelEn: string; 
   { key: 'dashboard', icon: '🏠', labelHe: 'לוח בקרה', labelEn: 'Dashboard' },
   { key: 'editor', icon: '🎨', labelHe: 'עורך תצוגה', labelEn: 'Display Editor', group: 'display' },
   { key: 'screens', icon: '🖥️', labelHe: 'מסכים וסגנונות', labelEn: 'Screens & Styles', group: 'display' },
-  { key: 'schedules', icon: '📅', labelHe: 'זמני תפילה', labelEn: 'Davening Times', group: 'content' },
   { key: 'content-hub', icon: '📚', labelHe: 'מרכז תוכן', labelEn: 'Content Hub', group: 'content' },
   { key: 'settings', icon: '⚙️', labelHe: 'הגדרות', labelEn: 'Settings', group: 'settings' },
   { key: 'members', icon: '👥', labelHe: 'משתמשים', labelEn: 'Members', group: 'settings' },
@@ -95,7 +93,6 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   const [screens, setScreens] = useState<any[]>([]);
   const [styles, setStyles] = useState<DisplayStyle[]>([]);
   const [orgPlan, setOrgPlan] = useState<string>('free');
-  const [scheduleTab, setScheduleTab] = useState<ScheduleEditorTab>('events');
   const [contentHubSeed, setContentHubSeed] = useState<ContentHubSeed | null>(null);
   const [importHubTab, setImportHubTab] = useState<ImportHubTab>('schedules');
   const [previewCalendar, setPreviewCalendar] = useState<any>(null);
@@ -339,7 +336,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
             </div>
             <div className="adm-dashGrid adm-dashGridMb" data-tutorial="dash-stats">
               {([
-                { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', nav: 'schedules' as const },
+                { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', nav: 'content-hub:schedules' as const },
                 { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', nav: 'content-hub:announcements' as const },
                 { label: 'Yahrzeit Entries', value: memorials.length, color: 'var(--adm-stat-amber)', nav: 'content-hub:yahrzeit' as const },
                 { label: 'Display Styles', value: styles.length, color: 'var(--adm-stat-purple)', nav: 'editor' as const },
@@ -499,21 +496,14 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
         );
       case 'members':
         return <MemberManager orgId={orgId} />;
-      case 'schedules':
-        return (
-          <ScheduleEditor
-            schedules={schedules}
-            onChange={handleSchedulesChange}
-            groups={groups}
-            onGroupsChange={handleGroupsChange}
-            weekExportFetcher={weekExportFetcher}
-            activeTab={scheduleTab}
-            onActiveTabChange={setScheduleTab}
-          />
-        );
       case 'content-hub':
         return (
           <ContentHub
+            schedules={schedules}
+            onSchedulesChange={handleSchedulesChange}
+            groups={groups}
+            onGroupsChange={handleGroupsChange}
+            weekExportFetcher={weekExportFetcher}
             announcements={announcements}
             onAnnouncementsChange={handleAnnouncementsChange}
             memorials={memorials}
@@ -572,8 +562,6 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   return (
     <TutorialProvider
       setActiveSection={(s) => setActiveSection(s as Section)}
-      scheduleTab={scheduleTab}
-      setScheduleTab={setScheduleTab}
     >
     <div className="adm-page adm-appRoot" data-tutorial="adm-root">
       {isMobile && mobileMenuOpen && (

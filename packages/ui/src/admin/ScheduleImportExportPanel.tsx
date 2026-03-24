@@ -46,6 +46,14 @@ export interface ScheduleRecord {
   sortOrder?: number;
   isPlaceholder?: boolean;
   placeholderLabel?: string;
+  priority?: number;
+  startDateGregorian?: string;
+  endDateGregorian?: string;
+  startDateHebrew?: string;
+  endDateHebrew?: string;
+  nearestEvent?: boolean;
+  nearestBefore?: number;
+  nearestAfter?: number;
 }
 
 export interface DaveningGroupRecord {

@@ -14,11 +14,11 @@ interface ScheduleEditorProps {
   onChange: (schedules: Schedule[]) => void;
   groups: DaveningGroup[];
   onGroupsChange?: (groups: DaveningGroup[]) => void;
-  /** Optional: enables multi-week export when provided */
   weekExportFetcher?: WeekExportFetcher;
-  /** Controlled tab (e.g. tutorial navigation). When omitted, tab is internal. */
   activeTab?: ScheduleEditorTab;
   onActiveTabChange?: (tab: ScheduleEditorTab) => void;
+  embedded?: boolean;
+  quickAddNonce?: number;
 }
 
 const TYPES = ['Shacharit', 'Mincha', 'Maariv', 'Other'];
@@ -46,32 +46,52 @@ const TYPE_COLORS: Record<string, string> = {
 
 type FilterMode = 'all' | 'ungrouped' | string;
 
+type TriState = 'ignore' | 'show' | 'hide';
+
+function triStateIcon(s: TriState): string {
+  if (s === 'show') return '✓';
+  if (s === 'hide') return '✗';
+  return '—';
+}
+
+function cycleTriState(s: TriState): TriState {
+  if (s === 'ignore') return 'show';
+  if (s === 'show') return 'hide';
+  return 'ignore';
+}
+
+function rulesToTriMap(rules: VisibilityRule[]): Record<string, TriState> {
+  const m: Record<string, TriState> = {};
+  for (const r of rules) {
+    m[r.condition] = r.show ? 'show' : 'hide';
+  }
+  return m;
+}
+
+function triMapToRules(m: Record<string, TriState>): VisibilityRule[] {
+  const rules: VisibilityRule[] = [];
+  for (const [condition, state] of Object.entries(m)) {
+    if (state === 'ignore') continue;
+    rules.push({ condition: condition as VisibilityCondition, show: state === 'show' });
+  }
+  return rules;
+}
+
 export function ScheduleEditor({
   schedules,
   onChange,
   groups,
   onGroupsChange,
-  weekExportFetcher,
-  activeTab: activeTabProp,
-  onActiveTabChange,
+  embedded,
+  quickAddNonce = 0,
 }: ScheduleEditorProps) {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [internalTab, setInternalTab] = useState<ScheduleEditorTab>('events');
-  const tab = activeTabProp ?? internalTab;
-  const setTab = useCallback(
-    (t: ScheduleEditorTab) => {
-      onActiveTabChange?.(t);
-      if (activeTabProp === undefined) setInternalTab(t);
-    },
-    [activeTabProp, onActiveTabChange],
-  );
   const [editingGroup, setEditingGroup] = useState<DaveningGroup | null>(null);
   const [bulkAction, setBulkAction] = useState<'copy' | 'move' | null>(null);
   const [bulkTargetGroup, setBulkTargetGroup] = useState('');
-  const [tableSortCol, setTableSortCol] = useState<string>('name');
-  const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('asc');
+  const [showGroupPanel, setShowGroupPanel] = useState(false);
 
   const groupMap = useMemo(() => {
     const m = new Map<string, DaveningGroup>();
@@ -93,7 +113,11 @@ export function ScheduleEditor({
     return result.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [schedules, filterMode]);
 
-  const selectedEvent = schedules.find((s) => s.id === selectedEventId) ?? null;
+  React.useEffect(() => {
+    if (!quickAddNonce) return;
+    addEvent(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickAddNonce]);
 
   const updateEvent = useCallback((id: string, patch: Partial<Schedule>) => {
     onChange(schedules.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -115,16 +139,17 @@ export function ScheduleEditor({
       sortOrder: maxSort + 1,
       isPlaceholder: placeholder,
       placeholderLabel: placeholder ? '---' : undefined,
+      priority: 0,
     };
     onChange([...schedules, newEvent]);
-    setSelectedEventId(newId);
+    setExpandedEventId(newId);
   }, [schedules, onChange, filteredEvents, filterMode]);
 
   const deleteEvent = useCallback((id: string) => {
     onChange(schedules.filter((s) => s.id !== id));
-    if (selectedEventId === id) setSelectedEventId(null);
+    if (expandedEventId === id) setExpandedEventId(null);
     setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
-  }, [schedules, onChange, selectedEventId]);
+  }, [schedules, onChange, expandedEventId]);
 
   const moveEvent = useCallback((idx: number, dir: -1 | 1) => {
     const events = [...filteredEvents];
@@ -159,8 +184,7 @@ export function ScheduleEditor({
     onGroupsChange(groups.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   }, [groups, onGroupsChange]);
 
-  const toggleSelect = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const n = new Set(prev);
       if (n.has(id)) n.delete(id); else n.add(id);
@@ -180,12 +204,9 @@ export function ScheduleEditor({
 
   const executeBulkAction = useCallback(() => {
     if (!bulkAction || !bulkTargetGroup || selectedIds.size === 0) return;
-
     if (bulkAction === 'move') {
       const targetGroup = bulkTargetGroup === '__none__' ? undefined : bulkTargetGroup;
-      onChange(schedules.map((s) =>
-        selectedIds.has(s.id) ? { ...s, groupId: targetGroup } : s
-      ));
+      onChange(schedules.map((s) => selectedIds.has(s.id) ? { ...s, groupId: targetGroup } : s));
     } else if (bulkAction === 'copy') {
       const copies: Schedule[] = [];
       const targetGroup = bulkTargetGroup === '__none__' ? undefined : bulkTargetGroup;
@@ -194,16 +215,10 @@ export function ScheduleEditor({
       for (const id of selectedIds) {
         const original = schedules.find((s) => s.id === id);
         if (!original) continue;
-        copies.push({
-          ...original,
-          id: `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          groupId: targetGroup,
-          sortOrder: sortCounter++,
-        });
+        copies.push({ ...original, id: `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, groupId: targetGroup, sortOrder: sortCounter++ });
       }
       onChange([...schedules, ...copies]);
     }
-
     setSelectedIds(new Set());
     setBulkAction(null);
     setBulkTargetGroup('');
@@ -219,89 +234,48 @@ export function ScheduleEditor({
     return ev.fixedTime ?? '';
   };
 
-  const getGroupName = (groupId?: string) => {
-    if (!groupId) return '—';
-    const g = groupMap.get(groupId);
-    return g ? g.nameHebrew : groupId;
-  };
-
-  const getDaysDisplay = (ev: Schedule) => {
+  const getDaysShort = (ev: Schedule) => {
     if (!ev.daysActive) return 'All';
     const active = ev.daysActive.map((d, i) => d ? DAYS_HE[i] : null).filter(Boolean);
     if (active.length === 7) return 'All';
     if (active.length === 0) return 'None';
-    return active.join(' ');
+    return active.join('');
   };
 
-  const tableSorted = useMemo(() => {
-    const items = [...filteredEvents];
-    items.sort((a, b) => {
-      let va: string | number = '';
-      let vb: string | number = '';
-      switch (tableSortCol) {
-        case 'name': va = a.name; vb = b.name; break;
-        case 'type': va = a.type; vb = b.type; break;
-        case 'group': va = getGroupName(a.groupId); vb = getGroupName(b.groupId); break;
-        case 'time': va = getTimeDisplay(a); vb = getTimeDisplay(b); break;
-        case 'room': va = a.room ?? ''; vb = b.room ?? ''; break;
-        case 'days': va = getDaysDisplay(a); vb = getDaysDisplay(b); break;
-        default: va = a.sortOrder ?? 0; vb = b.sortOrder ?? 0;
-      }
-      if (typeof va === 'string' && typeof vb === 'string') {
-        return tableSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-      }
-      return tableSortDir === 'asc' ? (va as number) - (vb as number) : (vb as number) - (va as number);
-    });
-    return items;
-  }, [filteredEvents, tableSortCol, tableSortDir]);
-
-  const handleTableSort = (col: string) => {
-    if (tableSortCol === col) {
-      setTableSortDir((d) => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setTableSortCol(col);
-      setTableSortDir('asc');
-    }
+  const getGroupName = (groupId?: string) => {
+    if (!groupId) return '';
+    const g = groupMap.get(groupId);
+    return g ? g.nameHebrew : '';
   };
 
   return (
-    <div className="adm-schedRoot">
-      {/* Tab bar */}
-      <div className="adm-tabBar" data-tutorial="sched-tab-bar">
-        <button
-          type="button"
-          data-tutorial="sched-tab-events"
-          onClick={() => setTab('events')}
-          className={tab === 'events' ? "adm-tabActive" : "adm-tab"}
-        >
-          Davening Times
-        </button>
-        <button type="button" onClick={() => setTab('table')} className={tab === 'table' ? "adm-tabActive" : "adm-tab"}>
-          All Events ({schedules.length})
-        </button>
-        <button
-          type="button"
-          data-tutorial="sched-tab-groups"
-          onClick={() => setTab('groups')}
-          className={tab === 'groups' ? "adm-tabActive" : "adm-tab"}
-        >
-          Groups ({groups.length})
-        </button>
+    <div className="adm-schedEditor">
+      {/* Top toolbar */}
+      <div className="adm-schedToolbar">
+        <div className="adm-schedFilters">
+          <FilterChip label={`All (${schedules.length})`} active={filterMode === 'all'} color="var(--adm-type-other)" onClick={() => setFilterMode('all')} />
+          {ungroupedCount > 0 && (
+            <FilterChip label={`Ungrouped (${ungroupedCount})`} active={filterMode === 'ungrouped'} color="var(--adm-danger)" onClick={() => setFilterMode('ungrouped')} />
+          )}
+          {groups.map((g) => (
+            <FilterChip key={g.id} label={`${g.nameHebrew} (${schedules.filter((s) => s.groupId === g.id).length})`} active={filterMode === g.id} color={g.color} onClick={() => setFilterMode(g.id)} />
+          ))}
+        </div>
+        <div className="adm-schedActions">
+          <button type="button" className="adm-btnSmallOutline" onClick={() => setShowGroupPanel(!showGroupPanel)}>
+            {showGroupPanel ? 'Hide Groups' : 'Groups'} ({groups.length})
+          </button>
+          <button type="button" className="adm-btnSmallOutline" style={{ color: 'var(--adm-accent)' }} onClick={() => addEvent(false)}>+ Event</button>
+          <button type="button" className="adm-btnSmallOutline" onClick={() => addEvent(true)}>+ Spacer</button>
+        </div>
       </div>
 
       {/* Bulk action bar */}
-      {selectedIds.size > 0 && (tab === 'events' || tab === 'table') && (
+      {selectedIds.size > 0 && (
         <div className="adm-schedBulkBar">
-          <strong className="adm-schedBulkStrong">{selectedIds.size} selected</strong>
-          <button type="button" className="adm-linkBtn" style={{ fontSize: 12 }} onClick={() => setSelectedIds(new Set())}>
-            Clear
-          </button>
-          <span style={{ color: 'var(--adm-sched-bulk-muted)' }}>|</span>
-          <select
-            className="adm-schedBulkSelect"
-            value={bulkAction ?? ''}
-            onChange={(e) => setBulkAction(e.target.value as 'copy' | 'move' | null)}
-          >
+          <strong style={{ color: 'var(--adm-text)', fontSize: 12 }}>{selectedIds.size} selected</strong>
+          <button type="button" className="adm-linkBtn" style={{ fontSize: 11, color: 'var(--adm-accent)' }} onClick={() => setSelectedIds(new Set())}>Clear</button>
+          <select className="adm-schedBulkSelect" value={bulkAction ?? ''} onChange={(e) => setBulkAction(e.target.value as any || null)}>
             <option value="">Action...</option>
             <option value="copy">Copy to group</option>
             <option value="move">Move to group</option>
@@ -311,508 +285,325 @@ export function ScheduleEditor({
               <select className="adm-schedBulkSelect" value={bulkTargetGroup} onChange={(e) => setBulkTargetGroup(e.target.value)}>
                 <option value="">Select group...</option>
                 <option value="__none__">No group</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>
-                ))}
+                {groups.map((g) => <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>)}
               </select>
-              <button type="button" className="adm-schedBulkApply" onClick={executeBulkAction} disabled={!bulkTargetGroup}>
-                Apply
-              </button>
+              <button type="button" className="adm-schedBulkApply" onClick={executeBulkAction} disabled={!bulkTargetGroup}>Apply</button>
             </>
           )}
-          <button
-            type="button"
-            className="adm-dangerLink adm-mlAuto"
-            style={{ fontSize: 12, fontWeight: 600 }}
-            onClick={() => {
-              onChange(schedules.filter((s) => !selectedIds.has(s.id)));
-              setSelectedIds(new Set());
-              setSelectedEventId(null);
-            }}
-          >
-            Delete selected
-          </button>
+          <button type="button" className="adm-dangerLink" style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600 }} onClick={() => {
+            onChange(schedules.filter((s) => !selectedIds.has(s.id)));
+            setSelectedIds(new Set());
+            setExpandedEventId(null);
+          }}>Delete selected</button>
         </div>
       )}
 
-      {/* ─── GROUPS TAB ─── */}
-      {tab === 'groups' && (
-        <div style={{ padding: '0 4px' }}>
+      {/* Groups panel (collapsible) */}
+      {showGroupPanel && (
+        <div className="adm-schedGroupPanel">
+          <div className="adm-schedGroupPanelTitle">Groups</div>
           {groups.map((g) => (
-            <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 6, borderRadius: 6, border: '1px solid var(--adm-border)', background: editingGroup?.id === g.id ? 'var(--adm-sched-group-sel-bg)' : 'var(--adm-bg)' }}>
-              <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: g.color, flexShrink: 0 }} />
+            <div key={g.id} className="adm-schedGroupRow">
+              <span className="adm-schedGroupDot" style={{ backgroundColor: g.color }} />
               {editingGroup?.id === g.id ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <input value={editingGroup.name} onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })} placeholder="English name" className="adm-input" />
-                  <input value={editingGroup.nameHebrew} onChange={(e) => setEditingGroup({ ...editingGroup, nameHebrew: e.target.value })} placeholder="Hebrew name" className="adm-input" />
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <ColorPicker
-                      variant="swatch-only"
-                      value={editingGroup.color}
-                      onChange={(v) => setEditingGroup({ ...editingGroup, color: v })}
-                      swatchClassName="adm-schedColorSwatch"
-                    />
-                    <button onClick={() => { updateGroup(g.id, editingGroup); setEditingGroup(null); }} className="adm-btnSmallSave">Save</button>
-                    <button onClick={() => setEditingGroup(null)} className="adm-btnSmallOutline">Cancel</button>
-                  </div>
+                <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input value={editingGroup.name} onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })} placeholder="English" className="adm-input" style={{ width: 100, flex: '0 1 100px' }} />
+                  <input value={editingGroup.nameHebrew} onChange={(e) => setEditingGroup({ ...editingGroup, nameHebrew: e.target.value })} placeholder="עברית" className="adm-input" style={{ width: 100, flex: '0 1 100px' }} />
+                  <ColorPicker variant="swatch-only" value={editingGroup.color} onChange={(v) => setEditingGroup({ ...editingGroup, color: v })} swatchClassName="adm-schedColorSwatch" />
+                  <button onClick={() => { updateGroup(g.id, editingGroup); setEditingGroup(null); }} className="adm-btnSmallSave">Save</button>
+                  <button onClick={() => setEditingGroup(null)} className="adm-btnSmallOutline">Cancel</button>
                 </div>
               ) : (
                 <>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{g.nameHebrew}</div>
-                    <div style={{ fontSize: 11, color: 'var(--adm-text-muted)' }}>{g.name} — {schedules.filter((s) => s.groupId === g.id).length} events</div>
-                  </div>
-                  <button onClick={() => setEditingGroup({ ...g })} className="adm-btnSmallOutline">Edit</button>
-                  <button onClick={() => deleteGroup(g.id)} className="adm-btnSmallDanger">×</button>
+                  <span style={{ flex: 1, fontSize: 12, color: 'var(--adm-text)' }}>
+                    <strong>{g.nameHebrew}</strong> <span style={{ color: 'var(--adm-text-muted)' }}>({g.name}) — {schedules.filter((s) => s.groupId === g.id).length} events</span>
+                  </span>
+                  <button onClick={() => setEditingGroup({ ...g })} className="adm-btnSmallOutline" style={{ fontSize: 10, padding: '2px 6px' }}>Edit</button>
+                  <button onClick={() => deleteGroup(g.id)} className="adm-btnSmallDanger" style={{ fontSize: 10, padding: '2px 6px' }}>×</button>
                 </>
               )}
             </div>
           ))}
-          <button
-            type="button"
-            data-tutorial="sched-add-group"
-            onClick={addGroup}
-            className="adm-btnSmallOutline"
-            style={{ width: '100%', marginTop: 8, color: 'var(--adm-accent)' }}
-          >
-            + Add Group
-          </button>
+          <button type="button" onClick={addGroup} className="adm-btnSmallOutline" style={{ width: '100%', marginTop: 4, color: 'var(--adm-accent)', fontSize: 11 }}>+ Add Group</button>
         </div>
       )}
 
-      {/* ─── TABLE VIEW TAB ─── */}
-      {tab === 'table' && (
-        <div style={{ flex: 1, overflow: 'auto', padding: '0 4px' }}>
-          {/* Filter chips for table too */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10, marginTop: 8 }}>
-            <FilterChip
-              label={`All (${schedules.length})`}
-              active={filterMode === 'all'}
-              color="var(--adm-type-other)"
-              onClick={() => setFilterMode('all')}
-            />
-            {ungroupedCount > 0 && (
-              <FilterChip
-                label={`Ungrouped (${ungroupedCount})`}
-                active={filterMode === 'ungrouped'}
-                color="var(--adm-danger)"
-                onClick={() => setFilterMode('ungrouped')}
-              />
-            )}
-            {groups.map((g) => (
-              <FilterChip
-                key={g.id}
-                label={`${g.nameHebrew} (${schedules.filter((s) => s.groupId === g.id).length})`}
-                active={filterMode === g.id}
-                color={g.color}
-                onClick={() => setFilterMode(g.id)}
-              />
-            ))}
-          </div>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--adm-border)', textAlign: 'left' }}>
-                <th style={thStyle}>
-                  <input
-                    type="checkbox"
-                    checked={filteredEvents.filter((e) => !e.isPlaceholder).length > 0 && filteredEvents.filter((e) => !e.isPlaceholder).every((e) => selectedIds.has(e.id))}
-                    onChange={toggleSelectAll}
-                    style={{ cursor: 'pointer' }}
-                  />
-                </th>
-                <ThSortable col="name" label="Name" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
-                <ThSortable col="type" label="Type" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
-                <ThSortable col="group" label="Group" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
-                <ThSortable col="time" label="Time" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
-                <ThSortable col="room" label="Room" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
-                <ThSortable col="days" label="Days" current={tableSortCol} dir={tableSortDir} onClick={handleTableSort} />
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tableSorted.map((ev, idx) => {
-                const isSelected = selectedIds.has(ev.id);
-                return (
-                  <tr
-                    key={ev.id}
-                    style={{
-                      borderBottom: '1px solid var(--adm-sched-border-soft)',
-                      background: isSelected ? 'var(--adm-sched-row-sel)' : (idx % 2 === 0 ? 'var(--adm-bg)' : 'var(--adm-sched-row-alt)'),
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => { setSelectedEventId(ev.id); setTab('events'); }}
-                  >
-                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                      {!ev.isPlaceholder && (
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {
-                            setSelectedIds((prev) => {
-                              const n = new Set(prev);
-                              if (n.has(ev.id)) n.delete(ev.id); else n.add(ev.id);
-                              return n;
-                            });
-                          }}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      )}
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)', flexShrink: 0 }} />
-                        <span style={{ fontWeight: 500, ...(ev.isPlaceholder ? { fontStyle: 'italic', color: 'var(--adm-text-muted)' } : {}) }}>
-                          {ev.isPlaceholder ? (ev.placeholderLabel || '— spacer —') : ev.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={tdStyle}>{ev.isPlaceholder ? '' : ev.type}</td>
-                    <td style={tdStyle}>
-                      <span style={{
-                        padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 600,
-                        background: ev.groupId
-                          ? `${groupMap.get(ev.groupId)?.color ?? '#64748b'}20`
-                          : 'var(--adm-sched-ungrouped-pill-bg)',
-                        color: ev.groupId ? (groupMap.get(ev.groupId)?.color ?? 'var(--adm-type-other)') : 'var(--adm-danger)',
-                      }}>
-                        {getGroupName(ev.groupId)}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>{getTimeDisplay(ev)}</td>
-                    <td style={tdStyle}>{ev.room ?? ''}</td>
-                    <td style={tdStyle}>{ev.isPlaceholder ? '' : getDaysDisplay(ev)}</td>
-                    <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => deleteEvent(ev.id)}
-                        style={{ border: 'none', background: 'none', color: 'var(--adm-danger)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {tableSorted.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--adm-text-muted)', padding: 24 }}>
-                    No events found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Event list with inline expansion */}
+      <div className="adm-schedList">
+        {/* Header row */}
+        <div className="adm-schedHeaderRow">
+          <span className="adm-schedCellCheck">
+            <input type="checkbox" checked={filteredEvents.filter((e) => !e.isPlaceholder).length > 0 && filteredEvents.filter((e) => !e.isPlaceholder).every((e) => selectedIds.has(e.id))} onChange={toggleSelectAll} />
+          </span>
+          <span className="adm-schedCellName">Name</span>
+          <span className="adm-schedCellType">Type</span>
+          <span className="adm-schedCellTime">Time</span>
+          <span className="adm-schedCellDays">Days</span>
+          <span className="adm-schedCellGroup">Group</span>
+          <span className="adm-schedCellPri">Pri</span>
+          <span className="adm-schedCellActions" />
         </div>
-      )}
 
-      {/* ─── EVENTS TAB (list + detail) ─── */}
-      {tab === 'events' && (
-        <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-          {/* Left: Group chips + event list */}
-          <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--adm-border)', paddingRight: 12 }}>
-            {/* Filter chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-              <FilterChip
-                label={`All (${schedules.length})`}
-                active={filterMode === 'all'}
-                color="var(--adm-type-other)"
-                onClick={() => { setFilterMode('all'); setSelectedEventId(null); }}
-              />
-              {ungroupedCount > 0 && (
-                <FilterChip
-                  label={`Ungrouped (${ungroupedCount})`}
-                  active={filterMode === 'ungrouped'}
-                  color="var(--adm-danger)"
-                  onClick={() => { setFilterMode('ungrouped'); setSelectedEventId(null); }}
-                />
-              )}
-              {groups.map((g) => (
-                <FilterChip
-                  key={g.id}
-                  label={g.nameHebrew}
-                  active={filterMode === g.id}
-                  color={g.color}
-                  onClick={() => { setFilterMode(g.id); setSelectedEventId(null); }}
-                />
-              ))}
-            </div>
-
-            {/* Event list */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {filteredEvents.map((ev, idx) => {
-                const isSel = ev.id === selectedEventId;
-                const isChecked = selectedIds.has(ev.id);
-                const firstRealIdx = filteredEvents.findIndex((e) => !e.isPlaceholder);
-                const isFirstReal = idx === firstRealIdx && !ev.isPlaceholder;
-                if (ev.isPlaceholder) {
-                  return (
-                    <div
-                      key={ev.id}
-                      onClick={() => setSelectedEventId(ev.id)}
-                      style={{
-                        padding: '4px 8px', marginBottom: 2, borderRadius: 4, cursor: 'pointer',
-                        border: isSel ? '1px solid var(--adm-accent)' : '1px dashed var(--adm-border-input)',
-                        backgroundColor: isSel ? 'var(--adm-sched-row-sel)' : 'var(--adm-bg-muted)',
-                        textAlign: 'center', fontSize: 11, color: 'var(--adm-text-muted)',
-                      }}
-                    >
-                      {ev.placeholderLabel || '— spacer —'}
-                    </div>
-                  );
-                }
-                return (
-                  <div
-                    key={ev.id}
-                    data-tutorial={isFirstReal ? 'sched-first-event-row' : undefined}
-                    onClick={() => setSelectedEventId(ev.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', marginBottom: 2,
-                      borderRadius: 4, cursor: 'pointer',
-                      border: isSel ? '1px solid var(--adm-accent)' : '1px solid transparent',
-                      backgroundColor: isChecked ? 'color-mix(in srgb, var(--adm-accent) 22%, var(--adm-bg))' : (isSel ? 'var(--adm-sched-row-sel)' : (idx % 2 === 0 ? 'var(--adm-bg)' : 'var(--adm-sched-row-alt)')),
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={(e) => toggleSelect(ev.id, e as any)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ cursor: 'pointer', flexShrink: 0 }}
-                    />
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ev.name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--adm-text-muted)' }}>
-                        {getTimeDisplay(ev)}
-                        {filterMode === 'all' && ev.groupId && (
-                          <span style={{ marginLeft: 4, color: groupMap.get(ev.groupId)?.color ?? 'var(--adm-type-other)' }}>
-                            [{groupMap.get(ev.groupId)?.nameHebrew ?? ''}]
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); moveEvent(idx, -1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--adm-text-muted)', padding: 0, lineHeight: 1 }}>▲</button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); moveEvent(idx, 1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--adm-text-muted)', padding: 0, lineHeight: 1 }}>▼</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Add buttons */}
-            <div style={{ display: 'flex', gap: 4, marginTop: 8 }} data-tutorial="sched-add-event-wrap">
-              <button
-                type="button"
-                data-tutorial="sched-add-event"
-                onClick={() => addEvent(false)}
-                className="adm-btnSmallOutline"
-                style={{ flex: 1, color: 'var(--adm-accent)' }}
-              >
-                + Event
-              </button>
-              <button type="button" onClick={() => addEvent(true)} className="adm-btnSmallOutline" style={{ flex: 1 }}>
-                + Spacer
-              </button>
-            </div>
+        {filteredEvents.length === 0 && (
+          <div className="adm-schedEmpty">
+            {embedded ? 'No events yet. Use + Event above or + Add in the section header.' : 'No events yet. Click + Event to create one.'}
           </div>
+        )}
 
-          {/* Right: Detail panel */}
-          <div data-tutorial="sched-event-detail" style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
-            {!selectedEvent ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--adm-text-muted)', fontSize: 14 }}>
-                Select an event to edit
-              </div>
-            ) : selectedEvent.isPlaceholder ? (
-              <div>
-                <SectionHeader title="Spacer / Divider" />
-                <FormRow label="Label">
-                  <input value={selectedEvent.placeholderLabel ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { placeholderLabel: e.target.value })} placeholder="e.g. --- or section name" className="adm-input" />
-                </FormRow>
-                <FormRow label="Group">
-                  <select value={selectedEvent.groupId ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { groupId: e.target.value || undefined })} className="adm-select">
-                    <option value="">None</option>
-                    {groups.map((g) => <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>)}
-                  </select>
-                </FormRow>
-                <div style={{ marginTop: 12 }}>
-                  <button onClick={() => deleteEvent(selectedEvent.id)} className="adm-btnSmallDanger">Delete Spacer</button>
+        {filteredEvents.map((ev, idx) => {
+          const isExpanded = expandedEventId === ev.id;
+          const isChecked = selectedIds.has(ev.id);
+
+          if (ev.isPlaceholder) {
+            return (
+              <div key={ev.id} className={`adm-schedRow adm-schedRow--spacer ${isExpanded ? 'adm-schedRow--expanded' : ''}`}>
+                <div className="adm-schedRowSummary" onClick={() => setExpandedEventId(isExpanded ? null : ev.id)}>
+                  <span className="adm-schedCellCheck" />
+                  <span className="adm-schedCellName" style={{ fontStyle: 'italic', color: 'var(--adm-text-muted)' }}>{ev.placeholderLabel || '— spacer —'}</span>
+                  <span className="adm-schedCellType" />
+                  <span className="adm-schedCellTime" />
+                  <span className="adm-schedCellDays" />
+                  <span className="adm-schedCellGroup" />
+                  <span className="adm-schedCellPri" />
+                  <span className="adm-schedCellActions">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); }} className="adm-schedDeleteBtn">×</button>
+                  </span>
                 </div>
+                {isExpanded && (
+                  <div className="adm-schedInlineEdit">
+                    <InlineField label="Label">
+                      <input value={ev.placeholderLabel ?? ''} onChange={(e) => updateEvent(ev.id, { placeholderLabel: e.target.value })} placeholder="e.g. --- or section name" className="adm-input" style={{ maxWidth: 200 }} />
+                    </InlineField>
+                    <InlineField label="Group">
+                      <select value={ev.groupId ?? ''} onChange={(e) => updateEvent(ev.id, { groupId: e.target.value || undefined })} className="adm-select" style={{ maxWidth: 180 }}>
+                        <option value="">None</option>
+                        {groups.map((g) => <option key={g.id} value={g.id}>{g.nameHebrew}</option>)}
+                      </select>
+                    </InlineField>
+                  </div>
+                )}
               </div>
+            );
+          }
+
+          return (
+            <div key={ev.id} className={`adm-schedRow ${isExpanded ? 'adm-schedRow--expanded' : ''} ${isChecked ? 'adm-schedRow--checked' : ''} ${idx % 2 === 0 ? '' : 'adm-schedRow--alt'}`}>
+              {/* Summary row */}
+              <div className="adm-schedRowSummary" onClick={() => setExpandedEventId(isExpanded ? null : ev.id)}>
+                <span className="adm-schedCellCheck" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={isChecked} onChange={() => toggleSelect(ev.id)} />
+                </span>
+                <span className="adm-schedCellName">
+                  <span className="adm-schedTypeDot" style={{ backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)' }} />
+                  {ev.name}
+                </span>
+                <span className="adm-schedCellType">{ev.type}</span>
+                <span className="adm-schedCellTime">{getTimeDisplay(ev)}</span>
+                <span className="adm-schedCellDays">{getDaysShort(ev)}</span>
+                <span className="adm-schedCellGroup">
+                  {ev.groupId && (
+                    <span className="adm-schedGroupPill" style={{ borderColor: groupMap.get(ev.groupId)?.color ?? 'var(--adm-border)', color: groupMap.get(ev.groupId)?.color ?? 'var(--adm-text-muted)' }}>
+                      {getGroupName(ev.groupId)}
+                    </span>
+                  )}
+                </span>
+                <span className="adm-schedCellPri">{ev.priority ?? 0}</span>
+                <span className="adm-schedCellActions">
+                  <button type="button" onClick={(e) => { e.stopPropagation(); moveEvent(idx, -1); }} className="adm-schedMoveBtn" title="Move up">▲</button>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); moveEvent(idx, 1); }} className="adm-schedMoveBtn" title="Move down">▼</button>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); deleteEvent(ev.id); }} className="adm-schedDeleteBtn" title="Delete">×</button>
+                </span>
+              </div>
+
+              {/* Inline expanded editor */}
+              {isExpanded && (
+                <InlineEventEditor
+                  ev={ev}
+                  groups={groups}
+                  onUpdate={(patch) => updateEvent(ev.id, patch)}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Inline Event Editor (compact, BeeZee-inspired) ─── */
+
+function InlineEventEditor({ ev, groups, onUpdate }: { ev: Schedule; groups: DaveningGroup[]; onUpdate: (patch: Partial<Schedule>) => void }) {
+  const triMap = useMemo(() => rulesToTriMap(ev.visibilityRules ?? []), [ev.visibilityRules]);
+
+  const setTriState = useCallback((condition: string, state: TriState) => {
+    const next = { ...triMap, [condition]: state };
+    onUpdate({ visibilityRules: triMapToRules(next) });
+  }, [triMap, onUpdate]);
+
+  return (
+    <div className="adm-schedInlineEdit">
+      {/* Row 1: Core fields */}
+      <div className="adm-schedEditRow">
+        <InlineField label="Name">
+          <input value={ev.name} onChange={(e) => onUpdate({ name: e.target.value })} className="adm-input" style={{ maxWidth: 180 }} />
+        </InlineField>
+        <InlineField label="Type">
+          <select value={ev.type} onChange={(e) => onUpdate({ type: e.target.value })} className="adm-select" style={{ maxWidth: 120 }}>
+            {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </InlineField>
+        <InlineField label="Group">
+          <select value={ev.groupId ?? ''} onChange={(e) => onUpdate({ groupId: e.target.value || undefined })} className="adm-select" style={{ maxWidth: 150 }}>
+            <option value="">None</option>
+            {groups.map((g) => <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>)}
+          </select>
+        </InlineField>
+        <InlineField label="Room">
+          <input value={ev.room ?? ''} onChange={(e) => onUpdate({ room: e.target.value })} className="adm-input" style={{ maxWidth: 100 }} />
+        </InlineField>
+        <InlineField label="Priority">
+          <input type="number" value={ev.priority ?? 0} onChange={(e) => onUpdate({ priority: parseInt(e.target.value) || 0 })} className="adm-input" style={{ maxWidth: 60 }} title="Higher priority overrides lower. 0 = default." />
+        </InlineField>
+      </div>
+
+      {/* Row 2: Time configuration */}
+      <div className="adm-schedEditRow">
+        <InlineField label="Time">
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <select value={ev.timeMode ?? 'fixed'} onChange={(e) => onUpdate({ timeMode: e.target.value as any })} className="adm-select" style={{ maxWidth: 90 }}>
+              <option value="fixed">Fixed</option>
+              <option value="dynamic">Dynamic</option>
+            </select>
+            {(ev.timeMode ?? 'fixed') === 'fixed' ? (
+              <input type="time" value={ev.fixedTime ?? ''} onChange={(e) => onUpdate({ fixedTime: e.target.value })} className="adm-input" style={{ maxWidth: 100 }} />
             ) : (
-              <div>
-                <SectionHeader title="Event Details" />
-                <FormRow label="Name">
-                  <input value={selectedEvent.name} onChange={(e) => updateEvent(selectedEvent.id, { name: e.target.value })} className="adm-input" />
-                </FormRow>
-                <FormRow label="Type">
-                  <select value={selectedEvent.type} onChange={(e) => updateEvent(selectedEvent.id, { type: e.target.value })} className="adm-select">
-                    {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </FormRow>
-                <FormRow label="Group">
-                  <select value={selectedEvent.groupId ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { groupId: e.target.value || undefined })} className="adm-select">
-                    <option value="">None</option>
-                    {groups.map((g) => <option key={g.id} value={g.id}>{g.nameHebrew} ({g.name})</option>)}
-                  </select>
-                </FormRow>
-                <FormRow label="Room">
-                  <input value={selectedEvent.room ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { room: e.target.value })} className="adm-input" />
-                </FormRow>
-
-                <SectionHeader title="Time" />
-                <FormRow label="Time Mode">
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {(['fixed', 'dynamic'] as const).map((m) => (
-                      <button key={m} onClick={() => updateEvent(selectedEvent.id, { timeMode: m })} className="adm-btnSmallOutline" style={{ flex: 1, backgroundColor: (selectedEvent.timeMode ?? 'fixed') === m ? 'var(--adm-bg-active)' : undefined, borderColor: (selectedEvent.timeMode ?? 'fixed') === m ? 'var(--adm-accent)' : undefined, color: (selectedEvent.timeMode ?? 'fixed') === m ? 'var(--adm-accent)' : undefined, fontWeight: (selectedEvent.timeMode ?? 'fixed') === m ? 600 : 400 }}>
-                        {m === 'fixed' ? 'Fixed Time' : 'Dynamic (Zman)'}
-                      </button>
-                    ))}
-                  </div>
-                </FormRow>
-                {(selectedEvent.timeMode ?? 'fixed') === 'fixed' ? (
-                  <FormRow label="Time">
-                    <input type="time" value={selectedEvent.fixedTime ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { fixedTime: e.target.value })} className="adm-input" />
-                  </FormRow>
-                ) : (
-                  <>
-                    <FormRow label="Based on Zman">
-                      <select value={selectedEvent.baseZman ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { baseZman: e.target.value })} className="adm-select">
-                        <option value="">Select...</option>
-                        {ZMANIM.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
-                      </select>
-                    </FormRow>
-                    <FormRow label="Offset (minutes)">
-                      <input type="number" value={selectedEvent.offset ?? 0} onChange={(e) => updateEvent(selectedEvent.id, { offset: parseInt(e.target.value) || 0 })} className="adm-input" />
-                    </FormRow>
-                    <FormRow label="Round to nearest">
-                      <select value={selectedEvent.roundTo ?? 1} onChange={(e) => updateEvent(selectedEvent.id, { roundTo: parseInt(e.target.value) })} className="adm-select">
-                        {ROUND_OPTIONS.map((r) => <option key={r} value={r}>{r} min</option>)}
-                      </select>
-                    </FormRow>
-                    <FormRow label="Round direction">
-                      <select value={selectedEvent.roundMode ?? 'nearest'} onChange={(e) => updateEvent(selectedEvent.id, { roundMode: e.target.value as any })} className="adm-select">
-                        <option value="nearest">Nearest</option>
-                        <option value="before">Before (earlier)</option>
-                        <option value="after">After (later)</option>
-                      </select>
-                    </FormRow>
-                  </>
-                )}
-                <FormRow label="Earliest limit">
-                  <input type="time" value={selectedEvent.limitBefore ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { limitBefore: e.target.value || undefined })} className="adm-input" />
-                </FormRow>
-                <FormRow label="Latest limit">
-                  <input type="time" value={selectedEvent.limitAfter ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { limitAfter: e.target.value || undefined })} className="adm-input" />
-                </FormRow>
-                <FormRow label="Duration (minutes)">
-                  <input type="number" value={selectedEvent.durationMinutes ?? ''} onChange={(e) => updateEvent(selectedEvent.id, { durationMinutes: parseInt(e.target.value) || undefined })} placeholder="e.g. 30" className="adm-input" />
-                </FormRow>
-
-                {(selectedEvent.timeMode ?? 'fixed') === 'dynamic' && (
-                  <>
-                    <SectionHeader title="Refresh Frequency" />
-                    <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginBottom: 6 }}>How often the dynamic time recalculates. Weekly/monthly uses the latest zman in the period.</div>
-                    <FormRow label="Refresh">
-                      <select value={selectedEvent.refreshMode ?? 'daily'} onChange={(e) => updateEvent(selectedEvent.id, { refreshMode: e.target.value as any })} className="adm-select">
-                        <option value="daily">Daily (recalculate every day)</option>
-                        <option value="weekly">Weekly (same time all week)</option>
-                        <option value="monthly">Monthly (same time all month)</option>
-                      </select>
-                    </FormRow>
-                    {selectedEvent.refreshMode === 'weekly' && (
-                      <FormRow label="Week starts">
-                        <select value={selectedEvent.refreshAnchorDay ?? 0} onChange={(e) => updateEvent(selectedEvent.id, { refreshAnchorDay: parseInt(e.target.value) })} className="adm-select">
-                          {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                        </select>
-                      </FormRow>
-                    )}
-                  </>
-                )}
-
-                <SectionHeader title="Active Days" />
-                <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-                  {DAYS.map((d, i) => {
-                    const active = selectedEvent.daysActive?.[i] ?? true;
-                    return (
-                      <button
-                        key={d}
-                        onClick={() => {
-                          const days = [...(selectedEvent.daysActive ?? [true, true, true, true, true, true, true])];
-                          days[i] = !days[i];
-                          updateEvent(selectedEvent.id, { daysActive: days });
-                        }}
-                        style={{
-                          flex: 1, padding: '6px 2px', borderRadius: 4, fontSize: 11, cursor: 'pointer', fontWeight: 600,
-                          border: `1px solid ${active ? 'var(--adm-accent)' : 'var(--adm-border-input)'}`,
-                          backgroundColor: active ? 'var(--adm-sched-row-sel)' : 'var(--adm-bg)',
-                          color: active ? 'var(--adm-accent)' : 'var(--adm-text-muted)',
-                        }}
-                        title={d}
-                      >
-                        {DAYS_HE[i]}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <SectionHeader title="Visibility Rules" />
-                <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginBottom: 6 }}>Show or hide this event based on calendar conditions.</div>
-                {(selectedEvent.visibilityRules ?? []).map((rule, rIdx) => (
-                  <div key={rIdx} style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
-                    <select
-                      value={rule.show ? 'show' : 'hide'}
-                      onChange={(e) => {
-                        const rules = [...(selectedEvent.visibilityRules ?? [])];
-                        rules[rIdx] = { ...rules[rIdx], show: e.target.value === 'show' };
-                        updateEvent(selectedEvent.id, { visibilityRules: rules });
-                      }}
-                      className="adm-select"
-                      style={{ width: 70 }}
-                    >
-                      <option value="show">Show</option>
-                      <option value="hide">Hide</option>
-                    </select>
-                    <span style={{ fontSize: 11, color: 'var(--adm-text-muted)' }}>on</span>
-                    <select
-                      value={rule.condition}
-                      onChange={(e) => {
-                        const rules = [...(selectedEvent.visibilityRules ?? [])];
-                        rules[rIdx] = { ...rules[rIdx], condition: e.target.value as VisibilityCondition };
-                        updateEvent(selectedEvent.id, { visibilityRules: rules });
-                      }}
-                      className="adm-select"
-                      style={{ flex: 1 }}
-                    >
-                      {VISIBILITY_CONDITIONS.map((vc) => (
-                        <option key={vc.value} value={vc.value}>{vc.labelHe} — {vc.label}</option>
-                      ))}
-                    </select>
-                    <button onClick={() => {
-                      const rules = (selectedEvent.visibilityRules ?? []).filter((_, i) => i !== rIdx);
-                      updateEvent(selectedEvent.id, { visibilityRules: rules });
-                    }} className="adm-btnSmallDanger" style={{ padding: '2px 6px' }}>×</button>
-                  </div>
-                ))}
-                <button
-                  onClick={() => {
-                    const rules = [...(selectedEvent.visibilityRules ?? []), { condition: 'weekday' as VisibilityCondition, show: true }];
-                    updateEvent(selectedEvent.id, { visibilityRules: rules });
-                  }}
-                  className="adm-btnSmallOutline"
-                  style={{ fontSize: 11, marginTop: 4, color: 'var(--adm-accent)' }}
-                >
-                  + Add Rule
-                </button>
-
-                <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid var(--adm-border)' }}>
-                  <button onClick={() => deleteEvent(selectedEvent.id)} className="adm-btnSmallDanger">Delete Event</button>
-                </div>
-              </div>
+              <>
+                <select value={ev.baseZman ?? ''} onChange={(e) => onUpdate({ baseZman: e.target.value })} className="adm-select" style={{ maxWidth: 140 }}>
+                  <option value="">Zman...</option>
+                  {ZMANIM.map((z) => <option key={z.value} value={z.value}>{z.label}</option>)}
+                </select>
+                <input type="number" value={ev.offset ?? 0} onChange={(e) => onUpdate({ offset: parseInt(e.target.value) || 0 })} className="adm-input" style={{ maxWidth: 55 }} title="Offset (min)" placeholder="±min" />
+              </>
             )}
           </div>
-        </div>
-      )}
+        </InlineField>
+        {(ev.timeMode ?? 'fixed') === 'dynamic' && (
+          <>
+            <InlineField label="Round">
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <select value={ev.roundTo ?? 1} onChange={(e) => onUpdate({ roundTo: parseInt(e.target.value) })} className="adm-select" style={{ maxWidth: 65 }}>
+                  {ROUND_OPTIONS.map((r) => <option key={r} value={r}>{r}m</option>)}
+                </select>
+                <select value={ev.roundMode ?? 'nearest'} onChange={(e) => onUpdate({ roundMode: e.target.value as any })} className="adm-select" style={{ maxWidth: 80 }}>
+                  <option value="nearest">Nearest</option>
+                  <option value="before">Before</option>
+                  <option value="after">After</option>
+                </select>
+              </div>
+            </InlineField>
+            <InlineField label="Refresh">
+              <select value={ev.refreshMode ?? 'daily'} onChange={(e) => onUpdate({ refreshMode: e.target.value as any })} className="adm-select" style={{ maxWidth: 90 }}>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </InlineField>
+          </>
+        )}
+        <InlineField label="Earliest">
+          <input type="time" value={ev.limitBefore ?? ''} onChange={(e) => onUpdate({ limitBefore: e.target.value || undefined })} className="adm-input" style={{ maxWidth: 90 }} />
+        </InlineField>
+        <InlineField label="Latest">
+          <input type="time" value={ev.limitAfter ?? ''} onChange={(e) => onUpdate({ limitAfter: e.target.value || undefined })} className="adm-input" style={{ maxWidth: 90 }} />
+        </InlineField>
+        <InlineField label="Duration">
+          <input type="number" value={ev.durationMinutes ?? ''} onChange={(e) => onUpdate({ durationMinutes: parseInt(e.target.value) || undefined })} placeholder="min" className="adm-input" style={{ maxWidth: 55 }} />
+        </InlineField>
+      </div>
+
+      {/* Row 3: Active days + Nearest event */}
+      <div className="adm-schedEditRow">
+        <InlineField label="Active Days">
+          <div className="adm-schedDayGrid">
+            {DAYS.map((d, i) => {
+              const active = ev.daysActive?.[i] ?? true;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => {
+                    const days = [...(ev.daysActive ?? [true, true, true, true, true, true, true])];
+                    days[i] = !days[i];
+                    onUpdate({ daysActive: days });
+                  }}
+                  className={`adm-schedDayBtn ${active ? 'adm-schedDayBtn--on' : ''}`}
+                  title={d}
+                >
+                  {DAYS_HE[i]}
+                </button>
+              );
+            })}
+          </div>
+        </InlineField>
+        <InlineField label="Nearest Event">
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--adm-text)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={ev.nearestEvent ?? false} onChange={(e) => onUpdate({ nearestEvent: e.target.checked })} />
+              On
+            </label>
+            {ev.nearestEvent && (
+              <>
+                <input type="number" value={ev.nearestBefore ?? 10} onChange={(e) => onUpdate({ nearestBefore: parseInt(e.target.value) || 0 })} className="adm-input" style={{ maxWidth: 45 }} title="Minutes before" />
+                <span style={{ fontSize: 10, color: 'var(--adm-text-muted)' }}>before</span>
+                <input type="number" value={ev.nearestAfter ?? 5} onChange={(e) => onUpdate({ nearestAfter: parseInt(e.target.value) || 0 })} className="adm-input" style={{ maxWidth: 45 }} title="Minutes after" />
+                <span style={{ fontSize: 10, color: 'var(--adm-text-muted)' }}>after</span>
+              </>
+            )}
+          </div>
+        </InlineField>
+      </div>
+
+      {/* Row 4: Display conditions (tri-state checkboxes) */}
+      <div className="adm-schedEditRow">
+        <InlineField label="Display Conditions">
+          <div className="adm-schedTriGrid">
+            {VISIBILITY_CONDITIONS.map((vc) => {
+              const state = triMap[vc.value] ?? 'ignore';
+              return (
+                <button
+                  key={vc.value}
+                  type="button"
+                  className={`adm-schedTriBtn adm-schedTriBtn--${state}`}
+                  onClick={() => setTriState(vc.value, cycleTriState(state))}
+                  title={`${vc.label}: ${state === 'ignore' ? 'No rule (—)' : state === 'show' ? 'Show only (✓)' : 'Hide (✗)'}\nClick to cycle: — → ✓ → ✗ → —`}
+                >
+                  <span className="adm-schedTriIcon">{triStateIcon(state)}</span>
+                  <span className="adm-schedTriLabel">{vc.labelHe}</span>
+                </button>
+              );
+            })}
+          </div>
+        </InlineField>
+      </div>
+
+      {/* Row 5: Date ranges */}
+      <div className="adm-schedEditRow">
+        <InlineField label="Date Range (Gregorian)">
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <input type="date" value={ev.startDateGregorian ?? ''} onChange={(e) => onUpdate({ startDateGregorian: e.target.value || undefined })} className="adm-input" style={{ maxWidth: 130 }} />
+            <span style={{ fontSize: 10, color: 'var(--adm-text-muted)' }}>to</span>
+            <input type="date" value={ev.endDateGregorian ?? ''} onChange={(e) => onUpdate({ endDateGregorian: e.target.value || undefined })} className="adm-input" style={{ maxWidth: 130 }} />
+          </div>
+        </InlineField>
+        <InlineField label="Date Range (Hebrew)">
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <input value={ev.startDateHebrew ?? ''} onChange={(e) => onUpdate({ startDateHebrew: e.target.value || undefined })} placeholder="e.g. 1 Tishrei" className="adm-input" style={{ maxWidth: 100 }} />
+            <span style={{ fontSize: 10, color: 'var(--adm-text-muted)' }}>to</span>
+            <input value={ev.endDateHebrew ?? ''} onChange={(e) => onUpdate({ endDateHebrew: e.target.value || undefined })} placeholder="e.g. 10 Tishrei" className="adm-input" style={{ maxWidth: 100 }} />
+          </div>
+        </InlineField>
+      </div>
     </div>
   );
 }
@@ -822,58 +613,21 @@ export function ScheduleEditor({
 function FilterChip({ label, active, color, onClick }: { label: string; active: boolean; color: string; onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      style={{
-        padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-        border: active ? `2px solid ${color}` : '1px solid var(--adm-border-input)',
-        backgroundColor: active ? `${color}15` : 'var(--adm-bg)',
-        color: active ? color : 'var(--adm-text-muted)',
-      }}
+      className={`adm-schedFilterChip ${active ? 'adm-schedFilterChip--active' : ''}`}
+      style={active ? { borderColor: color, color, backgroundColor: `color-mix(in srgb, ${color} 10%, var(--adm-bg))` } : undefined}
     >
       {label}
     </button>
   );
 }
 
-function ThSortable({ col, label, current, dir, onClick }: { col: string; label: string; current: string; dir: string; onClick: (col: string) => void }) {
+function InlineField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <th
-      onClick={() => onClick(col)}
-      style={{ ...thStyle, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
-    >
-      {label}{current === col ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}
-    </th>
-  );
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <div className="adm-sectionHeader" style={{ marginTop: 14, marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--adm-border)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-      <span className="adm-sectionTitle" style={{ fontSize: 12 }}>{title}</span>
+    <div className="adm-schedInlineField">
+      <label className="adm-schedInlineLabel">{label}</label>
+      {children}
     </div>
   );
 }
-
-function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="adm-inlineGroup" style={{ marginBottom: 6 }}>
-      <label className="adm-labelSm" style={{ width: 110, flexShrink: 0, marginBottom: 0 }}>{label}</label>
-      <div style={{ flex: 1 }}>{children}</div>
-    </div>
-  );
-}
-
-const thStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  fontSize: 11,
-  fontWeight: 700,
-  color: 'var(--adm-text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: 0.5,
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  fontSize: 12,
-  verticalAlign: 'middle',
-};

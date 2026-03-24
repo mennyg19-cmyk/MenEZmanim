@@ -5,17 +5,23 @@ import { AnnouncementEditor } from './AnnouncementEditor';
 import { MemorialEditor } from './MemorialEditor';
 import { SponsorManager } from './SponsorManager';
 import { FlyerUploader } from './FlyerUploader';
+import { ScheduleEditor } from './ScheduleEditor';
 import type { ImportHubTab } from './ImportExportHub';
+import type { ScheduleRecord, DaveningGroupRecord, WeekExportFetcher } from './ScheduleImportExportPanel';
 
-export type ContentHubSection = 'announcements' | 'yahrzeit' | 'sponsors' | 'media';
+export type ContentHubSection = 'schedules' | 'announcements' | 'yahrzeit' | 'sponsors' | 'media';
 
 export interface ContentHubSeed {
   section: ContentHubSection;
-  /** Increment embedded editor &quot;add&quot; form (if applicable) */
   triggerAdd?: boolean;
 }
 
 export interface ContentHubProps {
+  schedules: ScheduleRecord[];
+  onSchedulesChange: (s: ScheduleRecord[]) => void;
+  groups: DaveningGroupRecord[];
+  onGroupsChange: (g: DaveningGroupRecord[]) => void;
+  weekExportFetcher?: WeekExportFetcher;
   announcements: any[];
   onAnnouncementsChange: (a: any[]) => void;
   memorials: any[];
@@ -26,7 +32,6 @@ export interface ContentHubProps {
   onMediaUpload: (file: File) => Promise<void>;
   onMediaDelete: (id: string) => Promise<void>;
   onMediaChange: (m: any[]) => void;
-  /** One-shot navigation from dashboard / quick actions */
   seed?: ContentHubSeed | null;
   onSeedConsumed?: () => void;
   onRequestImportExport: (tab: ImportHubTab) => void;
@@ -39,6 +44,7 @@ const SECTIONS: {
   accentClass: string;
   importTab: ImportHubTab;
 }[] = [
+  { id: 'schedules', label: 'Davening Times', icon: '📅', accentClass: 'adm-hubSummaryCard--schedules', importTab: 'schedules' },
   { id: 'announcements', label: 'Announcements', icon: '📢', accentClass: 'adm-hubSummaryCard--announcements', importTab: 'announcements' },
   { id: 'yahrzeit', label: 'Yahrzeit', icon: '🕯️', accentClass: 'adm-hubSummaryCard--yahrzeit', importTab: 'yahrzeits' },
   { id: 'sponsors', label: 'Sponsors', icon: '💰', accentClass: 'adm-hubSummaryCard--sponsors', importTab: 'sponsors' },
@@ -46,6 +52,11 @@ const SECTIONS: {
 ];
 
 export function ContentHub({
+  schedules,
+  onSchedulesChange,
+  groups,
+  onGroupsChange,
+  weekExportFetcher,
   announcements,
   onAnnouncementsChange,
   memorials,
@@ -64,12 +75,15 @@ export function ContentHub({
   const [addNonce, setAddNonce] = useState<Partial<Record<ContentHubSection, number>>>({});
   const sectionRefs = useRef<Partial<Record<ContentHubSection, HTMLDivElement | null>>>({});
 
+  const schedCount = schedules.filter((s) => !s.isPlaceholder).length;
+  const groupCount = groups.length;
   const annActive = announcements.filter((a) => a.active !== false).length;
   const yahCount = memorials.length;
   const spActive = sponsors.filter((s) => s.active !== false).length;
   const mediaCount = media.length;
 
   const counts: Record<ContentHubSection, number> = {
+    schedules: schedCount,
     announcements: annActive,
     yahrzeit: yahCount,
     sponsors: spActive,
@@ -77,6 +91,7 @@ export function ContentHub({
   };
 
   const meta: Record<ContentHubSection, string> = {
+    schedules: `${schedCount} events, ${groupCount} groups`,
     announcements: `${annActive} active`,
     yahrzeit: `${yahCount} entr${yahCount === 1 ? 'y' : 'ies'}`,
     sponsors: `${spActive} active`,
@@ -112,10 +127,10 @@ export function ContentHub({
 
   return (
     <div className="adm-hubPage">
-      <h2 className="adm-hubTitle">Content hub</h2>
+      <h2 className="adm-hubTitle">Content Hub</h2>
       <p className="adm-hubSubtitle">
-        Announcements, yahrzeits, sponsors, and media in one place. Expand a section to edit. Use <strong>Import &amp; Export</strong> in the
-        sidebar for CSV/JSON backups.
+        All your content in one place — davening times, announcements, yahrzeits, sponsors, and media.
+        Expand a section to edit. Use <strong>Import &amp; Export</strong> in the sidebar for bulk operations.
       </p>
 
       <div className="adm-hubGrid">
@@ -141,10 +156,7 @@ export function ContentHub({
               <button
                 type="button"
                 className="adm-btnSmallOutline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  scrollTo(s.id);
-                }}
+                onClick={(e) => { e.stopPropagation(); scrollTo(s.id); }}
               >
                 Manage
               </button>
@@ -152,10 +164,7 @@ export function ContentHub({
                 type="button"
                 className="adm-btnPrimary"
                 style={{ padding: '6px 12px', fontSize: 13 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  bumpAdd(s.id);
-                }}
+                onClick={(e) => { e.stopPropagation(); bumpAdd(s.id); }}
               >
                 {s.id === 'media' ? 'Upload' : '+ Add'}
               </button>
@@ -169,9 +178,7 @@ export function ContentHub({
         return (
           <div
             key={s.id}
-            ref={(el) => {
-              sectionRefs.current[s.id] = el;
-            }}
+            ref={(el) => { sectionRefs.current[s.id] = el; }}
             className="adm-hubSection"
           >
             <button type="button" className="adm-hubSectionHeader" onClick={() => toggle(s.id)} aria-expanded={isOpen}>
@@ -183,24 +190,30 @@ export function ContentHub({
               </span>
               <span className="adm-hubBadge">{counts[s.id]}</span>
               <div className="adm-hubSectionActions" onClick={(e) => e.stopPropagation()}>
-                {s.id !== 'media' && (
-                  <button type="button" className="adm-btnSmallOutline" onClick={() => bumpAdd(s.id)}>
-                    + Add
-                  </button>
-                )}
-                {s.id === 'media' && (
-                  <button type="button" className="adm-btnSmallOutline" onClick={() => bumpAdd('media')}>
-                    Upload
-                  </button>
+                {s.id === 'media' ? (
+                  <button type="button" className="adm-btnSmallOutline" onClick={() => bumpAdd('media')}>Upload</button>
+                ) : (
+                  <button type="button" className="adm-btnSmallOutline" onClick={() => bumpAdd(s.id)}>+ Add</button>
                 )}
                 <button type="button" className="adm-btnSmallOutline" onClick={() => onRequestImportExport(s.importTab)}>
-                  Import…
+                  Import...
                 </button>
               </div>
             </button>
             {isOpen && (
               <div className="adm-hubSectionBody">
                 <div className="adm-hubEditorEmbed">
+                  {s.id === 'schedules' && (
+                    <ScheduleEditor
+                      embedded
+                      quickAddNonce={addNonce.schedules ?? 0}
+                      schedules={schedules}
+                      onChange={onSchedulesChange}
+                      groups={groups}
+                      onGroupsChange={onGroupsChange}
+                      weekExportFetcher={weekExportFetcher}
+                    />
+                  )}
                   {s.id === 'announcements' && (
                     <AnnouncementEditor
                       embedded

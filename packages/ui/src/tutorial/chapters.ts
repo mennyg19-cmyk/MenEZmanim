@@ -198,8 +198,7 @@ export function buildChapterSteps(chapterId: ChapterId, nav: NavHelpers): Step[]
           title: 'Davening Times',
           content: 'Open **Groups** to create buckets for your schedule (e.g. Main minyan, Vasikin).',
           before: async () => {
-            goSection('schedules');
-            goScheduleTab('groups');
+            goSection('content-hub');
             await delay(400);
           },
         }),
@@ -217,8 +216,7 @@ export function buildChapterSteps(chapterId: ChapterId, nav: NavHelpers): Step[]
           title: 'Davening Times list',
           content: 'Here you add real minyan rows: times, rooms, and which group they belong to.',
           before: async () => {
-            goSection('schedules');
-            goScheduleTab('events');
+            goSection('content-hub');
             await delay(400);
           },
         }),
@@ -233,8 +231,7 @@ export function buildChapterSteps(chapterId: ChapterId, nav: NavHelpers): Step[]
           content:
             'Set **fixed** time or **dynamic** (from halachic zmanim + offset). Configure active days, room, duration, refresh, and visibility rules.',
           before: async () => {
-            goSection('schedules');
-            goScheduleTab('events');
+            goSection('content-hub');
             await delay(200);
             const first = document.querySelector('[data-tutorial="sched-first-event-row"]') as HTMLElement | null;
             first?.click();
