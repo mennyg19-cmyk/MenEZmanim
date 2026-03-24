@@ -6,12 +6,8 @@ export type AdminSection =
   | 'settings'
   | 'members'
   | 'schedules'
-  | 'announcements'
-  | 'yahrzeit'
-  | 'sponsors'
-  | 'media'
-  | 'import'
-  | 'export';
+  | 'content-hub'
+  | 'import-export';
 
 export type { ScheduleEditorTab } from '../admin/ScheduleEditor';
 

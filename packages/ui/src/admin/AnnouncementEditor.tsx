@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { VisibilityRule } from '@zmanim-app/core';
 import { VisibilityRulesEditor } from '../shared/VisibilityRulesEditor';
 
 interface AnnouncementEditorProps {
   announcements: any[];
   onChange: (announcements: any[]) => void;
+  /** Nested in Content Hub — hide outer title row */
+  embedded?: boolean;
+  /** Increment to open &quot;new&quot; form from parent */
+  quickAddNonce?: number;
 }
 
 const emptyAnnouncement = () => ({
@@ -18,12 +22,17 @@ const emptyAnnouncement = () => ({
   visibilityRules: [] as VisibilityRule[],
 });
 
-export function AnnouncementEditor({ announcements, onChange }: AnnouncementEditorProps) {
+export function AnnouncementEditor({ announcements, onChange, embedded, quickAddNonce = 0 }: AnnouncementEditorProps) {
   const [editing, setEditing] = useState<any | null>(null);
 
   const handleAdd = () => {
     setEditing(emptyAnnouncement());
   };
+
+  useEffect(() => {
+    if (!quickAddNonce) return;
+    setEditing(emptyAnnouncement());
+  }, [quickAddNonce]);
 
   const handleEdit = (ann: any) => {
     setEditing({
@@ -56,13 +65,15 @@ export function AnnouncementEditor({ announcements, onChange }: AnnouncementEdit
   };
 
   return (
-    <div className="adm-card">
-      <div className="adm-pageHeader">
-        <h2 className="adm-pageTitle">הודעות — Announcements</h2>
-        <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
-          + Add Announcement
-        </button>
-      </div>
+    <div className={embedded ? undefined : 'adm-card'}>
+      {!embedded && (
+        <div className="adm-pageHeader">
+          <h2 className="adm-pageTitle">הודעות — Announcements</h2>
+          <button type="button" onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
+            + Add Announcement
+          </button>
+        </div>
+      )}
 
       {editing && (
         <div className="adm-formPanel" style={{ marginBottom: 20 }}>
@@ -137,7 +148,7 @@ export function AnnouncementEditor({ announcements, onChange }: AnnouncementEdit
         ))}
         {announcements.length === 0 && (
           <div className="adm-empty">
-            No announcements yet. Click "+ Add Announcement" to create one.
+            {embedded ? 'No announcements yet. Use + Add in the section header or the summary card.' : 'No announcements yet. Click "+ Add Announcement" to create one.'}
           </div>
         )}
       </div>

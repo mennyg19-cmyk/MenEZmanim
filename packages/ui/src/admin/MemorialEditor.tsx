@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-
+import React, { useEffect, useState, useMemo } from 'react';
 
 interface MemorialEditorProps {
   memorials: any[];
   onChange: (memorials: any[]) => void;
+  embedded?: boolean;
+  quickAddNonce?: number;
 }
 
 const HEBREW_MONTHS = [
@@ -29,9 +30,14 @@ const emptyMemorial = () => ({
   active: true,
 });
 
-export function MemorialEditor({ memorials, onChange }: MemorialEditorProps) {
+export function MemorialEditor({ memorials, onChange, embedded, quickAddNonce = 0 }: MemorialEditorProps) {
   const [editing, setEditing] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (!quickAddNonce) return;
+    setEditing(emptyMemorial());
+  }, [quickAddNonce]);
 
   const filtered = useMemo(() => {
     if (!searchTerm) return memorials;
@@ -62,18 +68,20 @@ export function MemorialEditor({ memorials, onChange }: MemorialEditorProps) {
   };
 
   return (
-    <div className="adm-card">
-      <div className="adm-pageHeader">
-        <h2 className="adm-pageTitle">יארצייט — Yahrzeit Management</h2>
-        <div className="adm-inlineGroup">
-          <button onClick={() => {}} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
-            Import from File
-          </button>
-          <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
-            + Add Yahrzeit
-          </button>
+    <div className={embedded ? undefined : 'adm-card'}>
+      {!embedded && (
+        <div className="adm-pageHeader">
+          <h2 className="adm-pageTitle">יארצייט — Yahrzeit Management</h2>
+          <div className="adm-inlineGroup">
+            <button type="button" onClick={() => {}} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
+              Import from File
+            </button>
+            <button type="button" onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
+              + Add Yahrzeit
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ marginBottom: 12 }}>
         <input

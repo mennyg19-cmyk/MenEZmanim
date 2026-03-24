@@ -5,14 +5,10 @@ import { useBreakpoint } from '../shared/useBreakpoint';
 import type { DisplayStyle } from '@zmanim-app/core';
 import { ScheduleEditor, type WeekExportFetcher, type ScheduleEditorTab } from './ScheduleEditor';
 import { TutorialProvider, TutorialLauncher, TutorialHelpLink } from '../tutorial';
-import { AnnouncementEditor } from './AnnouncementEditor';
-import { MemorialEditor } from './MemorialEditor';
-import { SponsorManager } from './SponsorManager';
-import { FlyerUploader } from './FlyerUploader';
+import { ContentHub, type ContentHubSeed, type ContentHubSection } from './ContentHub';
+import { ImportExportHub, type ImportHubTab } from './ImportExportHub';
 import { SettingsPage } from './SettingsPage';
 import { MemberManager } from './MemberManager';
-import { ImportWizard } from './ImportWizard';
-import { ExportPanel } from './ExportPanel';
 import { ScreenManager } from './ScreenManager';
 import {
   ThemePickerAdmin,
@@ -46,26 +42,18 @@ type Section =
   | 'settings'
   | 'members'
   | 'schedules'
-  | 'announcements'
-  | 'yahrzeit'
-  | 'sponsors'
-  | 'media'
-  | 'import'
-  | 'export';
+  | 'content-hub'
+  | 'import-export';
 
 const navItems: { key: Section; icon: string; labelHe: string; labelEn: string; group?: string }[] = [
   { key: 'dashboard', icon: '🏠', labelHe: 'לוח בקרה', labelEn: 'Dashboard' },
   { key: 'editor', icon: '🎨', labelHe: 'עורך תצוגה', labelEn: 'Display Editor', group: 'display' },
   { key: 'screens', icon: '🖥️', labelHe: 'מסכים וסגנונות', labelEn: 'Screens & Styles', group: 'display' },
   { key: 'schedules', icon: '📅', labelHe: 'זמני תפילה', labelEn: 'Davening Times', group: 'content' },
-  { key: 'announcements', icon: '📢', labelHe: 'הודעות', labelEn: 'Announcements', group: 'content' },
-  { key: 'yahrzeit', icon: '🕯️', labelHe: 'יארצייט', labelEn: 'Yahrzeit', group: 'content' },
-  { key: 'sponsors', icon: '💰', labelHe: 'תורמים', labelEn: 'Sponsors', group: 'content' },
-  { key: 'media', icon: '🖼️', labelHe: 'מדיה', labelEn: 'Media & Flyers', group: 'content' },
+  { key: 'content-hub', icon: '📚', labelHe: 'מרכז תוכן', labelEn: 'Content Hub', group: 'content' },
   { key: 'settings', icon: '⚙️', labelHe: 'הגדרות', labelEn: 'Settings', group: 'settings' },
   { key: 'members', icon: '👥', labelHe: 'משתמשים', labelEn: 'Members', group: 'settings' },
-  { key: 'import', icon: '📥', labelHe: 'ייבוא', labelEn: 'Import', group: 'tools' },
-  { key: 'export', icon: '📤', labelHe: 'ייצוא', labelEn: 'Export', group: 'tools' },
+  { key: 'import-export', icon: '🔄', labelHe: 'ייבוא וייצוא', labelEn: 'Import & Export', group: 'tools' },
 ];
 
 const groupLabels: Record<string, string> = {
@@ -108,6 +96,8 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   const [styles, setStyles] = useState<DisplayStyle[]>([]);
   const [orgPlan, setOrgPlan] = useState<string>('free');
   const [scheduleTab, setScheduleTab] = useState<ScheduleEditorTab>('events');
+  const [contentHubSeed, setContentHubSeed] = useState<ContentHubSeed | null>(null);
+  const [importHubTab, setImportHubTab] = useState<ImportHubTab>('schedules');
   const [previewCalendar, setPreviewCalendar] = useState<any>(null);
   const [previewZmanim, setPreviewZmanim] = useState<any[]>([]);
   const [previewSchedules, setPreviewSchedules] = useState<any[]>([]);
@@ -269,6 +259,16 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   const handleExport = async (type: string, options: any) => { await onSave('export', { type, options }); };
   const handleScreensChange = async (s: any[]) => { setScreens(s); await onSave('screens', s); };
 
+  const navigateSection = useCallback((target: string) => {
+    if (target.startsWith('content-hub:')) {
+      const sec = target.replace('content-hub:', '') as ContentHubSection;
+      setContentHubSeed({ section: sec });
+      setActiveSection('content-hub');
+      return;
+    }
+    setActiveSection(target as Section);
+  }, []);
+
   const weekExportFetcher = weekExportFetcherProp;
 
   // ── WYSIWYG editor handlers ─────────────────────────────
@@ -339,17 +339,18 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
             </div>
             <div className="adm-dashGrid adm-dashGridMb" data-tutorial="dash-stats">
               {([
-                { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', section: 'schedules' as Section },
-                { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', section: 'announcements' as Section },
-                { label: 'Yahrzeit Entries', value: memorials.length, color: 'var(--adm-stat-amber)', section: 'yahrzeit' as Section },
-                { label: 'Display Styles', value: styles.length, color: 'var(--adm-stat-purple)', section: 'editor' as Section },
-                { label: 'Screens', value: screens.length, color: 'var(--adm-stat-pink)', section: 'screens' as Section },
+                { label: 'Davening Times', value: schedules.length, color: 'var(--adm-accent)', nav: 'schedules' as const },
+                { label: 'Announcements', value: announcements.length, color: 'var(--adm-success)', nav: 'content-hub:announcements' as const },
+                { label: 'Yahrzeit Entries', value: memorials.length, color: 'var(--adm-stat-amber)', nav: 'content-hub:yahrzeit' as const },
+                { label: 'Display Styles', value: styles.length, color: 'var(--adm-stat-purple)', nav: 'editor' as const },
+                { label: 'Screens', value: screens.length, color: 'var(--adm-stat-pink)', nav: 'screens' as const },
               ] as const)
-                .filter((card) => bp !== 'mobile' || card.section !== 'editor')
+                .filter((card) => bp !== 'mobile' || card.nav !== 'editor')
                 .map((card) => (
                 <button
                   key={card.label}
-                  onClick={() => setActiveSection(card.section)}
+                  type="button"
+                  onClick={() => navigateSection(card.nav)}
                   className="adm-dashCard adm-dashCardAccent"
                   style={{ borderTop: `4px solid ${card.color}` }}
                 >
@@ -363,7 +364,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
             <div className="adm-dashQuickGrid adm-dashQuickStretch">
               <QuickActionsPanel
                 showEditorLink={bp !== 'mobile'}
-                onNavigate={(s) => setActiveSection(s as Section)}
+                onNavigate={navigateSection}
                 onAddEvent={(item) => {
                   const next = [...schedules, item];
                   setSchedules(next);
@@ -510,18 +511,48 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
             onActiveTabChange={setScheduleTab}
           />
         );
-      case 'announcements':
-        return <AnnouncementEditor announcements={announcements} onChange={handleAnnouncementsChange} />;
-      case 'yahrzeit':
-        return <MemorialEditor memorials={memorials} onChange={handleMemorialsChange} />;
-      case 'sponsors':
-        return <SponsorManager sponsors={sponsors} onChange={handleSponsorsChange} />;
-      case 'media':
-        return <FlyerUploader media={media} onUpload={handleMediaUpload} onDelete={handleMediaDelete} onChange={handleMediaChange} />;
-      case 'import':
-        return <ImportWizard onImport={handleImport} importResult={importResult} />;
-      case 'export':
-        return <ExportPanel onExport={handleExport} />;
+      case 'content-hub':
+        return (
+          <ContentHub
+            announcements={announcements}
+            onAnnouncementsChange={handleAnnouncementsChange}
+            memorials={memorials}
+            onMemorialsChange={handleMemorialsChange}
+            sponsors={sponsors}
+            onSponsorsChange={handleSponsorsChange}
+            media={media}
+            onMediaUpload={handleMediaUpload}
+            onMediaDelete={handleMediaDelete}
+            onMediaChange={handleMediaChange}
+            seed={contentHubSeed}
+            onSeedConsumed={() => setContentHubSeed(null)}
+            onRequestImportExport={(tab) => {
+              setImportHubTab(tab);
+              setActiveSection('import-export');
+            }}
+          />
+        );
+      case 'import-export':
+        return (
+          <ImportExportHub
+            schedules={schedules}
+            groups={groups}
+            onSchedulesChange={handleSchedulesChange}
+            onGroupsChange={handleGroupsChange}
+            weekExportFetcher={weekExportFetcher}
+            onImportBeeZee={handleImport}
+            importResult={importResult}
+            onExport={handleExport}
+            announcements={announcements}
+            onAnnouncementsChange={handleAnnouncementsChange}
+            memorials={memorials}
+            onMemorialsChange={handleMemorialsChange}
+            sponsors={sponsors}
+            onSponsorsChange={handleSponsorsChange}
+            importTab={importHubTab}
+            onImportTabChange={setImportHubTab}
+          />
+        );
       default:
         return null;
     }

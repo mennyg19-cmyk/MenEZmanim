@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
 
 interface SponsorManagerProps {
   sponsors: any[];
   onChange: (sponsors: any[]) => void;
+  embedded?: boolean;
+  quickAddNonce?: number;
 }
 
 const SPONSOR_TYPES = ['Parnas HaYom', 'Kiddush', 'Shalosh Seudos', 'Seudah Shlishit', 'Other'];
@@ -21,10 +22,15 @@ const emptySponsor = () => ({
   active: true,
 });
 
-export function SponsorManager({ sponsors, onChange }: SponsorManagerProps) {
+export function SponsorManager({ sponsors, onChange, embedded, quickAddNonce = 0 }: SponsorManagerProps) {
   const [editing, setEditing] = useState<any | null>(null);
 
   const handleAdd = () => setEditing(emptySponsor());
+
+  useEffect(() => {
+    if (!quickAddNonce) return;
+    setEditing(emptySponsor());
+  }, [quickAddNonce]);
   const handleEdit = (s: any) => setEditing({ ...s });
   const handleDelete = (id: string) => onChange(sponsors.filter((s) => s.id !== id));
 
@@ -42,13 +48,15 @@ export function SponsorManager({ sponsors, onChange }: SponsorManagerProps) {
   };
 
   return (
-    <div className="adm-card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>תורמים — Sponsors</h2>
-        <button onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
-          + Add Sponsor
-        </button>
-      </div>
+    <div className={embedded ? undefined : 'adm-card'}>
+      {!embedded && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>תורמים — Sponsors</h2>
+          <button type="button" onClick={handleAdd} className="adm-btnPrimary" style={{ padding: '8px 16px', fontSize: 14 }}>
+            + Add Sponsor
+          </button>
+        </div>
+      )}
 
       {editing && (
         <div className="adm-formPanel" style={{ marginBottom: 20 }}>

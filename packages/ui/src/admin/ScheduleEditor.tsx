@@ -1,62 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { VISIBILITY_CONDITIONS, type VisibilityCondition, type VisibilityRule } from '@zmanim-app/core';
 import { ColorPicker } from '../shared/ColorPicker';
-import {
-  generateGroupsSampleCsv, generateEventsSampleCsv,
-  parseGroupsCsv, parseEventsCsv,
-  exportGroupsCsv, exportEventsCsv,
-  downloadCsv, readFileAsText,
-  type CsvGroup, type CsvSchedule,
-} from '../shared/csvImportExport';
-import {
-  type WeeklyExportConfig, type WeekData,
-  buildWeeklyExportCsv, getNextDayOfWeek, formatDateDisplay, formatDateYMD,
-} from '../shared/weeklyExport';
+import type { ScheduleRecord as Schedule, DaveningGroupRecord as DaveningGroup, WeekExportFetcher } from './ScheduleImportExportPanel';
 
-interface Schedule {
-  id: string;
-  orgId: string;
-  name: string;
-  type: string;
-  groupId?: string;
-  timeMode?: 'fixed' | 'dynamic';
-  fixedTime?: string;
-  baseZman?: string;
-  offset?: number;
-  roundTo?: number;
-  roundMode?: 'nearest' | 'before' | 'after';
-  limitBefore?: string;
-  limitAfter?: string;
-  refreshMode?: 'daily' | 'weekly' | 'monthly';
-  refreshAnchorDay?: number;
-  durationMinutes?: number;
-  daysActive?: boolean[];
-  visibilityRules?: VisibilityRule[];
-  room?: string;
-  sortOrder?: number;
-  isPlaceholder?: boolean;
-  placeholderLabel?: string;
-}
+export type { WeekExportFetcher } from './ScheduleImportExportPanel';
 
-interface DaveningGroup {
-  id: string;
-  name: string;
-  nameHebrew: string;
-  color: string;
-  sortOrder: number;
-  active: boolean;
-}
-
-export interface WeekExportFetcher {
-  /** Fetch zmanim for a date, return array with { type, time } */
-  fetchZmanim: (date: Date) => Promise<Array<{ type: string; time: Date | null; label: string; hebrewLabel: string }>>;
-  /** Fetch calendar info for a date, return { parsha: { upcoming, upcomingHebrew } } */
-  fetchCalendar: (date: Date) => Promise<{ parsha?: { upcoming?: string; upcomingHebrew?: string; parsha?: string; parshaHebrew?: string } }>;
-}
-
-export type ScheduleEditorTab = 'events' | 'table' | 'groups' | 'import';
+export type ScheduleEditorTab = 'events' | 'table' | 'groups';
 
 interface ScheduleEditorProps {
   schedules: Schedule[];
@@ -336,9 +287,6 @@ export function ScheduleEditor({
         >
           Groups ({groups.length})
         </button>
-        <button type="button" onClick={() => setTab('import')} className={tab === 'import' ? "adm-tabActive" : "adm-tab"}>
-          Import / Export
-        </button>
       </div>
 
       {/* Bulk action bar */}
@@ -391,7 +339,7 @@ export function ScheduleEditor({
       {tab === 'groups' && (
         <div style={{ padding: '0 4px' }}>
           {groups.map((g) => (
-            <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 6, borderRadius: 6, border: '1px solid #e5e7eb', background: editingGroup?.id === g.id ? '#f0f9ff' : '#fff' }}>
+            <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', marginBottom: 6, borderRadius: 6, border: '1px solid var(--adm-border)', background: editingGroup?.id === g.id ? 'var(--adm-sched-group-sel-bg)' : 'var(--adm-bg)' }}>
               <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: g.color, flexShrink: 0 }} />
               {editingGroup?.id === g.id ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -412,7 +360,7 @@ export function ScheduleEditor({
                 <>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{g.nameHebrew}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{g.name} — {schedules.filter((s) => s.groupId === g.id).length} events</div>
+                    <div style={{ fontSize: 11, color: 'var(--adm-text-muted)' }}>{g.name} — {schedules.filter((s) => s.groupId === g.id).length} events</div>
                   </div>
                   <button onClick={() => setEditingGroup({ ...g })} className="adm-btnSmallOutline">Edit</button>
                   <button onClick={() => deleteGroup(g.id)} className="adm-btnSmallDanger">×</button>
@@ -440,14 +388,14 @@ export function ScheduleEditor({
             <FilterChip
               label={`All (${schedules.length})`}
               active={filterMode === 'all'}
-              color="#475569"
+              color="var(--adm-type-other)"
               onClick={() => setFilterMode('all')}
             />
             {ungroupedCount > 0 && (
               <FilterChip
                 label={`Ungrouped (${ungroupedCount})`}
                 active={filterMode === 'ungrouped'}
-                color="#ef4444"
+                color="var(--adm-danger)"
                 onClick={() => setFilterMode('ungrouped')}
               />
             )}
@@ -464,7 +412,7 @@ export function ScheduleEditor({
 
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+              <tr style={{ borderBottom: '2px solid var(--adm-border)', textAlign: 'left' }}>
                 <th style={thStyle}>
                   <input
                     type="checkbox"
@@ -489,8 +437,8 @@ export function ScheduleEditor({
                   <tr
                     key={ev.id}
                     style={{
-                      borderBottom: '1px solid #f1f5f9',
-                      background: isSelected ? '#eff6ff' : (idx % 2 === 0 ? '#fff' : '#f9fafb'),
+                      borderBottom: '1px solid var(--adm-sched-border-soft)',
+                      background: isSelected ? 'var(--adm-sched-row-sel)' : (idx % 2 === 0 ? 'var(--adm-bg)' : 'var(--adm-sched-row-alt)'),
                       cursor: 'pointer',
                     }}
                     onClick={() => { setSelectedEventId(ev.id); setTab('events'); }}
@@ -514,7 +462,7 @@ export function ScheduleEditor({
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)', flexShrink: 0 }} />
-                        <span style={{ fontWeight: 500, ...(ev.isPlaceholder ? { fontStyle: 'italic', color: '#94a3b8' } : {}) }}>
+                        <span style={{ fontWeight: 500, ...(ev.isPlaceholder ? { fontStyle: 'italic', color: 'var(--adm-text-muted)' } : {}) }}>
                           {ev.isPlaceholder ? (ev.placeholderLabel || '— spacer —') : ev.name}
                         </span>
                       </div>
@@ -537,7 +485,7 @@ export function ScheduleEditor({
                     <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => deleteEvent(ev.id)}
-                        style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                        style={{ border: 'none', background: 'none', color: 'var(--adm-danger)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
                       >
                         Delete
                       </button>
@@ -547,7 +495,7 @@ export function ScheduleEditor({
               })}
               {tableSorted.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8', padding: 24 }}>
+                  <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: 'var(--adm-text-muted)', padding: 24 }}>
                     No events found
                   </td>
                 </tr>
@@ -561,20 +509,20 @@ export function ScheduleEditor({
       {tab === 'events' && (
         <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
           {/* Left: Group chips + event list */}
-          <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e5e7eb', paddingRight: 12 }}>
+          <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--adm-border)', paddingRight: 12 }}>
             {/* Filter chips */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
               <FilterChip
                 label={`All (${schedules.length})`}
                 active={filterMode === 'all'}
-                color="#475569"
+                color="var(--adm-type-other)"
                 onClick={() => { setFilterMode('all'); setSelectedEventId(null); }}
               />
               {ungroupedCount > 0 && (
                 <FilterChip
                   label={`Ungrouped (${ungroupedCount})`}
                   active={filterMode === 'ungrouped'}
-                  color="#ef4444"
+                  color="var(--adm-danger)"
                   onClick={() => { setFilterMode('ungrouped'); setSelectedEventId(null); }}
                 />
               )}
@@ -603,9 +551,9 @@ export function ScheduleEditor({
                       onClick={() => setSelectedEventId(ev.id)}
                       style={{
                         padding: '4px 8px', marginBottom: 2, borderRadius: 4, cursor: 'pointer',
-                        border: isSel ? '1px solid #60a5fa' : '1px dashed #d1d5db',
-                        backgroundColor: isSel ? '#eff6ff' : '#fafafa',
-                        textAlign: 'center', fontSize: 11, color: '#94a3b8',
+                        border: isSel ? '1px solid var(--adm-accent)' : '1px dashed var(--adm-border-input)',
+                        backgroundColor: isSel ? 'var(--adm-sched-row-sel)' : 'var(--adm-bg-muted)',
+                        textAlign: 'center', fontSize: 11, color: 'var(--adm-text-muted)',
                       }}
                     >
                       {ev.placeholderLabel || '— spacer —'}
@@ -620,8 +568,8 @@ export function ScheduleEditor({
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', marginBottom: 2,
                       borderRadius: 4, cursor: 'pointer',
-                      border: isSel ? '1px solid #60a5fa' : '1px solid transparent',
-                      backgroundColor: isChecked ? '#dbeafe' : (isSel ? '#eff6ff' : (idx % 2 === 0 ? '#fff' : '#f9fafb')),
+                      border: isSel ? '1px solid var(--adm-accent)' : '1px solid transparent',
+                      backgroundColor: isChecked ? 'color-mix(in srgb, var(--adm-accent) 22%, var(--adm-bg))' : (isSel ? 'var(--adm-sched-row-sel)' : (idx % 2 === 0 ? 'var(--adm-bg)' : 'var(--adm-sched-row-alt)')),
                     }}
                   >
                     <input
@@ -634,7 +582,7 @@ export function ScheduleEditor({
                     <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: TYPE_COLORS[ev.type] ?? 'var(--adm-type-other)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ev.name}</div>
-                      <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                      <div style={{ fontSize: 10, color: 'var(--adm-text-muted)' }}>
                         {getTimeDisplay(ev)}
                         {filterMode === 'all' && ev.groupId && (
                           <span style={{ marginLeft: 4, color: groupMap.get(ev.groupId)?.color ?? 'var(--adm-type-other)' }}>
@@ -644,8 +592,8 @@ export function ScheduleEditor({
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <button onClick={(e) => { e.stopPropagation(); moveEvent(idx, -1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: 0, lineHeight: 1 }}>▲</button>
-                      <button onClick={(e) => { e.stopPropagation(); moveEvent(idx, 1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: 0, lineHeight: 1 }}>▼</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveEvent(idx, -1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--adm-text-muted)', padding: 0, lineHeight: 1 }}>▲</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveEvent(idx, 1); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--adm-text-muted)', padding: 0, lineHeight: 1 }}>▼</button>
                     </div>
                   </div>
                 );
@@ -672,7 +620,7 @@ export function ScheduleEditor({
           {/* Right: Detail panel */}
           <div data-tutorial="sched-event-detail" style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
             {!selectedEvent ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', fontSize: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--adm-text-muted)', fontSize: 14 }}>
                 Select an event to edit
               </div>
             ) : selectedEvent.isPlaceholder ? (
@@ -764,7 +712,7 @@ export function ScheduleEditor({
                 {(selectedEvent.timeMode ?? 'fixed') === 'dynamic' && (
                   <>
                     <SectionHeader title="Refresh Frequency" />
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>How often the dynamic time recalculates. Weekly/monthly uses the latest zman in the period.</div>
+                    <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginBottom: 6 }}>How often the dynamic time recalculates. Weekly/monthly uses the latest zman in the period.</div>
                     <FormRow label="Refresh">
                       <select value={selectedEvent.refreshMode ?? 'daily'} onChange={(e) => updateEvent(selectedEvent.id, { refreshMode: e.target.value as any })} className="adm-select">
                         <option value="daily">Daily (recalculate every day)</option>
@@ -796,9 +744,9 @@ export function ScheduleEditor({
                         }}
                         style={{
                           flex: 1, padding: '6px 2px', borderRadius: 4, fontSize: 11, cursor: 'pointer', fontWeight: 600,
-                          border: `1px solid ${active ? '#3b82f6' : '#d1d5db'}`,
-                          backgroundColor: active ? '#eff6ff' : '#fff',
-                          color: active ? '#3b82f6' : '#94a3b8',
+                          border: `1px solid ${active ? 'var(--adm-accent)' : 'var(--adm-border-input)'}`,
+                          backgroundColor: active ? 'var(--adm-sched-row-sel)' : 'var(--adm-bg)',
+                          color: active ? 'var(--adm-accent)' : 'var(--adm-text-muted)',
                         }}
                         title={d}
                       >
@@ -809,7 +757,7 @@ export function ScheduleEditor({
                 </div>
 
                 <SectionHeader title="Visibility Rules" />
-                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>Show or hide this event based on calendar conditions.</div>
+                <div style={{ fontSize: 11, color: 'var(--adm-text-muted)', marginBottom: 6 }}>Show or hide this event based on calendar conditions.</div>
                 {(selectedEvent.visibilityRules ?? []).map((rule, rIdx) => (
                   <div key={rIdx} style={{ display: 'flex', gap: 4, marginBottom: 4, alignItems: 'center' }}>
                     <select
@@ -825,7 +773,7 @@ export function ScheduleEditor({
                       <option value="show">Show</option>
                       <option value="hide">Hide</option>
                     </select>
-                    <span style={{ fontSize: 11, color: '#64748b' }}>on</span>
+                    <span style={{ fontSize: 11, color: 'var(--adm-text-muted)' }}>on</span>
                     <select
                       value={rule.condition}
                       onChange={(e) => {
@@ -857,7 +805,7 @@ export function ScheduleEditor({
                   + Add Rule
                 </button>
 
-                <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid var(--adm-border)' }}>
                   <button onClick={() => deleteEvent(selectedEvent.id)} className="adm-btnSmallDanger">Delete Event</button>
                 </div>
               </div>
@@ -865,527 +813,6 @@ export function ScheduleEditor({
           </div>
         </div>
       )}
-
-      {/* ─── IMPORT / EXPORT TAB ─── */}
-      {tab === 'import' && (
-        <ImportExportPanel
-          schedules={schedules}
-          groups={groups}
-          onChange={onChange}
-          onGroupsChange={onGroupsChange}
-          weekExportFetcher={weekExportFetcher}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ─── Import / Export panel ─── */
-
-function ImportExportPanel({
-  schedules,
-  groups,
-  onChange,
-  onGroupsChange,
-  weekExportFetcher,
-}: {
-  schedules: Schedule[];
-  groups: DaveningGroup[];
-  onChange: (s: Schedule[]) => void;
-  onGroupsChange?: (g: DaveningGroup[]) => void;
-  weekExportFetcher?: WeekExportFetcher;
-}) {
-  const [importMode, setImportMode] = useState<'replace' | 'append'>('append');
-  const [groupsPreview, setGroupsPreview] = useState<CsvGroup[] | null>(null);
-  const [eventsPreview, setEventsPreview] = useState<CsvSchedule[] | null>(null);
-  const [importError, setImportError] = useState('');
-  const [importSuccess, setImportSuccess] = useState('');
-  const groupsFileRef = useRef<HTMLInputElement>(null);
-  const eventsFileRef = useRef<HTMLInputElement>(null);
-
-  const handleGroupsFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImportError('');
-    setImportSuccess('');
-    setGroupsPreview(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await readFileAsText(file);
-      const parsed = parseGroupsCsv(text);
-      if (parsed.length === 0) { setImportError('No groups found in the file. Make sure the CSV has headers and data rows.'); return; }
-      setGroupsPreview(parsed);
-    } catch (err: any) {
-      setImportError(`Failed to parse groups file: ${err.message}`);
-    }
-  };
-
-  const handleEventsFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImportError('');
-    setImportSuccess('');
-    setEventsPreview(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await readFileAsText(file);
-      const parsed = parseEventsCsv(text);
-      if (parsed.length === 0) { setImportError('No events found in the file. Make sure the CSV has headers and data rows.'); return; }
-      setEventsPreview(parsed);
-    } catch (err: any) {
-      setImportError(`Failed to parse events file: ${err.message}`);
-    }
-  };
-
-  const confirmGroupsImport = () => {
-    if (!groupsPreview || !onGroupsChange) return;
-    if (importMode === 'replace') {
-      onGroupsChange(groupsPreview);
-    } else {
-      onGroupsChange([...groups, ...groupsPreview]);
-    }
-    setGroupsPreview(null);
-    setImportSuccess(`Imported ${groupsPreview.length} group(s) successfully.`);
-    if (groupsFileRef.current) groupsFileRef.current.value = '';
-  };
-
-  const confirmEventsImport = () => {
-    if (!eventsPreview) return;
-    if (importMode === 'replace') {
-      onChange(eventsPreview as Schedule[]);
-    } else {
-      const maxSort = schedules.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0);
-      const withSort = eventsPreview.map((ev, i) => ({
-        ...ev,
-        orgId: 'default',
-        sortOrder: (ev.sortOrder ?? 0) + maxSort + 1 + i,
-      }));
-      onChange([...schedules, ...withSort] as Schedule[]);
-    }
-    setEventsPreview(null);
-    setImportSuccess(`Imported ${eventsPreview.length} event(s) successfully.`);
-    if (eventsFileRef.current) eventsFileRef.current.value = '';
-  };
-
-  return (
-    <div style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {importError && (
-        <div style={{ padding: 10, backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#dc2626', fontSize: 13 }}>
-          {importError}
-        </div>
-      )}
-      {importSuccess && (
-        <div style={{ padding: 10, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, color: '#16a34a', fontSize: 13 }}>
-          {importSuccess}
-        </div>
-      )}
-
-      {/* ── Download sample files ── */}
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
-          1. Download sample files
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 10 }}>
-          Download a sample CSV, edit it in Excel / Google Sheets, then upload it below. The sample includes every possible column with example data.
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => downloadCsv(generateGroupsSampleCsv(), 'groups-sample.csv')}
-            className="adm-btnSmallOutline"
-            style={{ padding: '8px 16px', color: 'var(--adm-accent)' }}
-          >
-            Download Groups Sample
-          </button>
-          <button
-            onClick={() => downloadCsv(generateEventsSampleCsv(), 'events-sample.csv')}
-            className="adm-btnSmallOutline"
-            style={{ padding: '8px 16px', color: 'var(--adm-accent)' }}
-          >
-            Download Events Sample
-          </button>
-        </div>
-      </div>
-
-      {/* ── Import mode ── */}
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
-          2. Choose import mode
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['append', 'replace'] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setImportMode(m)}
-              className="adm-btnSmallOutline"
-              style={{
-                padding: '8px 16px',
-                backgroundColor: importMode === m ? 'var(--adm-bg-active)' : undefined,
-                borderColor: importMode === m ? 'var(--adm-accent)' : undefined,
-                color: importMode === m ? 'var(--adm-accent)' : undefined,
-                fontWeight: importMode === m ? 700 : 400,
-              }}
-            >
-              {m === 'append' ? 'Add to existing' : 'Replace all'}
-            </button>
-          ))}
-        </div>
-        {importMode === 'replace' && (
-          <div style={{ fontSize: 11, color: '#dc2626', marginTop: 6 }}>
-            Warning: Replace mode will delete all existing data of that type before importing.
-          </div>
-        )}
-      </div>
-
-      {/* ── Upload groups ── */}
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
-          3. Upload Groups CSV
-        </div>
-        <input ref={groupsFileRef} type="file" accept=".csv,.txt" onChange={handleGroupsFile} style={{ fontSize: 13 }} />
-        {groupsPreview && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-              Preview: {groupsPreview.length} group(s) found
-            </div>
-            <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--adm-border)', borderRadius: 6 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
-                    <th style={thStyle}>Name</th>
-                    <th style={thStyle}>Hebrew</th>
-                    <th style={thStyle}>Color</th>
-                    <th style={thStyle}>Active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupsPreview.map((g, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={tdStyle}>{g.name}</td>
-                      <td style={tdStyle}>{g.nameHebrew}</td>
-                      <td style={tdStyle}><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', backgroundColor: g.color, verticalAlign: 'middle' }} /> {g.color}</td>
-                      <td style={tdStyle}>{g.active ? 'Yes' : 'No'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button onClick={confirmGroupsImport} className="adm-btnSave" style={{ padding: '8px 16px' }}>
-                Import {groupsPreview.length} Group(s)
-              </button>
-              <button onClick={() => { setGroupsPreview(null); if (groupsFileRef.current) groupsFileRef.current.value = ''; }} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Upload events ── */}
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
-          4. Upload Events CSV
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 6 }}>
-          Make sure to import groups first if your events reference group IDs.
-        </div>
-        <input ref={eventsFileRef} type="file" accept=".csv,.txt" onChange={handleEventsFile} style={{ fontSize: 13 }} />
-        {eventsPreview && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-              Preview: {eventsPreview.length} event(s) found
-            </div>
-            <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--adm-border)', borderRadius: 6 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
-                    <th style={thStyle}>Name</th>
-                    <th style={thStyle}>Type</th>
-                    <th style={thStyle}>Group</th>
-                    <th style={thStyle}>Time</th>
-                    <th style={thStyle}>Days</th>
-                    <th style={thStyle}>Rules</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eventsPreview.map((ev, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={tdStyle}>{ev.isPlaceholder ? `[spacer] ${ev.placeholderLabel ?? ''}` : ev.name}</td>
-                      <td style={tdStyle}>{ev.type}</td>
-                      <td style={tdStyle}>{ev.groupId ?? '—'}</td>
-                      <td style={tdStyle}>
-                        {ev.timeMode === 'dynamic'
-                          ? `${ev.baseZman ?? '?'} ${(ev.offset ?? 0) > 0 ? '+' : ''}${ev.offset ?? 0}m`
-                          : ev.fixedTime ?? ''}
-                      </td>
-                      <td style={tdStyle}>{ev.daysActive?.filter(Boolean).length === 7 ? 'All' : `${ev.daysActive?.filter(Boolean).length ?? 0}/7`}</td>
-                      <td style={tdStyle}>{(ev.visibilityRules ?? []).length > 0 ? `${ev.visibilityRules!.length} rule(s)` : ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button onClick={confirmEventsImport} className="adm-btnSave" style={{ padding: '8px 16px' }}>
-                Import {eventsPreview.length} Event(s)
-              </button>
-              <button onClick={() => { setEventsPreview(null); if (eventsFileRef.current) eventsFileRef.current.value = ''; }} className="adm-btnCancel" style={{ padding: '8px 16px' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Export current data ── */}
-      <div style={{ borderTop: '1px solid var(--adm-border)', paddingTop: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
-          Export current data
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 10 }}>
-          Download your current groups and events as CSV files.
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => downloadCsv(exportGroupsCsv(groups as CsvGroup[]), `groups-export-${new Date().toISOString().slice(0, 10)}.csv`)}
-            className="adm-btnSmallOutline"
-            style={{ padding: '8px 16px' }}
-            disabled={groups.length === 0}
-          >
-            Export Groups ({groups.length})
-          </button>
-          <button
-            onClick={() => downloadCsv(exportEventsCsv(schedules as CsvSchedule[]), `events-export-${new Date().toISOString().slice(0, 10)}.csv`)}
-            className="adm-btnSmallOutline"
-            style={{ padding: '8px 16px' }}
-            disabled={schedules.length === 0}
-          >
-            Export Events ({schedules.length})
-          </button>
-        </div>
-      </div>
-
-      {/* ── Multi-week schedule export ── */}
-      {weekExportFetcher && (
-        <MultiWeekExportSection
-          schedules={schedules}
-          groups={groups}
-          fetcher={weekExportFetcher}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ─── Multi-week export ─── */
-
-function computeTimeForExport(
-  schedule: Schedule,
-  zmanim: Array<{ type: string; time: Date | null }>,
-): string {
-  if (schedule.isPlaceholder) return '';
-  const mode = schedule.timeMode ?? (schedule.baseZman ? 'dynamic' : 'fixed');
-  if (mode === 'fixed') return schedule.fixedTime ?? '';
-
-  if (!schedule.baseZman) return '';
-  const targetKey = String(schedule.baseZman).toLowerCase().replace(/[^a-z]/g, '');
-  const z = zmanim.find((zr) => {
-    const normType = (zr.type || '').toLowerCase().replace(/[^a-z]/g, '');
-    return normType.includes(targetKey);
-  });
-  if (!z?.time) return '';
-  let t = new Date(z.time);
-  t = new Date(t.getTime() + (schedule.offset ?? 0) * 60_000);
-
-  const roundTo = schedule.roundTo ?? 1;
-  const roundMode = schedule.roundMode ?? 'nearest';
-  if (roundTo > 1) {
-    const mins = t.getHours() * 60 + t.getMinutes();
-    const q = mins / roundTo;
-    let rounded: number;
-    if (roundMode === 'before') rounded = Math.floor(q) * roundTo;
-    else if (roundMode === 'after') rounded = Math.ceil(q) * roundTo;
-    else rounded = Math.round(q) * roundTo;
-    t.setHours(Math.floor(rounded / 60), rounded % 60, 0, 0);
-  }
-
-  if (schedule.limitBefore) {
-    const [hh, mm] = schedule.limitBefore.split(':').map(Number);
-    if (!isNaN(hh) && !isNaN(mm)) { const m = new Date(t); m.setHours(hh, mm, 0, 0); if (t < m) t = m; }
-  }
-  if (schedule.limitAfter) {
-    const [hh, mm] = schedule.limitAfter.split(':').map(Number);
-    if (!isNaN(hh) && !isNaN(mm)) { const m = new Date(t); m.setHours(hh, mm, 0, 0); if (t > m) t = m; }
-  }
-
-  const h = t.getHours();
-  const m = t.getMinutes();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
-
-function MultiWeekExportSection({
-  schedules,
-  groups,
-  fetcher,
-}: {
-  schedules: Schedule[];
-  groups: DaveningGroup[];
-  fetcher: WeekExportFetcher;
-}) {
-  const [weeks, setWeeks] = useState(20);
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
-  const [parshaAxis, setParshaAxis] = useState<'columns' | 'rows'>('columns');
-  const [eventNamesPos, setEventNamesPos] = useState<'left' | 'right'>('left');
-  const [showDate, setShowDate] = useState(true);
-  const [dateDay, setDateDay] = useState<'sunday' | 'shabbos'>('shabbos');
-  const [generating, setGenerating] = useState(false);
-  const [genError, setGenError] = useState('');
-
-  const filteredEvents = useMemo(() => {
-    const evts = schedules.filter((s) => !s.isPlaceholder);
-    if (selectedGroupIds.length === 0) return evts;
-    return evts.filter((s) => selectedGroupIds.includes(s.groupId ?? ''));
-  }, [schedules, selectedGroupIds]);
-
-  const handleGenerate = async () => {
-    setGenerating(true);
-    setGenError('');
-    try {
-      const startDate = getNextDayOfWeek(new Date(), 0); // next Sunday
-      const weekDataList: WeekData[] = [];
-      const eventNames = filteredEvents.map((e) => e.name);
-
-      for (let w = 0; w < weeks; w++) {
-        const weekStart = new Date(startDate);
-        weekStart.setDate(weekStart.getDate() + w * 7);
-
-        const shabbos = new Date(weekStart);
-        shabbos.setDate(shabbos.getDate() + 6);
-
-        const dateForDisplay = dateDay === 'sunday' ? weekStart : shabbos;
-        const zmanimDate = dateDay === 'shabbos' ? shabbos : weekStart;
-
-        const [zmanimResult, calResult] = await Promise.all([
-          fetcher.fetchZmanim(zmanimDate),
-          fetcher.fetchCalendar(shabbos),
-        ]);
-
-        const parsha = calResult?.parsha?.parshaHebrew
-          || calResult?.parsha?.parsha
-          || calResult?.parsha?.upcomingHebrew
-          || calResult?.parsha?.upcoming
-          || `Week ${w + 1}`;
-
-        const eventTimes: Record<string, string> = {};
-        for (const ev of filteredEvents) {
-          eventTimes[ev.name] = computeTimeForExport(ev, zmanimResult);
-        }
-
-        weekDataList.push({
-          parsha,
-          date: formatDateDisplay(dateForDisplay),
-          eventTimes,
-        });
-      }
-
-      const config: WeeklyExportConfig = {
-        weeks,
-        groupIds: selectedGroupIds,
-        parshaAxis,
-        eventNamesPosition: eventNamesPos,
-        showDate,
-        dateDay,
-      };
-
-      const csv = buildWeeklyExportCsv(config, weekDataList, eventNames);
-      downloadCsv(csv, `schedule-${weeks}wk-${new Date().toISOString().slice(0, 10)}.csv`);
-    } catch (err: any) {
-      setGenError(err.message || 'Export failed');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  return (
-    <div style={{ borderTop: '1px solid var(--adm-border)', paddingTop: 16, marginTop: 4 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--adm-text)' }}>
-        Multi-week schedule export
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 12 }}>
-        Export a table of event times across multiple weeks with parsha headers. Great for printing seasonal schedules.
-      </div>
-
-      {genError && (
-        <div style={{ padding: 8, backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#dc2626', fontSize: 12, marginBottom: 10 }}>
-          {genError}
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-        <div>
-          <label className="adm-labelSm">Number of weeks</label>
-          <input type="number" className="adm-input" value={weeks} onChange={(e) => setWeeks(Math.max(1, parseInt(e.target.value) || 1))} min={1} max={52} />
-        </div>
-        <div>
-          <label className="adm-labelSm">Parsha / weeks on</label>
-          <select className="adm-select" value={parshaAxis} onChange={(e) => setParshaAxis(e.target.value as any)}>
-            <option value="columns">Columns (X axis)</option>
-            <option value="rows">Rows (Y axis)</option>
-          </select>
-        </div>
-        <div>
-          <label className="adm-labelSm">Event names position</label>
-          <select className="adm-select" value={eventNamesPos} onChange={(e) => setEventNamesPos(e.target.value as any)}>
-            <option value="left">Left / Top</option>
-            <option value="right">Right / Bottom</option>
-          </select>
-        </div>
-        <div>
-          <label className="adm-labelSm">Date display day</label>
-          <select className="adm-select" value={dateDay} onChange={(e) => setDateDay(e.target.value as any)}>
-            <option value="shabbos">Shabbos</option>
-            <option value="sunday">Sunday</option>
-          </select>
-        </div>
-      </div>
-
-      <label className="adm-labelSm" style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <input type="checkbox" checked={showDate} onChange={(e) => setShowDate(e.target.checked)} />
-        Show Gregorian date
-      </label>
-
-      <div style={{ marginBottom: 12 }}>
-        <label className="adm-labelSm">Filter by groups (empty = all events)</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-          {groups.map((g) => (
-            <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={selectedGroupIds.includes(g.id)}
-                onChange={(e) => {
-                  if (e.target.checked) setSelectedGroupIds((p) => [...p, g.id]);
-                  else setSelectedGroupIds((p) => p.filter((id) => id !== g.id));
-                }}
-              />
-              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: g.color, display: 'inline-block' }} />
-              {g.nameHebrew}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 12, color: 'var(--adm-text-muted)', marginBottom: 8 }}>
-        Will export <strong>{filteredEvents.length}</strong> event(s) across <strong>{weeks}</strong> week(s).
-      </div>
-
-      <button
-        onClick={handleGenerate}
-        disabled={generating || filteredEvents.length === 0}
-        className="adm-btnPrimary"
-        style={{ padding: '10px 24px', fontSize: 14, fontWeight: 600, opacity: generating || filteredEvents.length === 0 ? 0.6 : 1 }}
-      >
-        {generating ? 'Generating...' : 'Generate & Download'}
-      </button>
     </div>
   );
 }
@@ -1398,9 +825,9 @@ function FilterChip({ label, active, color, onClick }: { label: string; active: 
       onClick={onClick}
       style={{
         padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-        border: active ? `2px solid ${color}` : '1px solid #d1d5db',
-        backgroundColor: active ? `${color}15` : '#fff',
-        color: active ? color : '#64748b',
+        border: active ? `2px solid ${color}` : '1px solid var(--adm-border-input)',
+        backgroundColor: active ? `${color}15` : 'var(--adm-bg)',
+        color: active ? color : 'var(--adm-text-muted)',
       }}
     >
       {label}
@@ -1440,7 +867,7 @@ const thStyle: React.CSSProperties = {
   padding: '8px 10px',
   fontSize: 11,
   fontWeight: 700,
-  color: '#475569',
+  color: 'var(--adm-text-muted)',
   textTransform: 'uppercase',
   letterSpacing: 0.5,
 };

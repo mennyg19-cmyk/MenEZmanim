@@ -257,9 +257,9 @@ export function QuickActionsPanel({
 
   const actions: { key: QuickActionType; icon: string; label: string; color: string; navigateTo: string }[] = [
     { key: 'event', icon: '📅', label: 'Add Event', color: '#f59e0b', navigateTo: 'schedules' },
-    { key: 'announcement', icon: '📢', label: 'Add Announcement', color: '#10b981', navigateTo: 'announcements' },
-    { key: 'yahrzeit', icon: '🕯️', label: 'Add Yahrzeit', color: '#a78bfa', navigateTo: 'yahrzeit' },
-    { key: 'sponsor', icon: '💰', label: 'Add Sponsor', color: '#f472b6', navigateTo: 'sponsors' },
+    { key: 'announcement', icon: '📢', label: 'Add Announcement', color: '#10b981', navigateTo: 'content-hub:announcements' },
+    { key: 'yahrzeit', icon: '🕯️', label: 'Add Yahrzeit', color: '#a78bfa', navigateTo: 'content-hub:yahrzeit' },
+    { key: 'sponsor', icon: '💰', label: 'Add Sponsor', color: '#f472b6', navigateTo: 'content-hub:sponsors' },
   ];
 
   return (
@@ -297,11 +297,11 @@ export function QuickActionsPanel({
           </div>
         ))}
         <div className="adm-quickActionCard">
-          <button type="button" className="adm-quickActionCardMain" onClick={() => onNavigate('media')}>
+          <button type="button" className="adm-quickActionCardMain" onClick={() => onNavigate('content-hub:media')}>
             <span className="adm-quickActionCardIcon">🖼️</span>
             <span>Upload Media</span>
           </button>
-          <button type="button" className="adm-quickActionCardViewAll" onClick={() => onNavigate('media')}>
+          <button type="button" className="adm-quickActionCardViewAll" onClick={() => onNavigate('content-hub:media')}>
             Open library
           </button>
         </div>

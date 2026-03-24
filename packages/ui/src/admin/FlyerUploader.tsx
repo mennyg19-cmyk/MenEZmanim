@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-
+import React, { useEffect, useRef, useState } from 'react';
 
 interface FlyerUploaderProps {
   media: any[];
   onUpload: (file: File) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onChange: (media: any[]) => void;
+  embedded?: boolean;
+  /** Increment to open the file picker from parent */
+  openUploadNonce?: number;
 }
 
-export function FlyerUploader({ media, onUpload, onDelete, onChange }: FlyerUploaderProps) {
+export function FlyerUploader({ media, onUpload, onDelete, onChange, embedded, openUploadNonce = 0 }: FlyerUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -31,6 +33,11 @@ export function FlyerUploader({ media, onUpload, onDelete, onChange }: FlyerUplo
     onChange(media.map((m) => (m.id === id ? { ...m, active: !m.active } : m)));
   };
 
+  useEffect(() => {
+    if (!openUploadNonce || uploading) return;
+    fileInputRef.current?.click();
+  }, [openUploadNonce, uploading]);
+
   const handleDragStart = (idx: number) => setDragIdx(idx);
 
   const handleDrop = (targetIdx: number) => {
@@ -43,27 +50,24 @@ export function FlyerUploader({ media, onUpload, onDelete, onChange }: FlyerUplo
   };
 
   return (
-    <div className="adm-card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>מדיה ופליירים — Media & Flyers</h2>
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="adm-btnPrimary"
-            style={{ padding: '8px 16px', fontSize: 14, opacity: uploading ? 0.6 : 1 }}
-          >
-            {uploading ? 'Uploading...' : '+ Upload Image'}
-          </button>
+    <div className={embedded ? undefined : 'adm-card'}>
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'none' }} />
+      {!embedded && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>מדיה ופליירים — Media & Flyers</h2>
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="adm-btnPrimary"
+              style={{ padding: '8px 16px', fontSize: 14, opacity: uploading ? 0.6 : 1 }}
+            >
+              {uploading ? 'Uploading...' : '+ Upload Image'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
         {media.map((item, idx) => (
@@ -126,7 +130,9 @@ export function FlyerUploader({ media, onUpload, onDelete, onChange }: FlyerUplo
 
       {media.length === 0 && (
         <div className="adm-empty">
-          No media uploaded yet. Click "+ Upload Image" to add flyers and images.
+          {embedded
+            ? 'No media yet. Use Upload in the section header or the summary card.'
+            : 'No media uploaded yet. Click "+ Upload Image" to add flyers and images.'}
         </div>
       )}
     </div>

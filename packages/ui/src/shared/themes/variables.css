@@ -167,6 +167,24 @@
   --adm-warning-text: #fcd34d;
   --adm-warning-border: rgba(251, 191, 36, 0.35);
 
+  /* Schedule editor (bulk bar, rows, type dots) — dark */
+  --adm-sched-bulk-bg: #1e293b;
+  --adm-sched-bulk-border: #334155;
+  --adm-sched-bulk-strong: #e2e8f0;
+  --adm-sched-bulk-link: #93c5fd;
+  --adm-sched-bulk-muted: #64748b;
+  --adm-sched-bulk-btn-on: #60a5fa;
+  --adm-sched-bulk-btn-off: #475569;
+  --adm-sched-border-soft: #334155;
+  --adm-sched-row-alt: #0f172a;
+  --adm-sched-row-sel: #1e3a5f;
+  --adm-sched-group-sel-bg: #172554;
+  --adm-type-shacharit: #fbbf24;
+  --adm-type-mincha: #60a5fa;
+  --adm-type-maariv: #a78bfa;
+  --adm-type-other: #94a3b8;
+  --adm-sched-ungrouped-pill-bg: rgba(248, 113, 113, 0.22);
+
   --adm-btn-fg: #ffffff;
 
   --web-auth-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%);
