@@ -22,6 +22,7 @@ const SCHEMA_STATEMENTS: string[] = [
     "amPmFormat" BOOLEAN NOT NULL DEFAULT false,
     "inIsrael" BOOLEAN NOT NULL DEFAULT false,
     "settings" TEXT NOT NULL DEFAULT '{}',
+    "plan" TEXT NOT NULL DEFAULT 'free',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -322,6 +323,7 @@ const ALTER_STATEMENTS: string[] = [
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameId" TEXT`,
   `ALTER TABLE "Style" ADD COLUMN "backgroundFrameThickness" REAL DEFAULT 1.0`,
   `ALTER TABLE "Organization" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'pending'`,
+  `ALTER TABLE "Organization" ADD COLUMN "plan" TEXT NOT NULL DEFAULT 'free'`,
   `ALTER TABLE "Screen" ADD COLUMN "styleSchedules" TEXT`,
 ];
 
