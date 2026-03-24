@@ -1502,15 +1502,26 @@
   color: var(--adm-success);
 }
 
+/* Joyride portal: keep floater within viewport (also set in TutorialProvider styles) */
+.react-joyride__floater {
+  max-width: min(100vw - 24px, 440px);
+  box-sizing: border-box;
+}
+
 .tut-tooltipCard {
   position: relative;
-  max-width: 420px;
+  width: 100%;
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: min(72vh, 640px);
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 16px 18px 14px;
   border-radius: 12px;
   background: var(--adm-bg, #fff);
   color: var(--adm-text, #0f172a);
   border: 1px solid var(--adm-border);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
 }
 
 .tut-tooltipMeta {

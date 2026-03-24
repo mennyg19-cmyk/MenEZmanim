@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Joyride, ACTIONS, EVENTS, STATUS, type EventData, type Step, type TooltipRenderProps } from 'react-joyride';
+import { Joyride, EVENTS, STATUS, type EventData, type Step, type TooltipRenderProps } from 'react-joyride';
 import { buildChapterSteps, type NavHelpers } from './chapters';
 import { TutorialTooltip } from './TutorialTooltip';
 import type { AdminSection, ChapterId, EditorPropertyTab, ScheduleEditorTab } from './types';
@@ -153,10 +153,6 @@ export function TutorialProvider({
         }
         return;
       }
-
-      if (type === EVENTS.STEP_AFTER && action === ACTIONS.SKIP) {
-        finishChapter();
-      }
     },
     [finishChapter],
   );
@@ -203,10 +199,35 @@ export function TutorialProvider({
         tooltipComponent={tooltipComponent}
         onEvent={onEvent}
         locale={{ skip: 'Skip chapter' }}
+        floatingOptions={{
+          /** Use viewport-fixed positioning so tooltips are not clipped or mispositioned inside scrollable admin panels. */
+          strategy: 'fixed',
+          shiftOptions: {
+            padding: 16,
+            crossAxis: true,
+            rootBoundary: 'viewport',
+          },
+          flipOptions: {
+            padding: 16,
+            crossAxis: true,
+          },
+        }}
+        styles={{
+          floater: {
+            maxWidth: 'min(100vw - 24px, 440px)',
+            boxSizing: 'border-box',
+          },
+          tooltip: {
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+          },
+        }}
         options={{
           zIndex: 25000,
           overlayColor: 'rgba(15, 23, 42, 0.72)',
           buttons: ['back', 'close', 'primary', 'skip'],
+          width: 'min(420px, calc(100vw - 32px))',
+          scrollOffset: 48,
         }}
       />
     </TutorialContext.Provider>
