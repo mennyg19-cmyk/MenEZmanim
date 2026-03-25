@@ -69,6 +69,8 @@ const VALID_ADMIN_THEMES: AdminThemeId[] = [
   'custom',
 ];
 
+const MOBILE_HIDDEN_SECTIONS: Section[] = ['editor', 'screens', 'import-export'];
+
 export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: weekExportFetcherProp }: AdminAppProps) {
   const bp = useBreakpoint();
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
@@ -214,7 +216,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
   }, [bp]);
 
   useEffect(() => {
-    if (bp === 'mobile' && activeSection === 'editor') {
+    if (bp === 'mobile' && MOBILE_HIDDEN_SECTIONS.includes(activeSection)) {
       setActiveSection('dashboard');
     }
   }, [bp, activeSection]);
@@ -342,7 +344,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
                 { label: 'Display Styles', value: styles.length, color: 'var(--adm-stat-purple)', nav: 'editor' as const },
                 { label: 'Screens', value: screens.length, color: 'var(--adm-stat-pink)', nav: 'screens' as const },
               ] as const)
-                .filter((card) => bp !== 'mobile' || card.nav !== 'editor')
+                .filter((card) => bp !== 'mobile' || !['editor', 'screens'].includes(card.nav))
                 .map((card) => (
                 <button
                   key={card.label}
@@ -358,7 +360,7 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
                 </button>
               ))}
             </div>
-            <div className="adm-dashQuickGrid adm-dashQuickStretch">
+            <div className={`adm-dashQuickGrid adm-dashQuickStretch${isMobile ? ' adm-dashQuickGrid--mobile' : ''}`}>
               <QuickActionsPanel
                 showEditorLink={bp !== 'mobile'}
                 onNavigate={navigateSection}
@@ -384,23 +386,47 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
                   onSave('sponsors', next).catch(console.error);
                 }}
               />
-              <ScreenPreviewWidget
-                screens={screens}
-                styles={styles}
-                orgSlug={orgId}
-                zmanim={previewZmanim}
-                calendarInfo={previewCalendar}
-                announcements={announcements}
-                memorials={memorials}
-                schedules={previewSchedules}
-                media={media}
-                displayNames={displayNames}
-                onEditStyle={(styleId) => {
-                  setEditorStyleId(styleId);
-                  setActiveSection('editor');
-                }}
-              />
+              {!isMobile && (
+                <ScreenPreviewWidget
+                  screens={screens}
+                  styles={styles}
+                  orgSlug={orgId}
+                  zmanim={previewZmanim}
+                  calendarInfo={previewCalendar}
+                  announcements={announcements}
+                  memorials={memorials}
+                  schedules={previewSchedules}
+                  media={media}
+                  displayNames={displayNames}
+                  onEditStyle={(styleId) => {
+                    setEditorStyleId(styleId);
+                    setActiveSection('editor');
+                  }}
+                />
+              )}
             </div>
+            {isMobile && (
+              <div className="adm-mobileShortcuts">
+                <h3 className="adm-sectionTitle adm-sectionTitleTight">Manage</h3>
+                <div className="adm-mobileShortcutGrid">
+                  {([
+                    { key: 'content-hub' as Section, icon: '📚', label: 'Content Hub' },
+                    { key: 'settings' as Section, icon: '⚙️', label: 'Settings' },
+                    { key: 'members' as Section, icon: '👥', label: 'Members' },
+                  ]).map((s) => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      className="adm-mobileShortcutCard"
+                      onClick={() => setActiveSection(s.key)}
+                    >
+                      <span className="adm-mobileShortcutIcon">{s.icon}</span>
+                      <span>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -548,7 +574,9 @@ export function AdminApp({ orgId, onSave, onLoad, onDelete, weekExportFetcher: w
     }
   };
 
-  const filteredNavItems = bp === 'mobile' ? navItems.filter((i) => i.key !== 'editor') : navItems;
+  const filteredNavItems = bp === 'mobile'
+    ? navItems.filter((i) => !MOBILE_HIDDEN_SECTIONS.includes(i.key))
+    : navItems;
 
   const grouped = filteredNavItems.reduce<Record<string, typeof filteredNavItems>>((acc, item) => {
     const g = item.group ?? '_top';

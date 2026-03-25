@@ -2316,3 +2316,272 @@
   background: var(--adm-bg-hover);
   color: var(--adm-text);
 }
+
+/* ── Settings page columns ─────────────────────────────── */
+.adm-settingsColumns {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.adm-settingsCol--sm {
+  flex: 0 0 25%;
+  min-width: 0;
+}
+
+.adm-settingsCol--lg {
+  flex: 1 1 50%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Mobile shortcut cards (dashboard) ─────────────────── */
+.adm-mobileShortcuts {
+  margin-top: 20px;
+}
+
+.adm-mobileShortcutGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.adm-mobileShortcutCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 10px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--radius-lg);
+  background: var(--adm-bg);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--adm-text);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.adm-mobileShortcutCard:hover {
+  border-color: var(--adm-accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.adm-mobileShortcutIcon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* ── Comprehensive mobile overrides (<=767px) ──────────── */
+@media (max-width: 767px) {
+  .adm-topHeader {
+    padding: 10px 12px;
+  }
+
+  .adm-topTitle {
+    font-size: 15px;
+  }
+
+  .adm-topTitleHe {
+    display: none;
+  }
+
+  .adm-contentWrap {
+    padding: 14px 12px;
+  }
+
+  .adm-card {
+    padding: 16px;
+  }
+
+  .adm-cardCompact {
+    padding: 12px;
+  }
+
+  .adm-dashTitle {
+    font-size: 20px;
+  }
+
+  .adm-dashGrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .adm-dashCard {
+    padding: 14px;
+  }
+
+  .adm-dashStat {
+    font-size: 24px;
+  }
+
+  .adm-dashCardDesc {
+    font-size: 12px;
+  }
+
+  .adm-dashQuickGrid--mobile {
+    grid-template-columns: 1fr;
+  }
+
+  .adm-quickCardGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .adm-quickActionCardMain {
+    padding: 12px 8px 6px;
+    font-size: 12px;
+  }
+
+  .adm-quickActionCardIcon {
+    font-size: 22px;
+  }
+
+  /* Settings columns stack */
+  .adm-settingsColumns {
+    flex-direction: column;
+  }
+
+  .adm-settingsCol--sm,
+  .adm-settingsCol--lg {
+    flex: none;
+    width: 100%;
+  }
+
+  /* Form grids collapse to single column */
+  .adm-grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .adm-grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  .adm-settingsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Content Hub */
+  .adm-hubGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .adm-hubTitle {
+    font-size: 18px;
+  }
+
+  .adm-hubSubtitle {
+    font-size: 13px;
+  }
+
+  .adm-hubSectionHeader {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .adm-hubSectionActions {
+    gap: 4px;
+  }
+
+  .adm-hubSectionBody {
+    padding: 0 8px 12px;
+  }
+
+  /* Tab bars: horizontal scroll */
+  .adm-tabBar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .adm-tab,
+  .adm-tabActive {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .adm-ieTabBar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .adm-ieTab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Modal: bottom-sheet style */
+  .adm-overlay {
+    align-items: flex-end;
+  }
+
+  .adm-modal {
+    max-width: 100%;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .adm-modal--scroll {
+    max-height: 85vh;
+  }
+
+  /* Tables: tighter on mobile */
+  .adm-th,
+  .adm-td,
+  .adm-tdActions {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  /* Tutorial FAB: compact */
+  .tut-fab {
+    padding: 10px 12px;
+    font-size: 13px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .tut-fabLabel {
+    display: none;
+  }
+
+  .tut-chapterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Panel split: stack vertically */
+  .adm-panelSplit {
+    flex-direction: column;
+  }
+
+  .adm-panelSplitHalf + .adm-panelSplitHalf {
+    border-left: none;
+    border-top: 1px solid var(--adm-border);
+  }
+
+  /* Page title */
+  .adm-pageTitle {
+    font-size: 18px;
+  }
+
+  /* Sidebar brand: always show expanded on mobile drawer */
+  .adm-sidebar--mobile .adm-sidebarCollapseBtn {
+    display: none;
+  }
+
+  .adm-sidebar--mobile .adm-sidebarBrand {
+    justify-content: flex-start;
+  }
+
+  .adm-sidebar--mobile .adm-sidebarBrandTitle {
+    display: inline;
+  }
+}

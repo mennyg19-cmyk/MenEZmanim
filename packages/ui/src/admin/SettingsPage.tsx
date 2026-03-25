@@ -76,17 +76,15 @@ export function SettingsPage({
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
-        {/* Location — 25% */}
-        <div data-tutorial="settings-location" className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
+      <div className="adm-settingsColumns">
+        <div data-tutorial="settings-location" className="adm-card adm-settingsCol--sm">
           <div className="adm-sectionHeader">
             <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Location</h3>
           </div>
           <LocationSetup embedded compact location={location} onChange={onLocationChange} />
         </div>
 
-        {/* Language & Kiosk — 25% */}
-        <div data-tutorial="settings-display-prefs" className="adm-card" style={{ flex: '0 0 25%', minWidth: 0 }}>
+        <div data-tutorial="settings-display-prefs" className="adm-card adm-settingsCol--sm">
           <div className="adm-sectionHeader">
             <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Language &amp; Kiosk</h3>
           </div>
@@ -112,7 +110,7 @@ export function SettingsPage({
               Kiosk mode
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <label className="adm-labelRow">
                 <input
                   type="checkbox"
                   checked={!!form.kioskMode}
@@ -121,13 +119,8 @@ export function SettingsPage({
                 Enable kiosk mode
               </label>
               <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 13,
-                  opacity: form.kioskMode ? 1 : 0.5,
-                }}
+                className="adm-labelRow"
+                style={{ opacity: form.kioskMode ? 1 : 0.5 }}
               >
                 <input
                   type="checkbox"
@@ -138,13 +131,8 @@ export function SettingsPage({
                 Hide cursor
               </label>
               <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 13,
-                  opacity: form.kioskMode ? 1 : 0.5,
-                }}
+                className="adm-labelRow"
+                style={{ opacity: form.kioskMode ? 1 : 0.5 }}
               >
                 <input
                   type="checkbox"
@@ -162,8 +150,7 @@ export function SettingsPage({
           </button>
         </div>
 
-        {/* Display Names — 50% */}
-        <div data-tutorial="settings-display-names" className="adm-card" style={{ flex: '1 1 50%', minWidth: 0, overflow: 'hidden' }}>
+        <div data-tutorial="settings-display-names" className="adm-card adm-settingsCol--lg">
           <div className="adm-sectionHeader">
             <h3 className="adm-sectionTitle" style={{ fontSize: 15 }}>Display Names</h3>
           </div>
